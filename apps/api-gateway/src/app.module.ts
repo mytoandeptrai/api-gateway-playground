@@ -7,7 +7,7 @@ import databaseConfig from './config/database.config';
 import redisConfig from './config/redis.config';
 import { CachingModule } from './shared/caching/caching.module';
 import { LoggingMiddleware } from './shared/middleware/logging.middleware';
-import { UsersModule } from './users/users.module';
+import { ApiGatewayModule } from './modules/api-gateway/api-gateway.module';
 
 @Module({
   imports: [
@@ -34,7 +34,7 @@ import { UsersModule } from './users/users.module';
         synchronize: configService.get<boolean>('database.synchronize', false),
         logging: configService.get<boolean>('database.logging', false),
         ssl: process.env.NODE_ENV === 'production' ? true : false,
-        migrationsTableName: 'migrations_api',
+        migrationsTableName: 'migrations_gateway',
         extra: {
           max: 20,
           connectionTimeoutMillis: 5000,
@@ -46,7 +46,7 @@ import { UsersModule } from './users/users.module';
     CachingModule,
 
     // Features Modules
-    UsersModule,
+    ApiGatewayModule,
   ],
   controllers: [AppController],
   providers: [AppService],

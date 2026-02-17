@@ -13,6 +13,6 @@ export default new DataSource({
   schema: process.env.DB_SCHEMA || 'public',
   entities: [__dirname + '/../**/*.entity{.ts,.js}'],
   migrations: [__dirname + '/migrations/*{.ts,.js}'],
-  migrationsTableName: 'migrations_api',
+  migrationsTableName: 'migrations_order',
   ssl: process.env.NODE_ENV === 'production' ? true : false,
 });

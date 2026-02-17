@@ -1,0 +1,10 @@
+{"context":"Bootstrap","level":"info","message":"Swagger documentation available at: /api/docs","timestamp":"2026-02-17T16:22:21.334Z"}
+{"context":"LegacyRouteConverter","level":"warn","message":"Unsupported route path: \"/api/v1/*\". In previous versions, the symbols ?, *, and + were used to denote optional or repeating path parameters. The latest version of \"path-to-regexp\" now requires the use of named parameters. For example, instead of using a route like /users/* to capture all routes starting with \"/users\", you should use /users/*path. For more details, refer to the migration guide. Attempting to auto-convert...","timestamp":"2026-02-17T16:22:21.337Z"}
+{"context":"RoutesResolver","level":"info","message":"AppController {/api/v1}:","timestamp":"2026-02-17T16:22:21.337Z"}
+{"context":"RouterExplorer","level":"info","message":"Mapped {/api/v1, GET} route","timestamp":"2026-02-17T16:22:21.338Z"}
+{"context":"RoutesResolver","level":"info","message":"UsersController {/api/v1/users}:","timestamp":"2026-02-17T16:22:21.339Z"}
+{"context":"RouterExplorer","level":"info","message":"Mapped {/api/v1/users, GET} route","timestamp":"2026-02-17T16:22:21.339Z"}
+{"context":"RouterExplorer","level":"info","message":"Mapped {/api/v1/users, POST} route","timestamp":"2026-02-17T16:22:21.339Z"}
+{"context":"NestApplication","level":"info","message":"Nest application successfully started","timestamp":"2026-02-17T16:22:21.340Z"}
+{"context":"Bootstrap","level":"info","message":"Application is running on: http://localhost:3001/api/v1","timestamp":"2026-02-17T16:22:21.341Z"}
+{"context":"Bootstrap","level":"info","message":"Environment: development","timestamp":"2026-02-17T16:22:21.342Z"}

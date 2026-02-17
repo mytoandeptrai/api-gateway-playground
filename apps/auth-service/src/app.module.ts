@@ -5,16 +5,18 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import databaseConfig from './config/database.config';
 import redisConfig from './config/redis.config';
+import { jwtConfig } from './config/jwt.config';
 import { CachingModule } from './shared/caching/caching.module';
 import { LoggingMiddleware } from './shared/middleware/logging.middleware';
-import { UsersModule } from './users/users.module';
+import { UsersModule } from './modules/users/users.module';
+import { AuthModule } from './modules/auth/auth.module';
 
 @Module({
   imports: [
     // Configuration module - must be first
     ConfigModule.forRoot({
       isGlobal: true,
-      load: [databaseConfig, redisConfig],
+      load: [databaseConfig, redisConfig, jwtConfig],
       envFilePath: ['.env.local', '.env'],
     }),
 
@@ -34,7 +36,7 @@ import { UsersModule } from './users/users.module';
         synchronize: configService.get<boolean>('database.synchronize', false),
         logging: configService.get<boolean>('database.logging', false),
         ssl: process.env.NODE_ENV === 'production' ? true : false,
-        migrationsTableName: 'migrations_api',
+        migrationsTableName: 'migrations_auth',
         extra: {
           max: 20,
           connectionTimeoutMillis: 5000,
@@ -47,6 +49,7 @@ import { UsersModule } from './users/users.module';
 
     // Features Modules
     UsersModule,
+    AuthModule,
   ],
   controllers: [AppController],
   providers: [AppService],
