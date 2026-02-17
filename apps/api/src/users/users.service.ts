@@ -1,26 +1,22 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
-import { PrismaService } from 'src/prisma/prisma.service';
+import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { User } from './user.entity';
+import { CreateUserDto } from './dto/create-user.dto';
 
-// Simplicity - Just a simple service to create and list users
 @Injectable()
 export class UsersService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    @InjectRepository(User)
+    private readonly userRepository: Repository<User>,
+  ) {}
 
-  async createUser(email: string, password: string) {
-    const user = await this.prisma.user.create({
-      data: { email, password },
-    });
-
-    return user;
+  async create(dto: CreateUserDto): Promise<User> {
+    const user = this.userRepository.create(dto);
+    return this.userRepository.save(user);
   }
 
-  async listUsers() {
-    const users = await this.prisma.user.findMany();
-
-    if (!users) {
-      throw new NotFoundException(`No users found`);
-    }
-
-    return users;
+  async findAll(): Promise<User[]> {
+    return this.userRepository.find();
   }
 }
