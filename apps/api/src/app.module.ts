@@ -5,6 +5,7 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import databaseConfig from './config/database.config';
 import redisConfig from './config/redis.config';
+import { SharedRedisModule } from './shared/redis/shared-redis.module';
 import { CachingModule } from './shared/caching/caching.module';
 import { LoggingMiddleware } from './shared/middleware/logging.middleware';
 import { UsersModule } from './users/users.module';
@@ -43,6 +44,7 @@ import { UsersModule } from './users/users.module';
     }),
 
     // Shared Module
+    SharedRedisModule,
     CachingModule,
 
     // Features Modules

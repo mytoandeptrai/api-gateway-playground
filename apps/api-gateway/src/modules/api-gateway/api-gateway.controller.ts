@@ -9,6 +9,7 @@ import {
   Param,
   Req,
   Res,
+  UseGuards,
 } from '@nestjs/common';
 import { Request, Response } from 'express';
 import { ApiGatewayService } from './api-gateway.service';
@@ -21,6 +22,7 @@ import {
 import { CreateRouteDto } from './dto/create-route.dto';
 import { UpdateRouteDto } from './dto/update-route.dto';
 import { ApiRoute } from './entities/api-route.entity';
+import { RateLimitGuard } from '../../shared/rate-limiting/guards/rate-limit.guard';
 
 /**
  * API Gateway Controller
@@ -102,6 +104,7 @@ export class ApiGatewayController {
    * Handle all other requests through gateway (proxy)
    */
   @All('*path')
+  @UseGuards(RateLimitGuard)
   async handleRequest(
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response,

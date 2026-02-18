@@ -6,6 +6,7 @@ import { AppService } from './app.service';
 import databaseConfig from './config/database.config';
 import redisConfig from './config/redis.config';
 import { jwtConfig } from './config/jwt.config';
+import { SharedRedisModule } from './shared/redis/shared-redis.module';
 import { CachingModule } from './shared/caching/caching.module';
 import { LoggingMiddleware } from './shared/middleware/logging.middleware';
 import { UsersModule } from './modules/users/users.module';
@@ -44,7 +45,8 @@ import { AuthModule } from './modules/auth/auth.module';
       }),
     }),
 
-    // Shared Module
+    // Global Modules
+    SharedRedisModule,
     CachingModule,
 
     // Features Modules
