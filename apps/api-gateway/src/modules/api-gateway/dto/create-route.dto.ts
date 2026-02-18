@@ -45,8 +45,10 @@ export class RequestTransformDto {
   rewritePath?: string;
 
   @ApiProperty({
-    example: '/gateway',
-    description: 'Prefix to strip from request path before forwarding',
+    example: '/api/v1/gateway',
+    description:
+      'Prefix to strip from the incoming path before forwarding. ' +
+      'E.g. stripPrefix="/api/v1/gateway": /api/v1/gateway/auth/login → /auth/login',
     required: false,
   })
   @IsOptional()
@@ -55,7 +57,9 @@ export class RequestTransformDto {
 
   @ApiProperty({
     example: '/api/v1',
-    description: 'Prefix to add to request path before forwarding',
+    description:
+      'Prefix to prepend to the path after stripping. ' +
+      'E.g. addPrefix="/api/v1": /auth/login → /api/v1/auth/login',
     required: false,
   })
   @IsOptional()

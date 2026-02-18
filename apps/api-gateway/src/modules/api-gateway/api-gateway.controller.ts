@@ -106,10 +106,34 @@ export class ApiGatewayController {
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
   ) {
+    // Strip hop-by-hop and problematic headers that break proxying.
+    // content-length from the original request won't match the re-serialized
+    // body, causing the upstream to abort with "request aborted".
+    const HOP_BY_HOP_HEADERS = new Set([
+      'content-length',
+      'transfer-encoding',
+      'connection',
+      'keep-alive',
+      'host',
+      'upgrade',
+      'expect',
+      'te',
+    ]);
+
+    const forwardHeaders: Record<string, string> = {};
+    for (const [key, value] of Object.entries(req.headers)) {
+      if (
+        !HOP_BY_HOP_HEADERS.has(key.toLowerCase()) &&
+        typeof value === 'string'
+      ) {
+        forwardHeaders[key] = value;
+      }
+    }
+
     const gatewayRequest = {
       path: req.path,
       method: req.method,
-      headers: req.headers as Record<string, string>,
+      headers: forwardHeaders,
       query: req.query as Record<string, string>,
       body: req.body,
       tenantId: (req as any).user?.tenantId,

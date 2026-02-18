@@ -115,7 +115,11 @@ export class ApiGatewayService {
         const cached = await this.getCachedResponse(targetUrl);
         if (cached) {
           this.logger.log(`Cache hit for ${targetUrl}`);
-          return cached;
+          return {
+            ...cached,
+            targetUrl,
+            duration: Date.now() - startTime,
+          };
         }
       }
 
@@ -388,7 +392,16 @@ export class ApiGatewayService {
   }
 
   /**
-   * Transform request
+   * Transform request before forwarding to target service.
+   *
+   * Path transform order: stripPrefix → addPrefix → rewritePath (overrides all).
+   *
+   * Example flow (gateway → auth-service):
+   *   Original path:  /api/v1/gateway/auth/login
+   *   stripPrefix:    "/api/v1/gateway"  → /auth/login
+   *   addPrefix:      "/api/v1"          → /api/v1/auth/login
+   *   Target URL:     http://localhost:3003 + /api/v1/auth/login
+   *   Final:          http://localhost:3003/api/v1/auth/login
    */
   private transformRequest(
     request: GatewayRequest,
@@ -397,7 +410,6 @@ export class ApiGatewayService {
     const transformed = { ...request };
 
     if (route.requestTransform) {
-      // Add headers
       if (route.requestTransform.addHeaders) {
         transformed.headers = {
           ...transformed.headers,
@@ -405,14 +417,12 @@ export class ApiGatewayService {
         };
       }
 
-      // Remove headers
       if (route.requestTransform.removeHeaders) {
         route.requestTransform.removeHeaders.forEach((header) => {
           delete transformed.headers[header];
         });
       }
 
-      // Add query params
       if (route.requestTransform.addQueryParams) {
         transformed.query = {
           ...transformed.query,
@@ -420,7 +430,7 @@ export class ApiGatewayService {
         };
       }
 
-      // Strip prefix from path (e.g., "/gateway/auth/login" → "/auth/login")
+      // 1. Strip prefix (e.g., "/api/v1/gateway/auth/login" → "/auth/login")
       if (route.requestTransform.stripPrefix) {
         const prefix = route.requestTransform.stripPrefix;
         if (transformed.path.startsWith(prefix)) {
@@ -428,12 +438,12 @@ export class ApiGatewayService {
         }
       }
 
-      // Add prefix to path (e.g., "/auth/login" → "/api/v1/auth/login")
+      // 2. Add prefix (e.g., "/auth/login" → "/api/v1/auth/login")
       if (route.requestTransform.addPrefix) {
         transformed.path = route.requestTransform.addPrefix + transformed.path;
       }
 
-      // Rewrite path (replaces entire path, takes precedence over strip/add)
+      // 3. Rewrite path (replaces entire path, overrides strip/add above)
       if (route.requestTransform.rewritePath) {
         transformed.path = route.requestTransform.rewritePath;
       }
