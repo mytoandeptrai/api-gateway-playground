@@ -1,6 +1,6 @@
-# API Gateway Microservices
+# API Gateway Playground
 
-A microservices architecture built with NestJS, featuring an API Gateway with dynamic routing, rate limiting, circuit breaker, load balancing, and caching.
+An architecture built with NestJS, featuring an API Gateway with dynamic routing, rate limiting, circuit breaker, load balancing, and caching.
 
 ## Tech Stack
 
