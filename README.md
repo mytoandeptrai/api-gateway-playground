@@ -215,3 +215,13 @@ pnpm --filter <app> test:watch    # Watch mode
 pnpm --filter <app> test:e2e      # E2E tests
 pnpm --filter <app> test:cov      # Coverage report
 ```
+
+## Documentation
+
+Deep-dive documentation for each module is available in both English and Vietnamese:
+
+| Topic | English | Vietnamese |
+|-------|---------|------------|
+| API Gateway | [api-gateway_en.md](docs/personal/explains/api-gateway_en.md) | [api-gateway_vn.md](docs/personal/explains/api-gateway_vn.md) |
+| Rate Limiting | [rate-limiting_en.md](docs/personal/explains/rate-limiting_en.md) | [rate-limiting_vn.md](docs/personal/explains/rate-limiting_vn.md) |
+| Caching | [caching_en.md](docs/personal/explains/caching_en.md) | [caching_vn.md](docs/personal/explains/caching_vn.md) |
