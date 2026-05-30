@@ -1,0 +1,358 @@
+# Instincts generated from https://github.com/mytoandeptrai/api-gateway-playground
+# Generated: 2026-05-30T07:10:12.659Z
+# Version: 2.0
+# NOTE: This file supplements (does not replace) any existing curated instincts.
+# High-confidence manually curated instincts should be preserved alongside these.
+
+---
+id: api-gateway-playground-commit-conventional
+trigger: "when writing a commit message"
+confidence: 0.85
+domain: git
+source: repo-analysis
+source_repo: https://github.com/mytoandeptrai/api-gateway-playground
+---
+
+# Api Gateway Playground Commit Conventional
+
+## Action
+
+Use conventional commit format with prefixes: feat
+
+## Evidence
+
+- 2 commits analyzed
+- Detected conventional commit pattern
+- Examples: feat: update Docker configuration and documentation for sequential port mapping, feat: remove unused AI DevKit files and update agent instructions for Harness integration
+
+---
+id: api-gateway-playground-commit-length
+trigger: "when writing a commit message"
+confidence: 0.6
+domain: git
+source: repo-analysis
+source_repo: https://github.com/mytoandeptrai/api-gateway-playground
+---
+
+# Api Gateway Playground Commit Length
+
+## Action
+
+Write moderate-length commit messages (~84 characters)
+
+## Evidence
+
+- Average commit message length: 84 chars
+- Based on 2 commits
+
+---
+id: api-gateway-playground-naming-files
+trigger: "when creating a new file"
+confidence: 0.8
+domain: code-style
+source: repo-analysis
+source_repo: https://github.com/mytoandeptrai/api-gateway-playground
+---
+
+# Api Gateway Playground Naming Files
+
+## Action
+
+Use camelCase naming convention
+
+## Evidence
+
+- Analyzed file naming patterns in repository
+- Dominant pattern: camelCase
+
+---
+id: api-gateway-playground-import-alias
+trigger: "when importing modules"
+confidence: 0.85
+domain: code-style
+source: repo-analysis
+source_repo: https://github.com/mytoandeptrai/api-gateway-playground
+---
+
+# Api Gateway Playground Import Alias
+
+## Action
+
+Use path aliases (@/, ~/) instead of relative imports
+
+## Evidence
+
+- Import analysis shows alias pattern
+- Example: import { x } from '@/lib/x'
+
+---
+id: api-gateway-playground-export-style
+trigger: "when exporting from a module"
+confidence: 0.7
+domain: code-style
+source: repo-analysis
+source_repo: https://github.com/mytoandeptrai/api-gateway-playground
+---
+
+# Api Gateway Playground Export Style
+
+## Action
+
+Prefer default exports
+
+## Evidence
+
+- Export pattern analysis
+- Dominant style: default
+
+---
+id: api-gateway-playground-arch-feature-based
+trigger: "when adding a new feature"
+confidence: 0.85
+domain: architecture
+source: repo-analysis
+source_repo: https://github.com/mytoandeptrai/api-gateway-playground
+---
+
+# Api Gateway Playground Arch Feature Based
+
+## Action
+
+Create a new folder in src/features/ with all related code colocated
+
+## Evidence
+
+- Feature-based module organization detected
+- Structure: src/features/[feature-name]/
+
+---
+id: api-gateway-playground-test-naming
+trigger: "when creating a test file"
+confidence: 0.85
+domain: testing
+source: repo-analysis
+source_repo: https://github.com/mytoandeptrai/api-gateway-playground
+---
+
+# Api Gateway Playground Test Naming
+
+## Action
+
+Name test files using the pattern: *.test.ts
+
+## Evidence
+
+- File pattern: *.test.ts
+- Consistent across test files
+
+---
+id: api-gateway-playground-test-types
+trigger: "when planning tests for a feature"
+confidence: 0.7
+domain: testing
+source: repo-analysis
+source_repo: https://github.com/mytoandeptrai/api-gateway-playground
+---
+
+# Api Gateway Playground Test Types
+
+## Action
+
+Write unit, e2e tests to match project standards
+
+## Evidence
+
+- Test types detected: unit, e2e
+- Coverage config: no
+
+---
+id: api-gateway-playground-instinct-filename-camelcase
+trigger: "When creating or renaming a file"
+confidence: 0.8
+domain: code-style
+source: repo-analysis
+source_repo: mytoandeptrai/api-gateway-playground
+---
+
+# Api Gateway Playground Instinct Filename Camelcase
+
+## Action
+
+Use camelCase for file names
+
+## Evidence
+
+- Pattern in namingConventions.files
+
+---
+id: api-gateway-playground-instinct-function-camelcase
+trigger: "When defining a function"
+confidence: 0.9
+domain: code-style
+source: repo-analysis
+source_repo: mytoandeptrai/api-gateway-playground
+---
+
+# Api Gateway Playground Instinct Function Camelcase
+
+## Action
+
+Name the function using camelCase
+
+## Evidence
+
+- Pattern in namingConventions.functions
+
+---
+id: api-gateway-playground-instinct-class-pascalcase
+trigger: "When defining a class"
+confidence: 0.9
+domain: code-style
+source: repo-analysis
+source_repo: mytoandeptrai/api-gateway-playground
+---
+
+# Api Gateway Playground Instinct Class Pascalcase
+
+## Action
+
+Name the class using PascalCase
+
+## Evidence
+
+- Pattern in namingConventions.classes
+
+---
+id: api-gateway-playground-instinct-constant-screaming-snake
+trigger: "When defining a constant"
+confidence: 0.9
+domain: code-style
+source: repo-analysis
+source_repo: mytoandeptrai/api-gateway-playground
+---
+
+# Api Gateway Playground Instinct Constant Screaming Snake
+
+## Action
+
+Use SCREAMING_SNAKE_CASE for constant names
+
+## Evidence
+
+- Pattern in namingConventions.constants
+
+---
+id: api-gateway-playground-instinct-import-alias
+trigger: "When importing modules"
+confidence: 0.8
+domain: code-style
+source: repo-analysis
+source_repo: mytoandeptrai/api-gateway-playground
+---
+
+# Api Gateway Playground Instinct Import Alias
+
+## Action
+
+Use import aliases instead of relative paths
+
+## Evidence
+
+- Pattern in importStyle: alias
+
+---
+id: api-gateway-playground-instinct-export-default
+trigger: "When exporting modules or components"
+confidence: 0.8
+domain: code-style
+source: repo-analysis
+source_repo: mytoandeptrai/api-gateway-playground
+---
+
+# Api Gateway Playground Instinct Export Default
+
+## Action
+
+Use default exports
+
+## Evidence
+
+- Pattern in exportStyle: default
+
+---
+id: api-gateway-playground-instinct-test-file-pattern
+trigger: "When creating a test file"
+confidence: 0.9
+domain: testing
+source: repo-analysis
+source_repo: mytoandeptrai/api-gateway-playground
+---
+
+# Api Gateway Playground Instinct Test File Pattern
+
+## Action
+
+Name the file with the pattern *.test.ts
+
+## Evidence
+
+- Pattern in testing.filePattern
+
+---
+id: api-gateway-playground-instinct-test-types
+trigger: "When writing tests"
+confidence: 0.7
+domain: testing
+source: repo-analysis
+source_repo: mytoandeptrai/api-gateway-playground
+---
+
+# Api Gateway Playground Instinct Test Types
+
+## Action
+
+Include both unit and e2e test types as appropriate
+
+## Evidence
+
+- Pattern in testing.testTypes
+
+---
+id: api-gateway-playground-instinct-commit-conventional-feat
+trigger: "When making a commit for a new feature"
+confidence: 0.9
+domain: git
+source: repo-analysis
+source_repo: mytoandeptrai/api-gateway-playground
+---
+
+# Api Gateway Playground Instinct Commit Conventional Feat
+
+## Action
+
+Start the commit message with 'feat:' followed by a concise description
+
+## Evidence
+
+- Pattern in commits.prefixes
+- Seen in commit: 'feat: update Docker configuration and documentation for sequential port mapping'
+
+---
+id: api-gateway-playground-instinct-commit-average-length
+trigger: "When writing a commit message"
+confidence: 0.7
+domain: git
+source: repo-analysis
+source_repo: mytoandeptrai/api-gateway-playground
+---
+
+# Api Gateway Playground Instinct Commit Average Length
+
+## Action
+
+Keep the commit message around 84 characters on average
+
+## Evidence
+
+- Pattern in commits.averageLength
+
