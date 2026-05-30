@@ -4,16 +4,18 @@ import {
   RateLimitAlgorithm,
   RateLimitScope,
 } from 'src/shared/rate-limiting/entities/rate-limit-rule.entity';
+import {
+  ApiRoute,
+  RouteTargetType,
+  LoadBalancingStrategy,
+} from 'src/modules/api-gateway/entities/api-route.entity';
+
+// ─── Rate Limit Rules ────────────────────────────────────────────────────────
 
 const rules: Partial<RateLimitRule>[] = [
-  // ──────────────────────────────────────────────
-  // Priority 1: Global safety net (lowest priority, checked last)
-  // Protects the entire system from total overload
-  // ──────────────────────────────────────────────
   {
     name: 'Global Safety Net',
-    description:
-      'Overall system protection — limits total requests across all clients',
+    description: 'Overall system protection — limits total requests across all clients',
     scope: RateLimitScope.GLOBAL,
     algorithm: RateLimitAlgorithm.TOKEN_BUCKET,
     maxRequests: 5000,
@@ -23,15 +25,9 @@ const rules: Partial<RateLimitRule>[] = [
     priority: 1,
     enabled: true,
   },
-
-  // ──────────────────────────────────────────────
-  // Priority 10: Endpoint-specific rules (medium priority)
-  // Applied to all proxy traffic through the gateway
-  // ──────────────────────────────────────────────
   {
     name: 'Gateway Proxy - Standard',
-    description:
-      'Default rate limit for all proxy requests through the gateway',
+    description: 'Default rate limit for all proxy requests through the gateway',
     scope: RateLimitScope.GLOBAL,
     endpoint: '/api/v1/gateway',
     algorithm: RateLimitAlgorithm.SLIDING_WINDOW,
@@ -40,39 +36,6 @@ const rules: Partial<RateLimitRule>[] = [
     priority: 10,
     enabled: true,
   },
-
-  // ──────────────────────────────────────────────
-  // Priority 15: Admin endpoints (higher priority)
-  // Route management — no auth yet, so limit tighter
-  // ──────────────────────────────────────────────
-  {
-    name: 'Admin - Route Management',
-    description:
-      'Rate limit for route CRUD operations (no auth guard yet, keep tight)',
-    scope: RateLimitScope.GLOBAL,
-    endpoint: '/api/v1/gateway/routes',
-    algorithm: RateLimitAlgorithm.SLIDING_WINDOW,
-    maxRequests: 30,
-    windowSeconds: 60,
-    priority: 15,
-    enabled: true,
-  },
-  {
-    name: 'Admin - Rate Limit Management',
-    description: 'Rate limit for rate-limiting admin API',
-    scope: RateLimitScope.GLOBAL,
-    endpoint: '/api/v1/rate-limiting',
-    algorithm: RateLimitAlgorithm.SLIDING_WINDOW,
-    maxRequests: 30,
-    windowSeconds: 60,
-    priority: 15,
-    enabled: true,
-  },
-
-  // ──────────────────────────────────────────────
-  // Priority 20: Auth endpoints (highest priority, checked first)
-  // Brute force & spam protection
-  // ──────────────────────────────────────────────
   {
     name: 'Auth - Login Brute Force Protection',
     description: 'Prevent brute force login attempts',
@@ -86,46 +49,92 @@ const rules: Partial<RateLimitRule>[] = [
     retryAfterSeconds: 60,
     enabled: true,
   },
+];
+
+// ─── API Routes ──────────────────────────────────────────────────────────────
+
+const routes: Partial<ApiRoute>[] = [
   {
-    name: 'Auth - Registration Spam Protection',
-    description: 'Prevent mass account creation',
-    scope: RateLimitScope.GLOBAL,
-    endpoint: '/api/v1/gateway/auth/register',
-    algorithm: RateLimitAlgorithm.FIXED_WINDOW,
-    maxRequests: 3,
-    windowSeconds: 3600,
-    priority: 20,
-    customMessage:
-      'Too many registration attempts. Please try again after 1 hour.',
-    retryAfterSeconds: 3600,
+    name: 'Auth Service',
+    description: 'Routes all auth requests to auth-service:3003',
+    path: '/api/v1/gateway/auth*',
+    method: '*',
+    targetType: RouteTargetType.SERVICE,
+    targets: [{ url: 'http://localhost:3003' }],
+    loadBalancingStrategy: LoadBalancingStrategy.ROUND_ROBIN,
+    requestTransform: {
+      stripPrefix: '/api/v1/gateway',
+      addPrefix: '/api/v1',
+    },
+    requiresAuth: false,
+    enableCircuitBreaker: true,
+    circuitBreakerThreshold: 5,
+    circuitBreakerTimeout: 30,
+    requestTimeout: 10000,
+    retryAttempts: 2,
+    enableCaching: false,
     enabled: true,
+    isGlobal: true,
+    priority: 10,
+  },
+  {
+    name: 'Product Service',
+    description: 'Routes all product requests to product-service:3005',
+    path: '/api/v1/gateway/products*',
+    method: '*',
+    targetType: RouteTargetType.SERVICE,
+    targets: [{ url: 'http://localhost:3005' }],
+    loadBalancingStrategy: LoadBalancingStrategy.ROUND_ROBIN,
+    requestTransform: {
+      stripPrefix: '/api/v1/gateway',
+      addPrefix: '/api/v1',
+    },
+    requiresAuth: false,
+    enableCircuitBreaker: true,
+    circuitBreakerThreshold: 5,
+    circuitBreakerTimeout: 30,
+    requestTimeout: 10000,
+    retryAttempts: 2,
+    enableCaching: true,
+    cacheTTL: 60,
+    enabled: true,
+    isGlobal: true,
+    priority: 10,
   },
 ];
+
+// ─── Runner ──────────────────────────────────────────────────────────────────
 
 async function runSeed() {
   await dataSource.initialize();
   console.log('Data source initialized. Running gateway seeds...');
 
+  // Seed rate limit rules
   const ruleRepo = dataSource.getRepository(RateLimitRule);
-
-  let created = 0;
-  let skipped = 0;
-
   for (const rule of rules) {
     const exists = await ruleRepo.findOne({ where: { name: rule.name } });
     if (!exists) {
       await ruleRepo.save(ruleRepo.create(rule));
-      created++;
-      console.log(`  ✓ Created: ${rule.name}`);
+      console.log(`  ✓ Rule: ${rule.name}`);
     } else {
-      skipped++;
-      console.log(`  - Skipped (exists): ${rule.name}`);
+      console.log(`  - Skipped rule: ${rule.name}`);
     }
   }
 
-  console.log(
-    `\nSeeding complete. Created: ${created}, Skipped: ${skipped}, Total: ${rules.length}`,
-  );
+  // Seed routes (upsert by name)
+  const routeRepo = dataSource.getRepository(ApiRoute);
+  for (const route of routes) {
+    const existing = await routeRepo.findOne({ where: { name: route.name } });
+    if (existing) {
+      await routeRepo.update(existing.id, route);
+      console.log(`  ↺ Updated route: ${route.name} (${route.path})`);
+    } else {
+      await routeRepo.save(routeRepo.create(route));
+      console.log(`  ✓ Created route: ${route.name} (${route.path})`);
+    }
+  }
+
+  console.log('\nGateway seeding complete.');
   await dataSource.destroy();
 }
 

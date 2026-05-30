@@ -5,6 +5,7 @@ import { ThemeProvider } from "@repo/ui/providers/theme-provider";
 import { Toaster } from "@repo/ui/components/sonner";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
+import { AuthProvider } from "@/components/auth/auth-provider";
 
 export const queryClient = new QueryClient({
   defaultOptions: {
@@ -28,7 +29,9 @@ export function Providers({ children }: { children: ReactNode }) {
       enableColorScheme
     >
       <QueryClientProvider client={_queryClient}>
-        {children}
+        <AuthProvider>
+          {children}
+        </AuthProvider>
         <ReactQueryDevtools initialIsOpen={false} />
       </QueryClientProvider>
       <Toaster richColors />

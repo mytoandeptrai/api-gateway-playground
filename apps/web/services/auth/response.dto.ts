@@ -1,12 +1,11 @@
-export type GetAuthNonceResponse = { nonce: string };
+import type { BaseResponseType } from '@/types/base-type';
+import type { AuthUser } from './types.dto';
 
-export type VerifyAuthResponse = {
-  token: string;
-  refreshToken: string;
-};
+export type LoginResponse = BaseResponseType<{
+  accessToken: string;
+  user: AuthUser;
+}>;
 
-export type GetMeResponse = {
-  id: string;
-  email: string;
-  role: string;
-};
+export type RefreshResponse = BaseResponseType<{
+  accessToken: string;
+}>;

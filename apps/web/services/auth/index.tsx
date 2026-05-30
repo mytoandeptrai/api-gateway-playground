@@ -1,34 +1,14 @@
-import { useMutation, useQuery } from "@tanstack/react-query";
-import { getAuthNonce, getMe, verifyAuth } from "./api";
-import type {
-  GetAuthNonceParams,
-  GetMeParams,
-  VerifyAuthRequestBody,
-} from "./request.dto";
-import { GetMeResponse } from "./response.dto";
+import { useMutation } from "@tanstack/react-query";
+import { loginApi, logoutApi } from "./api";
+import { LoginRequest } from "./request.dto";
 
-export const useGetAuthNonceMutation = () => {
+export const useLoginMutation = () =>
+  useMutation({
+    mutationFn: (body: LoginRequest) => loginApi(body),
+  });
+
+export const useLogoutMutation = () => {
   return useMutation({
-    mutationFn: (params: GetAuthNonceParams) => getAuthNonce(params),
+    mutationFn: () => logoutApi(),
   });
-};
-
-export const useVerifyAuthMutation = () => {
-  return useMutation({
-    mutationFn: (body: VerifyAuthRequestBody) => verifyAuth(body),
-  });
-};
-
-export const useGetMeQuery = (
-  params: GetMeParams,
-  queryParams?: Omit<
-    Parameters<typeof useQuery<GetMeResponse>>[0],
-    "queryKey" | "queryFn"
-  >,
-) => {
-  return useQuery<GetMeResponse>({
-    queryKey: ["me", params],
-    queryFn: ({ signal }) => getMe(params, signal),
-    ...queryParams,
-  });
-};
+}

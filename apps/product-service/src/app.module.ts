@@ -8,56 +8,61 @@ import redisConfig from '@/config/redis.config';
 import { SharedRedisModule } from '@/shared/redis/shared-redis.module';
 import { CachingModule } from '@/shared/caching/caching.module';
 import { LoggingMiddleware } from '@/shared/middleware/logging.middleware';
-import { UsersModule } from '@/users/users.module';
+import { ProductModule } from '@/modules/product/product.module';
 
 @Module({
   imports: [
-    // Configuration module - must be first
     ConfigModule.forRoot({
       isGlobal: true,
       load: [databaseConfig, redisConfig],
       envFilePath: ['.env.local', '.env'],
     }),
 
-    // TypeORM Database
     TypeOrmModule.forRootAsync({
       inject: [ConfigService],
-      useFactory: (configService: ConfigService) => ({
-        type: 'postgres' as const,
-        host: configService.get<string>('database.host'),
-        port: configService.get<number>('database.port'),
-        username: configService.get<string>('database.username'),
-        password: configService.get<string>('database.password'),
-        database: configService.get<string>('database.database'),
-        schema: configService.get<string>('database.schema'),
-        autoLoadEntities: true,
-        migrations: [__dirname + '/database/migrations/*{.ts,.js}'],
-        synchronize: configService.get<boolean>('database.synchronize', false),
-        logging: configService.get<boolean>('database.logging', false),
-        ssl: process.env.NODE_ENV === 'production' ? true : false,
-        migrationsTableName: 'migrations_api',
-        extra: {
-          max: 20,
-          connectionTimeoutMillis: 5000,
-        },
-      }),
+      useFactory: async (configService: ConfigService) => {
+        const schema = configService.get<string>('database.schema', 'public');
+        const host = configService.get<string>('database.host');
+        const port = configService.get<number>('database.port');
+        const username = configService.get<string>('database.username');
+        const password = configService.get<string>('database.password');
+        const database = configService.get<string>('database.database');
+
+        if (schema !== 'public') {
+          const { Client } = await import('pg');
+          const pgClient = new Client({ host, port, user: username, password, database });
+          await pgClient.connect();
+          await pgClient.query(`CREATE SCHEMA IF NOT EXISTS "${schema}"`);
+          await pgClient.end();
+        }
+
+        return {
+          type: 'postgres' as const,
+          host,
+          port,
+          username,
+          password,
+          database,
+          schema,
+          autoLoadEntities: true,
+          migrations: [__dirname + '/database/migrations/*{.ts,.js}'],
+          synchronize: configService.get<boolean>('database.synchronize', false),
+          logging: configService.get<boolean>('database.logging', false),
+          ssl: process.env.NODE_ENV === 'production',
+          migrationsTableName: `migrations_${schema}`,
+          extra: { max: 20, connectionTimeoutMillis: 5000 },
+        };
+      },
     }),
 
-    // Shared Module
     SharedRedisModule,
     CachingModule,
-
-    // Features Modules
-    UsersModule,
+    ProductModule,
   ],
   controllers: [AppController],
   providers: [AppService],
 })
 export class AppModule implements NestModule {
-  /**
-   * Configure middleware for all routes
-   * @param consumer - Middleware consumer to apply middleware
-   */
   configure(consumer: MiddlewareConsumer) {
     consumer.apply(LoggingMiddleware).forRoutes('*path');
   }

@@ -24,11 +24,6 @@ type NonNullableObject<T> = {
     : NonNullable<T[K]>;
 };
 
-type TRefreshToKenResponse = {
-  token?: string;
-  refreshToken?: string;
-  tokenExpires?: number;
-};
 
 type ErrorResponseData = {
   retryAfter?: number;
@@ -142,7 +137,8 @@ class HttpInstance {
     const originalRequest = error.config!;
     const data = error.response?.data as unknown as ErrorResponse;
     const statusCode = error.response?.status;
-    const isTokenExpired = statusCode === 401 && data?.error === "unauthorized";
+    const isAuthEndpoint = originalRequest.url?.includes('/auth/');
+    const isTokenExpired = statusCode === 401 && !isAuthEndpoint;
 
     if (!isTokenExpired) {
       return Promise.reject(data);
@@ -162,24 +158,17 @@ class HttpInstance {
     this.isTokenRefreshing = true;
 
     try {
-      const refreshToken = useSessionStore.getState().refreshToken;
-      const urlEndpoint = "/api/auth/refresh";
-
       const response = await axios.post(
-        urlEndpoint,
+        "/api/auth/refresh",
+        {},
         {
-          refreshToken,
-        },
-        {
-          headers: {
-            "Content-Type": "application/json",
-          },
+          headers: { "Content-Type": "application/json" },
+          withCredentials: true, // send httpOnly cookie automatically
         },
       );
 
-      const result: TRefreshToKenResponse = response.data;
-      useSessionStore.getState().setToken(result.token!);
-      useSessionStore.getState().setRefreshToken(result.refreshToken!);
+      const result = response.data?.data ?? response.data;
+      useSessionStore.getState().setToken(result?.accessToken);
 
       this.failedRequests.forEach(({ resolve, reject, config }) => {
         this.instance(config)

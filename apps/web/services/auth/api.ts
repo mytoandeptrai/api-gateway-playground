@@ -1,39 +1,13 @@
-import type {
-  GetAuthNonceParams,
-  GetMeParams,
-  VerifyAuthRequestBody,
-} from "./request.dto";
-import type {
-  GetAuthNonceResponse,
-  GetMeResponse,
-  VerifyAuthResponse,
-} from "./response.dto";
-import httpInstance from "../http-instance";
+import httpInstance from '../http-instance';
+import type { LoginRequest } from './request.dto';
+import type { LoginResponse, RefreshResponse } from './response.dto';
 
-export const getAuthNonce = (params: GetAuthNonceParams) => {
-  return httpInstance
-    .get<GetAuthNonceResponse>("/api/auth/nonce", {
-      params,
-    })
-    .then((res) => res);
-};
+export const loginApi = (body: LoginRequest) =>
+  httpInstance.post<LoginResponse>('/api/auth/login', body);
 
-export const verifyAuth = (
-  body: VerifyAuthRequestBody,
-  signal?: AbortSignal,
-) => {
-  return httpInstance
-    .post<VerifyAuthResponse>("/api/auth/verify", body, {
-      signal,
-    })
-    .then((res) => res);
-};
+// No body needed — browser sends httpOnly cookie automatically
+export const refreshApi = () =>
+  httpInstance.post<RefreshResponse>('/api/auth/refresh', {});
 
-export const getMe = (params: GetMeParams, signal?: AbortSignal) => {
-  return httpInstance
-    .get<GetMeResponse>("/api/auth/me", {
-      params,
-      signal,
-    })
-    .then((res) => res);
-};
+export const logoutApi = () =>
+  httpInstance.post<void>('/api/auth/logout', {});

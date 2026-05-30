@@ -1,4 +1,4 @@
-import { faker } from '@faker-js/faker';
+import bcrypt from 'bcryptjs';
 import dataSource from '../data-source';
 import { User } from 'src/modules/users/user.entity';
 
@@ -8,25 +8,21 @@ async function runSeed() {
 
   const userRepo = dataSource.getRepository(User);
 
-  const users: Partial<User>[] = Array.from({ length: 20 }, () => ({
-    email: faker.internet.email().toLowerCase(),
-    password: faker.internet.password({ length: 12 }),
-  }));
+  const testUser = {
+    email: 'test@nextmart.com',
+    password: await bcrypt.hash('Test@123', 10),
+    name: 'Test User',
+  };
 
-  // Add a known test user
-  users.unshift({
-    email: 'admin@test.com',
-    password: 'password123',
-  });
-
-  for (const user of users) {
-    const exists = await userRepo.findOne({ where: { email: user.email } });
-    if (!exists) {
-      await userRepo.save(userRepo.create(user));
-    }
+  const exists = await userRepo.findOne({ where: { email: testUser.email } });
+  if (!exists) {
+    await userRepo.save(userRepo.create(testUser));
+    console.log(`✓ Seeded user: ${testUser.email}`);
+  } else {
+    console.log(`- Skipped (exists): ${testUser.email}`);
   }
 
-  console.log(`Seeded ${users.length} users.`);
+  console.log('Auth seeding complete.');
   await dataSource.destroy();
 }
 

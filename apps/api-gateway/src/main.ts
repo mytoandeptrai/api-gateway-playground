@@ -7,7 +7,6 @@ import compression from 'compression';
 import helmet from 'helmet';
 import { AppModule } from '@/app.module';
 import { HttpExceptionFilter } from '@/shared/filters/http-exception.filter';
-import { TransformInterceptor } from '@/shared/interceptors/transform.interceptor';
 
 /**
  * Bootstrap the NestJS application
@@ -59,9 +58,6 @@ async function bootstrap() {
 
   // Global exception filter
   app.useGlobalFilters(new HttpExceptionFilter());
-
-  // Global response transformation interceptor
-  app.useGlobalInterceptors(new TransformInterceptor());
 
   // Swagger documentation
   const swaggerEnabled = configService.get<boolean>('SWAGGER_ENABLED', true);

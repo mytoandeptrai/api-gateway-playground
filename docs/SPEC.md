@@ -1875,28 +1875,38 @@ Services **bắt buộc** có đầy đủ resilience patterns: Orchestrator, Or
 
 ## 13. Development Phases & Checklist
 
-### Phase 1 — Foundation (Week 1)
+### Phase 1 — Foundation ✅ DONE
 
 **Goal**: Auth và Product Service hoạt động, FE login và xem sản phẩm được.
 
 **Backend:**
 
-- `auth-service`: Login endpoint, JWT (access 5m + refresh 1d), refresh rotation, logout, Swagger
-- `product-service`: GET /products, GET /products/:id, seed 15 sản phẩm, Swagger
-- `api-gateway`: Route config cho `/api/auth/`* và `/api/products/*`, JWT validation middleware
+- [x] `auth-service`: Login, JWT (5m/1d), refresh rotation, logout, seed `test@nextmart.com`
+- [x] `auth-service`: `cookie-parser`, login/refresh set `httpOnly cookie`, refresh đọc từ `req.cookies`
+- [x] `product-service`: GET /products, GET /products/:id, seed 15 sản phẩm
+- [x] `api-gateway`: Routes seeded (`auth*`, `products*`), `TransformInterceptor` removed (proxy không re-wrap)
 
 **Frontend:**
 
-- Layout và ProtectedRoute wrapper
-- `/login` page: form, validation, token storage
-- `/` page: ProductCard grid, loading skeleton, error state
-- TanStack Query setup, axios interceptor cho silent refresh
+- [x] `AuthProvider` — silent refresh khi app mount, show `LoadingScreen` trong lúc chờ
+- [x] `LoadingScreen` component trong `packages/ui`
+- [x] ProtectedRoute layout (`app/(protected)/layout.tsx`)
+- [x] `/login` page: form, Zod validation, Zustand in-memory accessToken
+- [x] `/products` page: ProductCard grid, loading skeleton, error state + retry
+- [x] Session store: chỉ `accessToken` in-memory, `refreshToken` sống trong httpOnly cookie
+- [x] `http-instance`: 401 → `POST /api/auth/refresh` (no body, `withCredentials: true`) → retry
+
+**Decisions thực tế:**
+
+- Product list route: `/products` thay vì `/` (tránh Next.js route group conflict)
+- F5 → `AuthProvider` tự động silent refresh qua cookie → không cần login lại
 
 **Verify:**
 
-- Login thành công → redirect về product list
-- Unauthenticated → redirect về login
-- Access token expire → silent refresh → tiếp tục
+- [x] Login thành công → redirect về `/products`
+- [x] Unauthenticated → redirect về `/login`
+- [x] F5 → silent refresh → vào thẳng `/products` không bị kick về login
+- [x] Gateway double-wrap fix: bỏ `TransformInterceptor` khỏi gateway
 
 ---
 

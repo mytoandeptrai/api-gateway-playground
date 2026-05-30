@@ -1,35 +1,21 @@
-import { create } from "zustand";
-import { createJSONStorage, persist } from "zustand/middleware";
+import { create } from 'zustand';
 
-export type SessionStoreState = {
+type SessionStoreState = {
   token: string | null;
-  refreshToken: string | null;
 };
 
-export type SessionStoreActions = {
+type SessionStoreActions = {
   reset: () => void;
   setToken: (token: string | null) => void;
-  setRefreshToken: (refreshToken: string | null) => void;
 };
 
 export type SessionStore = SessionStoreState & SessionStoreActions;
 
-export const DEFAULT_SESSION_STORE_STATE: SessionStoreState = {
-  token: null,
-  refreshToken: null,
-};
+const DEFAULT_STATE: SessionStoreState = { token: null };
 
-export const useSessionStore = create<SessionStore>()(
-  persist(
-    (set) => ({
-      ...DEFAULT_SESSION_STORE_STATE,
-      reset: () => set(DEFAULT_SESSION_STORE_STATE),
-      setToken: (token: string | null) => set({ token }),
-      setRefreshToken: (refreshToken: string | null) => set({ refreshToken }),
-    }),
-    {
-      name: "__session_storage",
-      storage: createJSONStorage(() => localStorage),
-    },
-  ),
-);
+// accessToken in-memory only — refreshToken lives in httpOnly cookie (managed by server)
+export const useSessionStore = create<SessionStore>()((set) => ({
+  ...DEFAULT_STATE,
+  reset: () => set(DEFAULT_STATE),
+  setToken: (token) => set({ token }),
+}));
