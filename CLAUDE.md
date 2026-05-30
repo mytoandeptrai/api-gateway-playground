@@ -1,101 +1,148 @@
-# AI DevKit Rules
+# CLAUDE.md
 
-## Project Context
-This project uses ai-devkit for structured AI-assisted development. Phase documentation is located in `docs/ai/`.
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Documentation Structure
-- `docs/ai/requirements/` - Problem understanding and requirements
-- `docs/ai/design/` - System architecture and design decisions (include mermaid diagrams)
-- `docs/ai/planning/` - Task breakdown and project planning
-- `docs/ai/implementation/` - Implementation guides and notes
-- `docs/ai/testing/` - Testing strategy and test cases
-- `docs/ai/deployment/` - Deployment and infrastructure docs
-- `docs/ai/monitoring/` - Monitoring and observability setup
+## Project Overview
 
-## Code Style & Standards
-- Follow the project's established code style and conventions
-- Write clear, self-documenting code with meaningful variable names
-- Add comments for complex logic or non-obvious decisions
+Full-stack NestJS microservices playground demonstrating an API Gateway with rate limiting, circuit breaking, load balancing, and response caching. Uses Turborepo + pnpm for monorepo management.
 
-## Development Workflow
-- Review phase documentation in `docs/ai/` before implementing features
-- Keep requirements, design, and implementation docs updated as the project evolves
-- Reference the planning doc for task breakdown and priorities
-- Copy the testing template (`docs/ai/testing/README.md`) before creating feature-specific testing docs
+**Package manager:** `pnpm@10.11.0` (required — enforced in `engines`). Never use npm or yarn.
 
-## AI Interaction Guidelines
-- When implementing features, first check relevant phase documentation
-- For new features, start with requirements clarification
-- Update phase docs when significant changes or decisions are made
+---
 
-## Skills (Extend Your Capabilities)
-Skills are packaged capabilities that teach you new competencies, patterns, and best practices. Check for installed skills in the project's skill directory and use them to enhance your work.
+## Commands
 
-### Using Installed Skills
-1. **Check for skills**: Look for `SKILL.md` files in the project's skill directory
-2. **Read skill instructions**: Each skill contains detailed guidance on when and how to use it
-3. **Apply skill knowledge**: Follow the patterns, commands, and best practices defined in the skill
+### Root-level (runs across all apps via Turborepo)
 
-### Key Installed Skills
-- **memory**: Use AI DevKit's memory service via CLI commands when MCP is unavailable. Read the skill for detailed `memory store` and `memory search` command usage.
+```bash
+pnpm dev                  # All apps in watch mode
+pnpm dev:services         # Backend services only (api-gateway, auth-service, order-service)
+pnpm build                # Build all apps
+pnpm lint                 # ESLint all apps
+pnpm format               # Prettier formatting
+pnpm check-types          # TypeScript type checking
+pnpm only-infra           # Start Docker infrastructure (cd docker && docker compose up -d)
+```
 
-### When to Reference Skills
-- Before implementing features that match a skill's domain
-- When MCP tools are unavailable but skill provides CLI alternatives
-- To follow established patterns and conventions defined in skills
+### Per-app (NestJS services)
 
-## Knowledge Memory (Always Use When Helpful)
-The AI assistant should proactively use knowledge memory throughout all interactions.
+```bash
+pnpm --filter api-gateway dev
+pnpm --filter api-gateway test            # Unit tests (Jest)
+pnpm --filter api-gateway test:watch
+pnpm --filter api-gateway test:cov        # Coverage report
+pnpm --filter api-gateway test:e2e
+pnpm --filter api-gateway migration:generate -- src/database/migrations/MigrationName
+pnpm --filter api-gateway migration:run
+pnpm --filter api-gateway seed
+```
 
-> **Tip**: If MCP is unavailable, use the **memory skill** for detailed CLI command reference.
+Replace `api-gateway` with `api`, `auth-service`, or `order-service` as needed.
 
-### When to Search Memory
-- Before starting any task, search for relevant project conventions, patterns, or decisions
-- When you need clarification on how something was done before
-- To check for existing solutions to similar problems
-- To understand project-specific terminology or standards
+### Frontend
 
-**How to search**:
-- Use `memory.searchKnowledge` MCP tool with relevant keywords, tags, and scope
-- If MCP tools are unavailable, use `npx ai-devkit memory search` CLI command (see memory skill for details)
-- Example: Search for "authentication patterns" when implementing auth features
+```bash
+pnpm --filter web dev     # Next.js dev on :3000 (Turbopack)
+pnpm --filter web build
+```
 
-### When to Store Memory
-- After making important architectural or design decisions
-- When discovering useful patterns or solutions worth reusing
-- If the user explicitly asks to "remember this" or save guidance
-- When you establish new conventions or standards for the project
+---
 
-**How to store**:
-- Use `memory.storeKnowledge` MCP tool
-- If MCP tools are unavailable, use `npx ai-devkit memory store` CLI command (see memory skill for details)
-- Include clear title, detailed content, relevant tags, and appropriate scope
-- Make knowledge specific and actionable, not generic advice
+## Architecture
 
-### Memory Best Practices
-- **Be Proactive**: Search memory before asking the user repetitive questions
-- **Be Specific**: Store knowledge that's actionable and reusable
-- **Use Tags**: Tag knowledge appropriately for easy discovery (e.g., "api", "testing", "architecture")
-- **Scope Appropriately**: Use `global` for general patterns, `project:<name>` for project-specific knowledge
+### Applications & Ports
 
-## Testing & Quality
-- Write tests alongside implementation
-- Follow the testing strategy defined in `docs/ai/testing/`
-- Use `/writing-test` to generate unit and integration tests targeting 100% coverage
-- Ensure code passes all tests before considering it complete
+| App | Port | Purpose |
+|-----|------|---------|
+| `apps/web` | 3000 | Next.js 15 (App Router) frontend |
+| `apps/api` | 3001 | General NestJS API service |
+| `apps/api-gateway` | 3002 | Core gateway — routing, rate limiting, circuit breaking, caching |
+| `apps/auth-service` | 3003 | JWT auth (Passport.js) |
+| `apps/order-service` | 3004 | Order management |
 
-## Documentation
-- Update phase documentation when requirements or design changes
-- Keep inline code comments focused and relevant
-- Document architectural decisions and their rationale
-- Use mermaid diagrams for any architectural or data-flow visuals (update existing diagrams if needed)
-- Record test coverage results and outstanding gaps in `docs/ai/testing/`
+### Infrastructure Ports (Docker)
 
-## Key Commands
-When working on this project, you can run commands to:
-- Understand project requirements and goals (`review-requirements`)
-- Review architectural decisions (`review-design`)
-- Plan and execute tasks (`execute-plan`)
-- Verify implementation against design (`check-implementation`)
-- Writing tests (`writing-test`)
-- Perform structured code reviews (`code-review`)
+All sequential for easy reference:
+
+| Port | Service | Credentials |
+|------|---------|-------------|
+| 1111 | PostgreSQL | postgres:postgres |
+| 1112 | Redis | (no auth) |
+| 1113 | Mailpit SMTP | (no auth) |
+| 1114 | Mailpit Web UI | browser |
+| 1115 | Kafka (KRaft) | (no ZooKeeper) |
+| 1116 | Kafka UI | browser |
+| 1117 | MinIO S3 API | minioadmin:minioadmin |
+| 1118 | MinIO Console | browser |
+
+Docker volumes live in `docker/volumes/`. Reset everything with `cd docker && docker compose down -v`.
+
+### Shared packages
+
+- `packages/ui` — shadcn/ui component library (`@repo/ui`)
+- `packages/eslint-config` — shared ESLint config
+- `packages/typescript-config` — shared TS config
+
+### Database layout
+
+Single PostgreSQL instance, one schema per service:
+- `gateway` — api-gateway
+- `auth` — auth-service
+- `orders` — order-service
+- `api` — api service
+
+Set `DB_SCHEMA` in each app's `.env` accordingly.
+
+---
+
+## API Gateway — Core Design
+
+The gateway is the most complex service. Request flow:
+
+1. **Rate limiting** (Redis-backed) — checked first via `RateLimitingService`
+   - 4 algorithms: Fixed Window, Sliding Window, Token Bucket, Leaky Bucket
+   - Multi-scope: global, tenant, user, IP, endpoint
+2. **Route matching** — `ApiRoute` entity in DB maps `path + method → target URLs`
+3. **Circuit breaker** — per-target state tracking (CLOSED → OPEN → HALF_OPEN)
+4. **Load balancing** — Round Robin, Least Connections, Random, Weighted
+5. **Request forwarding** — via `@nestjs/axios`
+6. **Response caching** — Redis TTL-based cache
+7. **Response transformation** — global interceptor adds envelope
+
+Key files:
+- `apps/api-gateway/src/modules/api-gateway/api-gateway.service.ts` — core routing, circuit breaker, load balancing
+- `apps/api-gateway/src/shared/rate-limiting/rate-limiting.service.ts` — rate limiting algorithms
+- `apps/api-gateway/src/shared/caching/` — cache decorator and interceptor
+- `apps/api-gateway/src/main.ts` — bootstrap (Swagger, Helmet, CORS, global pipes/filters)
+
+Swagger UI is available at `http://localhost:3002/api/docs` when `SWAGGER_ENABLED=true`.
+
+---
+
+## Environment Variables
+
+Each NestJS app needs a `.env` file. Common variables shared by all services:
+
+```env
+NODE_ENV=development
+DB_HOST=localhost
+DB_PORT=1111
+DB_USERNAME=postgres
+DB_PASSWORD=postgres
+DB_DATABASE=api-gateway-db
+DB_SCHEMA=<gateway|auth|orders|api>
+REDIS_HOST=localhost
+REDIS_PORT=1112
+KAFKA_BROKERS=localhost:1115
+```
+
+---
+
+## AI Harness Workflow Integration
+
+This project will run base on Harness Engineering, so before starting any task, please read the `AGENTS.md` file first to understand the rules and workflow.
+
+**Knowledge memory:** 
+
+- Use `memory.searchKnowledge` MCP tool before starting tasks to find prior conventions and decisions. Store decisions with `memory.storeKnowledge`. If MCP is unavailable, use the memory skill (`npx ai-devkit memory search/store`).
+- Deep-dive documentation is in `personal/explains/` — bilingual (EN/VN) guides for API gateway design, rate limiting algorithms, and caching strategies.
