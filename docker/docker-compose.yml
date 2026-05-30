@@ -1,5 +1,11 @@
 services:
+  # Local infra host ports: sequential 1111–1118 (see README)
+  #
+  # 1111 PostgreSQL | 1112 Redis | 1113 Mailpit SMTP | 1114 Mailpit UI
+  # 1115 Kafka      | 1116 Kafka UI | 1117 MinIO API | 1118 MinIO Console
+
   # PostgreSQL Database
+  # Pin major + alpine — tránh :latest, image nhẹ hơn
   postgres:
     image: postgres:16-alpine
     container_name: api-gateway-postgres
@@ -9,7 +15,7 @@ services:
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: api-gateway-db
     ports:
-      - "5440:5432"
+      - "1111:5432"
     volumes:
       - ./volumes/postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -19,12 +25,13 @@ services:
       retries: 5
 
   # Redis Cache
+  # Pin major + alpine
   redis:
     image: redis:7-alpine
     container_name: api-gateway-redis
     restart: unless-stopped
     ports:
-      - "6440:6379"
+      - "1112:6379"
     volumes:
       - ./volumes/redis_data:/data
     healthcheck:
@@ -34,18 +41,20 @@ services:
       retries: 5
 
   # Mailpit (Local email testing)
+  # Pin version — tag trên Docker Hub dạng semver (vd. 1.30.1), không có prefix "v"
   mailpit:
-    image: axllent/mailpit:latest
+    image: axllent/mailpit:v1.30.1
     container_name: api-gateway-mailpit
     restart: unless-stopped
     ports:
-      - "1440:1025"  # SMTP
-      - "8440:8025"  # Web UI
+      - "1113:1025"  # SMTP
+      - "1114:8025"  # Web UI
     environment:
       MP_SMTP_AUTH_ACCEPT_ANY: 1
       MP_SMTP_AUTH_ALLOW_INSECURE: 1
 
-  # Kafka
+  # Kafka (KRaft mode — không cần Zookeeper)
+  # Confluent không ship bản alpine; giữ tag cố định thay vì latest
   kafka:
     image: confluentinc/cp-kafka:7.6.0
     container_name: api-gateway-kafka
@@ -55,7 +64,7 @@ services:
       KAFKA_PROCESS_ROLES: broker,controller
       KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
       KAFKA_LISTENERS: PLAINTEXT://kafka:29092,CONTROLLER://kafka:9093,PLAINTEXT_HOST://0.0.0.0:9092
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:1115
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
       KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
@@ -64,7 +73,7 @@ services:
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
       CLUSTER_ID: "MkU3OEVBNTcwNTJENDM2Qk"
     ports:
-      - "9092:9092"
+      - "1115:9092"
     volumes:
       - ./volumes/kafka_data:/var/lib/kafka/data
     healthcheck:
@@ -74,7 +83,55 @@ services:
       retries: 5
       start_period: 30s
 
+  # Kafka UI — web console xem topics, messages, consumer groups
+  # Pin version — image JRE-based, không có variant alpine chính thức
+  kafka-ui:
+    image: provectuslabs/kafka-ui:v0.7.2
+    container_name: api-gateway-kafka-ui
+    restart: unless-stopped
+    depends_on:
+      kafka:
+        condition: service_healthy
+    ports:
+      - "1116:8080"
+    environment:
+      KAFKA_CLUSTERS_0_NAME: local
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:29092
+
+  # MinIO — S3-compatible object storage (upload file, avatar, backup, ...)
+  # Pin RELEASE tag — minio/minio là single binary (scratch-based), không có tag alpine
+  #
+  # minio-bucket (init sidecar) — CÓ CẦN KHÔNG?
+  # → Không bắt buộc. MinIO chạy độc lập, không cần service phụ để hoạt động.
+  #
+  # minio-bucket là gì?
+  # → Container one-shot dùng image minio/mc (MinIO Client), chạy sau khi MinIO healthy
+  #   để tự tạo bucket (vd. uploads, assets) bằng lệnh: mc mb local/my-bucket
+  #
+  # Bucket là gì?
+  # → "Container" cấp cao nhất trong S3/MinIO — giống root folder chứa objects.
+  #   MinIO mới start không có bucket nào; app upload vào bucket phải tồn tại trước.
+  #
+  # Khi nào nên thêm minio-bucket?
+  # → Khi app expect bucket name cố định ngay lúc docker compose up (tránh 404 NoSuchBucket).
+  # → Dev solo: có thể tạo bucket tay qua Console (http://localhost:1118) — đủ dùng.
+  # → Team/CI: nên thêm init sidecar để môi trường reproducible, không phụ thuộc thao tác tay.
+  minio:
+    image: minio/minio:RELEASE.2025-04-22T22-12-26Z
+    container_name: api-gateway-minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    ports:
+      - "1117:9000"  # S3 API
+      - "1118:9001"  # Web Console
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    volumes:
+      - ./volumes/minio_data:/data
+
 volumes:
   postgres_data:
   redis_data:
   kafka_data:
+  minio_data:

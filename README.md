@@ -8,6 +8,8 @@ An architecture built with NestJS, featuring an API Gateway with dynamic routing
 - **Backend:** NestJS (multiple microservices)
 - **Database:** PostgreSQL + TypeORM
 - **Cache:** Redis
+- **Message Broker:** Kafka (KRaft)
+- **Object Storage:** MinIO (S3-compatible)
 - **Monorepo:** Turborepo + pnpm
 - **Email (Dev):** Mailpit
 
@@ -22,9 +24,12 @@ graph TB
     Gateway --> ApiService[API Service :3001]
 
     subgraph Infrastructure
-        PG[(PostgreSQL :5440)]
-        Redis[(Redis :6440)]
-        Mailpit[Mailpit :8440]
+        PG[(PostgreSQL :1111)]
+        Redis[(Redis :1112)]
+        Mailpit[Mailpit :1114]
+        Kafka[Kafka :1115]
+        KafkaUI[Kafka UI :1116]
+        MinIO[MinIO :1117 / :1118]
     end
 
     Gateway --> Redis
@@ -132,34 +137,142 @@ pnpm install
 docker compose -f docker/docker-compose.yml up -d
 ```
 
-This starts:
-| Service    | Port  | Description            |
-|------------|-------|------------------------|
-| PostgreSQL | 5440  | Database               |
-| Redis      | 6440  | Cache & rate limiting  |
-| Mailpit    | 8440  | Email testing Web UI   |
-| Mailpit    | 1440  | SMTP server            |
+This starts PostgreSQL, Redis, Mailpit, Kafka, Kafka UI, and MinIO. Data is persisted under `docker/volumes/`.
+
+#### Port pattern (1111–1118)
+
+Local infrastructure uses **sequential host ports** starting at `1111` — easy to trace, one block for all Docker services:
+
+| Host | Container | Service |
+|------|-----------|---------|
+| 1111 | 5432 | PostgreSQL |
+| 1112 | 6379 | Redis |
+| 1113 | 1025 | Mailpit SMTP |
+| 1114 | 8025 | Mailpit Web UI |
+| 1115 | 9092 | Kafka |
+| 1116 | 8080 | Kafka UI |
+| 1117 | 9000 | MinIO S3 API |
+| 1118 | 9001 | MinIO Console |
+
+> **Kafka note:** `KAFKA_ADVERTISED_LISTENERS` is set to `localhost:1115` so host clients receive the correct broker address in metadata.
+
+#### Web UI (browser)
+
+| Service | URL | Credentials |
+|---------|-----|-------------|
+| Mailpit | http://localhost:1114 | — |
+| Kafka UI | http://localhost:1116 | — |
+| MinIO Console | http://localhost:1118 | `minioadmin` / `minioadmin` |
+
+#### App connections (NestJS, CLI, drivers)
+
+Use these from apps running on your host machine (`localhost`):
+
+| Service | Host | Port | Example |
+|---------|------|------|---------|
+| PostgreSQL | `localhost` | `1111` | `postgresql://postgres:postgres@localhost:1111/api-gateway-db` |
+| Redis | `localhost` | `1112` | `redis://localhost:1112` |
+| Mailpit SMTP | `localhost` | `1113` | No auth required in local dev |
+| Kafka | `localhost` | `1115` | `localhost:1115` (bootstrap server) |
+| MinIO S3 API | `localhost` | `1117` | `http://localhost:1117` — access key `minioadmin`, secret `minioadmin` |
+
+> **MinIO buckets:** MinIO starts with no buckets. Create them manually via the [MinIO Console](http://localhost:1118) or add an init sidecar in `docker-compose.yml` for fixed bucket names (e.g. `uploads`).
+
+#### Stop / reset
+
+```bash
+# Stop containers
+docker compose -f docker/docker-compose.yml down
+
+# Stop and remove persisted data (fresh start)
+docker compose -f docker/docker-compose.yml down -v
+```
 
 ### 4. Environment Setup
 
-Each service needs a `.env` or `.env.local` file. Example for `apps/api-gateway/.env`:
+Each app under `apps/` needs its own `.env` or `.env.local`. Copy from the matching `.env.example` and align values with the local Docker stack below.
+
+**Shared local infrastructure** (reference for all NestJS services):
 
 ```env
-# Server
-PORT=3002
-
-# Database
+# ── Database (PostgreSQL) ──────────────────────────────────────
 DB_HOST=localhost
-DB_PORT=5440
+DB_PORT=1111
 DB_USERNAME=postgres
 DB_PASSWORD=postgres
-DB_DATABASE=turbo-app-template-db
+DB_DATABASE=api-gateway-db
+DB_SCHEMA=public
+DB_SYNC=true
+DB_LOGGING=false
+
+# ── Cache (Redis) ────────────────────────────────────────────────
+REDIS_HOST=localhost
+REDIS_PORT=1112
+REDIS_PASSWORD=
+REDIS_DB=0
+
+# ── Email (Mailpit SMTP) ─────────────────────────────────────────
+SMTP_HOST=localhost
+SMTP_PORT=1113
+SMTP_USER=
+SMTP_PASSWORD=
+SMTP_FROM=noreply@localhost
+
+# ── Kafka ────────────────────────────────────────────────────────
+KAFKA_BROKERS=localhost:1115
+KAFKA_CLIENT_ID=api-gateway-playground
+KAFKA_GROUP_ID=api-gateway-playground-group
+
+# ── MinIO (S3-compatible) ────────────────────────────────────────
+MINIO_ENDPOINT=localhost
+MINIO_PORT=1117
+MINIO_ACCESS_KEY=minioadmin
+MINIO_SECRET_KEY=minioadmin
+MINIO_USE_SSL=false
+MINIO_BUCKET=uploads
+```
+
+**Per-service example** — `apps/api-gateway/.env` (add service-specific vars on top of the shared block):
+
+```env
+NODE_ENV=development
+PORT=3002
+API_PREFIX=api/v1
+
+# CORS
+CORS_ENABLED=true
+CORS_ORIGINS=http://localhost:3000
+
+# Database — use a dedicated schema per service on the same DB
+DB_HOST=localhost
+DB_PORT=1111
+DB_USERNAME=postgres
+DB_PASSWORD=postgres
+DB_DATABASE=api-gateway-db
 DB_SCHEMA=gateway
 
 # Redis
 REDIS_HOST=localhost
-REDIS_PORT=6440
+REDIS_PORT=1112
+REDIS_PASSWORD=
+REDIS_DB=0
+
+# Swagger
+SWAGGER_ENABLED=true
+SWAGGER_TITLE=API Gateway API
+SWAGGER_DESCRIPTION=API documentation for API Gateway
+SWAGGER_VERSION=1.0
+SWAGGER_PATH=api/docs
 ```
+
+Other services follow the same pattern with different `PORT`, `DB_SCHEMA`, and Swagger titles:
+
+| App | Port | Suggested `DB_SCHEMA` |
+|-----|------|------------------------|
+| `api` | 3001 | `api` |
+| `api-gateway` | 3002 | `gateway` |
+| `auth-service` | 3003 | `auth` |
+| `order-service` | 3004 | `orders` |
 
 ### 5. Run Migrations
 
