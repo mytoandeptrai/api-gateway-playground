@@ -1,13 +1,13 @@
 import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { AppController } from './app.controller';
-import { AppService } from './app.service';
-import databaseConfig from './config/database.config';
-import redisConfig from './config/redis.config';
-import { CachingModule } from './shared/caching/caching.module';
-import { LoggingMiddleware } from './shared/middleware/logging.middleware';
-import { OrdersModule } from './modules/orders/orders.module';
+import { AppController } from '@/app.controller';
+import { AppService } from '@/app.service';
+import databaseConfig from '@/config/database.config';
+import redisConfig from '@/config/redis.config';
+import { CachingModule } from '@/shared/caching/caching.module';
+import { LoggingMiddleware } from '@/shared/middleware/logging.middleware';
+import { OrdersModule } from '@/modules/orders/orders.module';
 
 @Module({
   imports: [

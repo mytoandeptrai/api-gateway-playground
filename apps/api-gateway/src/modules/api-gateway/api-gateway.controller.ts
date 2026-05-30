@@ -22,7 +22,7 @@ import {
 import { CreateRouteDto } from './dto/create-route.dto';
 import { UpdateRouteDto } from './dto/update-route.dto';
 import { ApiRoute } from './entities/api-route.entity';
-import { RateLimitGuard } from '../../shared/rate-limiting/guards/rate-limit.guard';
+import { RateLimitGuard } from '@/shared/rate-limiting/guards/rate-limit.guard';
 
 /**
  * API Gateway Controller

@@ -39,3 +39,4 @@ yarn-error.log*
 
 # Others
 volumes/*
+docker/volumes/*

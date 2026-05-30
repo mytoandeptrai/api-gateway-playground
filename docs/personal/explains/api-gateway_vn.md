@@ -1480,12 +1480,12 @@ erDiagram
 | `PORT` | 3000 | Port server |
 | `API_PREFIX` | api/v1 | Prefix cho tất cả route |
 | `DB_HOST` | localhost | Host PostgreSQL |
-| `DB_PORT` | 5440 | Port PostgreSQL |
+| `DB_PORT` | 1111 | Port PostgreSQL |
 | `DB_USERNAME` | postgres | Username DB |
 | `DB_PASSWORD` | postgres | Password DB |
 | `DB_DATABASE` | mydb | Tên DB |
 | `REDIS_HOST` | localhost | Host Redis |
-| `REDIS_PORT` | 6440 | Port Redis |
+| `REDIS_PORT` | 1112 | Port Redis |
 | `CORS_ENABLED` | true | Bật CORS |
 | `CORS_ORIGINS` | * | Các origin được phép |
 | `SWAGGER_ENABLED` | true | Bật Swagger UI |
@@ -1496,7 +1496,7 @@ erDiagram
 ### Bước 1: Khởi động hạ tầng
 
 ```bash
-docker compose -f docker/docker-compose.yml up -d   # Postgres:5440, Redis:6440
+docker compose -f docker/docker-compose.yml up -d   # Infra ports 1111–1118
 ```
 
 ### Bước 2: Khởi động service

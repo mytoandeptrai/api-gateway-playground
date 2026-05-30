@@ -1480,12 +1480,12 @@ erDiagram
 | `PORT` | 3000 | Server port |
 | `API_PREFIX` | api/v1 | Global route prefix |
 | `DB_HOST` | localhost | PostgreSQL host |
-| `DB_PORT` | 5440 | PostgreSQL port |
+| `DB_PORT` | 1111 | PostgreSQL port |
 | `DB_USERNAME` | postgres | DB username |
 | `DB_PASSWORD` | postgres | DB password |
 | `DB_DATABASE` | mydb | DB name |
 | `REDIS_HOST` | localhost | Redis host |
-| `REDIS_PORT` | 6440 | Redis port |
+| `REDIS_PORT` | 1112 | Redis port |
 | `CORS_ENABLED` | true | Enable CORS |
 | `CORS_ORIGINS` | * | Allowed origins |
 | `SWAGGER_ENABLED` | true | Enable Swagger UI |
@@ -1496,7 +1496,7 @@ erDiagram
 ### Step 1: Start infrastructure
 
 ```bash
-docker compose -f docker/docker-compose.yml up -d   # Postgres:5440, Redis:6440
+docker compose -f docker/docker-compose.yml up -d   # Infra ports 1111–1118
 ```
 
 ### Step 2: Start services

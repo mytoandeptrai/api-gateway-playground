@@ -1,15 +1,15 @@
 import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { AppController } from './app.controller';
-import { AppService } from './app.service';
-import databaseConfig from './config/database.config';
-import redisConfig from './config/redis.config';
-import { SharedRedisModule } from './shared/redis/shared-redis.module';
-import { CachingModule } from './shared/caching/caching.module';
-import { LoggingMiddleware } from './shared/middleware/logging.middleware';
-import { ApiGatewayModule } from './modules/api-gateway/api-gateway.module';
-import { RateLimitingModule } from './shared/rate-limiting/rate-limiting.module';
+import { AppController } from '@/app.controller';
+import { AppService } from '@/app.service';
+import databaseConfig from '@/config/database.config';
+import redisConfig from '@/config/redis.config';
+import { SharedRedisModule } from '@/shared/redis/shared-redis.module';
+import { CachingModule } from '@/shared/caching/caching.module';
+import { LoggingMiddleware } from '@/shared/middleware/logging.middleware';
+import { ApiGatewayModule } from '@/modules/api-gateway/api-gateway.module';
+import { RateLimitingModule } from '@/shared/rate-limiting/rate-limiting.module';
 
 @Module({
   imports: [

@@ -22,7 +22,7 @@ pnpm turbo db:migrate       # Run migrations (dev)
 pnpm turbo db:deploy        # Deploy migrations (production)
 
 # Docker infrastructure
-docker compose -f docker/docker-compose.yml up -d   # Postgres:5440, Redis:6440, Mailpit:8440
+docker compose -f docker/docker-compose.yml up -d   # Infra ports 1111–1118 (see README)
 
 # Run a single app
 pnpm --filter web dev
@@ -56,8 +56,8 @@ pnpm --filter api test:cov          # Coverage report
 - **Next.js app** uses Turbopack, path alias `@/*` mapping to project root.
 - **Prettier**: single quotes, trailing commas (`all`) in NestJS apps.
 - **ESLint**: `@typescript-eslint/no-explicit-any` is turned off in NestJS apps.
-- **Docker ports are offset by +440**: Postgres 5440, Redis 6440, Mailpit SMTP 1440 / UI 8440.
-- **DATABASE_URL** must point to port 5440 when using docker-compose: `postgresql://postgres:postgres@localhost:5440/mydb?schema=public`
+- **Docker infra ports (sequential 1111–1118)**: Postgres 1111, Redis 1112, Mailpit SMTP 1113 / UI 1114, Kafka 1115, Kafka UI 1116, MinIO API 1117 / Console 1118.
+- **DATABASE_URL** must point to port 1111 when using docker-compose: `postgresql://postgres:postgres@localhost:1111/api-gateway-db?schema=public`
 
 ## AI DevKit Workflow
 

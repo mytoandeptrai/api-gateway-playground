@@ -5,9 +5,9 @@ import { NestExpressApplication } from '@nestjs/platform-express';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import compression from 'compression';
 import helmet from 'helmet';
-import { AppModule } from './app.module';
-import { HttpExceptionFilter } from './shared/filters/http-exception.filter';
-import { TransformInterceptor } from './shared/interceptors/transform.interceptor';
+import { AppModule } from '@/app.module';
+import { HttpExceptionFilter } from '@/shared/filters/http-exception.filter';
+import { TransformInterceptor } from '@/shared/interceptors/transform.interceptor';
 
 /**
  * Bootstrap the NestJS application
