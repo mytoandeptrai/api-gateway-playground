@@ -60,6 +60,7 @@ class HttpInstance {
       headers: {
         "Content-Type": "application/json",
       },
+      withCredentials: true,
       timeout: 10000,
       paramsSerializer: (params) => {
         const _params = this.cleanParams(params);
