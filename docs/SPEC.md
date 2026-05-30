@@ -1916,7 +1916,7 @@ Services **bắt buộc** có đầy đủ resilience patterns: Orchestrator, Or
 
 **Backend:**
 
-- `order-service`: POST /orders, GET /orders, GET /orders/:id, Prisma schema + Outbox
+- `order-service`: POST /orders, GET /orders, GET /orders/:id, TypeOrm schema + Outbox
 - `inventory-service`: Reserve/Confirm/Release với Redlock, idempotency, Swagger
 - `payment-service`: Tạo VNPay QR URL, webhook IPN, idempotency, payment timeout cron, Outbox, Swagger
 - `orchestrator-service`: SagaInstance/Step schema, happy path 5 steps, Saga log, Swagger
