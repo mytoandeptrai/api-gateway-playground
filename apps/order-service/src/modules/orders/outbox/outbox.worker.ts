@@ -8,6 +8,7 @@ import { KafkaProducer } from '@/shared/kafka/utils/kafka.producer';
 @Injectable()
 export class OutboxWorker {
   private readonly logger = new Logger(OutboxWorker.name);
+  private isRunning = false;
 
   constructor(
     @InjectRepository(OutboxEvent)
@@ -17,29 +18,50 @@ export class OutboxWorker {
 
   @Cron('*/5 * * * * *')
   async publishOutboxEvents() {
-    const events = await this.outboxRepo.find({
-      where: { published: false },
-      order: { createdAt: 'ASC' },
-      take: 100,
-    });
+    if (this.isRunning) {
+      this.logger.warn('Outbox worker is already running, skipping...');
+      return;
+    }
 
-    if (events.length === 0) return;
+    this.isRunning = true;
+    try {
+      const events = await this.outboxRepo.find({
+        where: { published: false },
+        order: { createdAt: 'ASC' },
+        take: 100,
+      });
 
-    for (const event of events) {
-      try {
-        await this.kafkaProducer.send({
-          topic: event.eventType,
-          messages: [
-            {
-              key: event.aggregateId,
-              value: JSON.stringify(event.payload),
-            },
-          ],
-        });
-        await this.outboxRepo.update(event.id, { published: true });
-      } catch (error) {
-        this.logger.error(`Failed to publish outbox event ${event.id}: ${error}`);
+      if (events.length === 0) return;
+
+      this.logger.log(
+        `Outbox worker started, publishing ${events.length} events`,
+      );
+      let published = 0;
+      for (const event of events) {
+        try {
+          await this.kafkaProducer.send({
+            topic: event.eventType,
+            messages: [
+              {
+                key: event.aggregateId,
+                value: JSON.stringify(event.payload),
+              },
+            ],
+          });
+          await this.outboxRepo.update(event.id, { published: true });
+          published++;
+        } catch (error) {
+          this.logger.error(
+            `Failed to publish outbox event ${event.id}`,
+            error instanceof Error ? error.stack : JSON.stringify(error),
+          );
+        }
       }
+      this.logger.log(
+        `Outbox worker done, published ${published}/${events.length} events`,
+      );
+    } finally {
+      this.isRunning = false;
     }
   }
 }

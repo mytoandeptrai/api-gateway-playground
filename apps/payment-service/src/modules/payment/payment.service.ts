@@ -2,9 +2,7 @@ import { Injectable, Logger, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource, LessThan } from 'typeorm';
 import { ConfigService } from '@nestjs/config';
-import { createHmac } from 'crypto';
-import { randomUUID } from 'crypto';
-import { Cron } from '@nestjs/schedule';
+import { createHmac, randomUUID } from 'crypto';
 import { PaymentIntent, PaymentStatus } from './entities/payment-intent.entity';
 import { OutboxEvent } from './entities/outbox-event.entity';
 import { ProcessedWebhook } from './entities/processed-webhook.entity';
@@ -25,16 +23,26 @@ export class PaymentService {
   ) {}
 
   async createQR(body: { orderId: string; amount: number; sagaId: string }) {
-    const existing = await this.intentRepo.findOne({ where: { orderId: body.orderId } });
+    const existing = await this.intentRepo.findOne({
+      where: { orderId: body.orderId },
+    });
     if (existing) {
-      return { qrUrl: existing.qrUrl, paymentIntentId: existing.id, expiresAt: existing.paymentDeadline };
+      return {
+        qrUrl: existing.qrUrl,
+        paymentIntentId: existing.id,
+        expiresAt: existing.paymentDeadline,
+      };
     }
 
     const tmnCode = this.configService.getOrThrow<string>('VNPAY_TMN_CODE');
-    const hashSecret = this.configService.getOrThrow<string>('VNPAY_HASH_SECRET');
+    const hashSecret =
+      this.configService.getOrThrow<string>('VNPAY_HASH_SECRET');
     const vnpUrl = this.configService.getOrThrow<string>('VNPAY_URL');
     const returnUrl = this.configService.getOrThrow<string>('VNPAY_RETURN_URL');
-    const timeoutMinutes = this.configService.get<number>('PAYMENT_TIMEOUT_MINUTES', 15);
+    const timeoutMinutes = this.configService.get<number>(
+      'PAYMENT_TIMEOUT_MINUTES',
+      15,
+    );
 
     const now = new Date();
     const expiresAt = new Date(now.getTime() + timeoutMinutes * 60 * 1000);
@@ -59,8 +67,12 @@ export class PaymentService {
     };
 
     const sortedKeys = Object.keys(params).sort();
-    const signData = sortedKeys.map((k) => `${k}=${encodeURIComponent(params[k]).replace(/%20/g, '+')}`).join('&');
-    const signature = createHmac('sha512', hashSecret).update(signData).digest('hex');
+    const signData = sortedKeys
+      .map((k) => `${k}=${encodeURIComponent(params[k]).replace(/%20/g, '+')}`)
+      .join('&');
+    const signature = createHmac('sha512', hashSecret)
+      .update(signData)
+      .digest('hex');
 
     const qrUrl = `${vnpUrl}?${signData}&vnp_SecureHash=${signature}`;
 
@@ -82,8 +94,11 @@ export class PaymentService {
     return { qrUrl, paymentIntentId: intent.id, expiresAt };
   }
 
-  async handleIPN(query: Record<string, string>): Promise<{ RspCode: string; Message: string }> {
-    const hashSecret = this.configService.getOrThrow<string>('VNPAY_HASH_SECRET');
+  async handleIPN(
+    query: Record<string, string>,
+  ): Promise<{ RspCode: string; Message: string }> {
+    const hashSecret =
+      this.configService.getOrThrow<string>('VNPAY_HASH_SECRET');
     const secureHash = query['vnp_SecureHash'];
     const txnRef = query['vnp_TxnRef'];
     const responseCode = query['vnp_ResponseCode'];
@@ -93,35 +108,49 @@ export class PaymentService {
     delete params['vnp_SecureHashType'];
 
     const sortedKeys = Object.keys(params).sort();
-    const signData = sortedKeys.map((k) => `${k}=${encodeURIComponent(params[k]).replace(/%20/g, '+')}`).join('&');
-    const expectedHash = createHmac('sha512', hashSecret).update(signData).digest('hex');
+    const signData = sortedKeys
+      .map((k) => `${k}=${encodeURIComponent(params[k]).replace(/%20/g, '+')}`)
+      .join('&');
+    const expectedHash = createHmac('sha512', hashSecret)
+      .update(signData)
+      .digest('hex');
 
     if (expectedHash !== secureHash) {
       this.logger.warn(`Invalid IPN signature for txnRef=${txnRef}`);
       return { RspCode: '97', Message: 'Invalid signature' };
     }
 
-    const alreadyProcessed = await this.webhookRepo.findOne({ where: { vnpTxnRef: txnRef } });
+    const alreadyProcessed = await this.webhookRepo.findOne({
+      where: { vnpTxnRef: txnRef },
+    });
     if (alreadyProcessed) {
       return { RspCode: '00', Message: 'Already processed' };
     }
 
-    const intent = await this.intentRepo.findOne({ where: { orderId: txnRef } });
+    const intent = await this.intentRepo.findOne({
+      where: { orderId: txnRef },
+    });
     if (!intent) {
       return { RspCode: '01', Message: 'Order not found' };
     }
 
     if (responseCode !== '00') {
       await this.intentRepo.update(intent.id, { status: PaymentStatus.FAILED });
-      await this.webhookRepo.save(this.webhookRepo.create({ vnpTxnRef: txnRef }));
+      await this.webhookRepo.save(
+        this.webhookRepo.create({ vnpTxnRef: txnRef }),
+      );
       return { RspCode: '00', Message: 'Acknowledged' };
     }
 
     await this.dataSource.transaction(async (manager) => {
-      await manager.update(PaymentIntent, { id: intent.id }, {
-        status: PaymentStatus.COMPLETED,
-        paidAt: new Date(),
-      });
+      await manager.update(
+        PaymentIntent,
+        { id: intent.id },
+        {
+          status: PaymentStatus.COMPLETED,
+          paidAt: new Date(),
+        },
+      );
 
       const outbox = manager.create(OutboxEvent, {
         aggregateId: intent.id,
@@ -145,7 +174,10 @@ export class PaymentService {
         published: false,
       });
       await manager.save(outbox);
-      await manager.save(ProcessedWebhook, manager.create(ProcessedWebhook, { vnpTxnRef: txnRef }));
+      await manager.save(
+        ProcessedWebhook,
+        manager.create(ProcessedWebhook, { vnpTxnRef: txnRef }),
+      );
     });
 
     this.logger.log(`Payment completed for order ${txnRef}`);
@@ -162,15 +194,25 @@ export class PaymentService {
     };
   }
 
-  async processRefund(body: { orderId: string; amount: number; reason: string }) {
-    const intent = await this.intentRepo.findOne({ where: { orderId: body.orderId } });
+  async processRefund(body: {
+    orderId: string;
+    amount: number;
+    reason: string;
+  }) {
+    const intent = await this.intentRepo.findOne({
+      where: { orderId: body.orderId },
+    });
     if (!intent) throw new BadRequestException('Payment not found');
 
     await this.dataSource.transaction(async (manager) => {
-      await manager.update(PaymentIntent, { id: intent.id }, {
-        status: PaymentStatus.REFUNDED,
-        refundedAt: new Date(),
-      });
+      await manager.update(
+        PaymentIntent,
+        { id: intent.id },
+        {
+          status: PaymentStatus.REFUNDED,
+          refundedAt: new Date(),
+        },
+      );
 
       const outbox = manager.create(OutboxEvent, {
         aggregateId: intent.id,
@@ -194,8 +236,7 @@ export class PaymentService {
     return { success: true };
   }
 
-  @Cron('0 * * * * *')
-  async checkPaymentTimeouts() {
+  async handleExpiredPayments(): Promise<number> {
     const expired = await this.intentRepo.find({
       where: {
         status: PaymentStatus.PENDING,
@@ -205,9 +246,11 @@ export class PaymentService {
 
     for (const intent of expired) {
       await this.dataSource.transaction(async (manager) => {
-        await manager.update(PaymentIntent, { id: intent.id }, {
-          status: PaymentStatus.EXPIRED,
-        });
+        await manager.update(
+          PaymentIntent,
+          { id: intent.id },
+          { status: PaymentStatus.EXPIRED },
+        );
 
         const outbox = manager.create(OutboxEvent, {
           aggregateId: intent.id,
@@ -220,7 +263,10 @@ export class PaymentService {
             userId: intent.userId,
             correlationId: randomUUID(),
             timestamp: new Date().toISOString(),
-            payload: { orderId: intent.orderId, expiredAt: new Date().toISOString() },
+            payload: {
+              orderId: intent.orderId,
+              expiredAt: new Date().toISOString(),
+            },
           },
           published: false,
         });
@@ -229,6 +275,8 @@ export class PaymentService {
 
       this.logger.log(`Payment timeout for order ${intent.orderId}`);
     }
+
+    return expired.length;
   }
 }
 
