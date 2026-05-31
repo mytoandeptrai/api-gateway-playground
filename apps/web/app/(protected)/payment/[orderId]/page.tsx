@@ -110,6 +110,11 @@ export default function PaymentPage() {
               <p className="text-xs text-muted-foreground text-center">
                 Quét QR bằng ứng dụng ngân hàng để thanh toán
               </p>
+              <a href={qrUrl} target="_blank" rel="noopener noreferrer" className="w-full">
+                <Button variant="outline" className="w-full" size="sm">
+                  Thanh toán qua trình duyệt (Sandbox)
+                </Button>
+              </a>
             </>
           ) : (
             <div className="text-center py-8 space-y-2">
