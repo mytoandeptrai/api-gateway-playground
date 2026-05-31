@@ -90,6 +90,7 @@ Window 1 (00:00-01:00)    Window 2 (01:00-02:00)
 ```
 
 **Cách hoạt động trong code** (`checkFixedWindow`):
+
 1. Tính window hiện tại: `currentWindow = floor(now / windowMs)`
 2. Redis key: `ratelimit:{ruleId}:{scope}:{currentWindow}`
 3. Lấy counter từ Redis → kiểm tra có < maxRequests không
@@ -120,6 +121,7 @@ Thời gian: ──────[===========60s window===========]─────
 ```
 
 **Cách hoạt động trong code** (`checkSlidingWindow`):
+
 1. Dùng Redis Sorted Set — mỗi request lưu với timestamp làm score
 2. Xóa entry cũ: `ZREMRANGEBYSCORE key 0 (now - windowMs)`
 3. Đếm còn lại: `ZCARD key`
@@ -147,6 +149,7 @@ Burst:        [TTTT......] 4 tokens   (dùng 6 request)
 ```
 
 **Cách hoạt động trong code** (`checkTokenBucket`):
+
 1. Redis lưu: `{ tokens: number, lastRefill: timestamp }`
 2. Khi check: tính số token cần nạp dựa trên thời gian đã trôi qua
 3. `tokens = min(burstSize, tokens + elapsed * refillRate)`
@@ -177,6 +180,7 @@ Burst:        [TTTT......] 4 tokens   (dùng 6 request)
 ```
 
 **Cách hoạt động trong code** (`checkLeakyBucket`):
+
 1. Redis lưu: `{ queueSize: number, lastLeak: timestamp }`
 2. Khi check: tính số request đã "rò" dựa trên thời gian
 3. `queueSize = max(0, queueSize - elapsed * leakRate)`
@@ -189,12 +193,12 @@ Burst:        [TTTT......] 4 tokens   (dùng 6 request)
 
 ### 3.3 So sánh thuật toán
 
-| Thuật toán | Chịu burst? | Bộ nhớ | Độ chính xác | Độ phức tạp |
-|-----------|------------|--------|-------------|------------|
-| Fixed Window | Không (vấn đề ranh giới) | Thấp (1 counter) | Thấp | Đơn giản |
-| Sliding Window | Không | Cao (lưu mỗi timestamp) | Cao | Trung bình |
-| Token Bucket | Có (tối đa burst size) | Thấp (2 giá trị) | Trung bình | Trung bình |
-| Leaky Bucket | Không (output ổn định) | Thấp (2 giá trị) | Cao | Trung bình |
+| Thuật toán     | Chịu burst?              | Bộ nhớ                  | Độ chính xác | Độ phức tạp |
+| -------------- | ------------------------ | ----------------------- | ------------ | ----------- |
+| Fixed Window   | Không (vấn đề ranh giới) | Thấp (1 counter)        | Thấp         | Đơn giản    |
+| Sliding Window | Không                    | Cao (lưu mỗi timestamp) | Cao          | Trung bình  |
+| Token Bucket   | Có (tối đa burst size)   | Thấp (2 giá trị)        | Trung bình   | Trung bình  |
+| Leaky Bucket   | Không (output ổn định)   | Thấp (2 giá trị)        | Cao          | Trung bình  |
 
 ### 3.4 Hướng dẫn chọn thuật toán
 
@@ -213,13 +217,13 @@ graph TD
 
 Rule có thể nhắm vào các phạm vi khác nhau:
 
-| Scope | Ý nghĩa | Ví dụ |
-|-------|---------|-------|
-| `GLOBAL` | Tất cả request bất kể ai | 10000 req/phút cho toàn API |
-| `TENANT` | Theo tổ chức/công ty | Tenant A: 1000 req/giờ |
-| `USER` | Theo user đã xác thực | User X: 100 req/phút |
-| `IP` | Theo địa chỉ IP | 192.168.1.1: 60 req/phút |
-| `ENDPOINT` | Theo route cụ thể | POST /auth/login: 5 req/phút |
+| Scope      | Ý nghĩa                  | Ví dụ                        |
+| ---------- | ------------------------ | ---------------------------- |
+| `GLOBAL`   | Tất cả request bất kể ai | 10000 req/phút cho toàn API  |
+| `TENANT`   | Theo tổ chức/công ty     | Tenant A: 1000 req/giờ       |
+| `USER`     | Theo user đã xác thực    | User X: 100 req/phút         |
+| `IP`       | Theo địa chỉ IP          | 192.168.1.1: 60 req/phút     |
+| `ENDPOINT` | Theo route cụ thể        | POST /auth/login: 5 req/phút |
 
 Nhiều scope có thể áp dụng đồng thời. **Rule nghiêm ngặt nhất thắng** — nếu global cho phép nhưng IP bị chặn, request vẫn bị block.
 
@@ -255,6 +259,7 @@ export class UsersController { ... }
 ```
 
 Guard tự động:
+
 1. Lấy IP, user, tenant từ request
 2. Query DB tìm rule phù hợp
 3. Kiểm tra Redis counter
@@ -392,26 +397,26 @@ erDiagram
 
 ## 7. Cấu trúc Redis Key
 
-| Thuật toán | Pattern Redis Key | Kiểu dữ liệu |
-|-----------|------------------|-------------|
-| Token Bucket | `ratelimit:{ruleId}:{scope}` | String: `{"tokens": 8, "lastRefill": 1708300000}` |
-| Sliding Window | `ratelimit:{ruleId}:{scope}:requests` | Sorted Set: score=timestamp, member=`{timestamp}-{random}` |
-| Fixed Window | `ratelimit:{ruleId}:{scope}:{sốWindow}` | String: counter (số nguyên) |
-| Leaky Bucket | `ratelimit:{ruleId}:{scope}` | String: `{"queueSize": 3, "lastLeak": 1708300000}` |
+| Thuật toán     | Pattern Redis Key                       | Kiểu dữ liệu                                               |
+| -------------- | --------------------------------------- | ---------------------------------------------------------- |
+| Token Bucket   | `ratelimit:{ruleId}:{scope}`            | String: `{"tokens": 8, "lastRefill": 1708300000}`          |
+| Sliding Window | `ratelimit:{ruleId}:{scope}:requests`   | Sorted Set: score=timestamp, member=`{timestamp}-{random}` |
+| Fixed Window   | `ratelimit:{ruleId}:{scope}:{sốWindow}` | String: counter (số nguyên)                                |
+| Leaky Bucket   | `ratelimit:{ruleId}:{scope}`            | String: `{"queueSize": 3, "lastLeak": 1708300000}`         |
 
 Tất cả key có TTL = `windowSeconds * 2` để tự động dọn dẹp.
 
 ## 8. Bảng Preset tham khảo
 
-| Preset | Max Request | Window | Thuật toán | Use Case |
-|--------|-----------|--------|-----------|----------|
-| `STRICT` | 10 | 60s | Sliding Window | Endpoint nhạy cảm |
-| `STANDARD` | 60 | 60s | Sliding Window | Sử dụng API bình thường |
-| `RELAXED` | 300 | 60s | Token Bucket | Endpoint traffic cao |
-| `API` | 1000 | 3600s | Sliding Window | Quota API theo giờ |
-| `BURST` | 100 | 60s | Token Bucket | Endpoint cần chịu burst |
-| `AUTH` | 5 | 60s | Fixed Window | Đăng nhập/đăng ký |
-| `PUBLIC_API` | 100 | 3600s | Sliding Window | API công khai |
+| Preset       | Max Request | Window | Thuật toán     | Use Case                |
+| ------------ | ----------- | ------ | -------------- | ----------------------- |
+| `STRICT`     | 10          | 60s    | Sliding Window | Endpoint nhạy cảm       |
+| `STANDARD`   | 60          | 60s    | Sliding Window | Sử dụng API bình thường |
+| `RELAXED`    | 300         | 60s    | Token Bucket   | Endpoint traffic cao    |
+| `API`        | 1000        | 3600s  | Sliding Window | Quota API theo giờ      |
+| `BURST`      | 100         | 60s    | Token Bucket   | Endpoint cần chịu burst |
+| `AUTH`       | 5           | 60s    | Fixed Window   | Đăng nhập/đăng ký       |
+| `PUBLIC_API` | 100         | 3600s  | Sliding Window | API công khai           |
 
 ## 9. Câu hỏi mở
 

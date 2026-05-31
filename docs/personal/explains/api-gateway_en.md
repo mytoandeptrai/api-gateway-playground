@@ -5,6 +5,7 @@
 An API Gateway is the single entry point for all client requests in a microservices architecture. Instead of clients calling each service directly, they call the gateway, which routes requests to the correct backend service.
 
 **Without gateway:**
+
 ```
 Client --> Auth Service (:3003)
 Client --> User Service (:3001)
@@ -12,6 +13,7 @@ Client --> Payment Service (:3004)
 ```
 
 **With gateway:**
+
 ```
 Client --> API Gateway (:3001) --> Auth Service (:3003)
                                 --> User Service (:3002)
@@ -151,16 +153,16 @@ graph TD
 
 ### 3.1 Core Responsibilities
 
-| Responsibility | What it means | Analogy |
-|---------------|--------------|---------|
-| **Routing** | Direct request to correct service | Airport traffic control directing planes to runways |
-| **Load Balancing** | Distribute load across multiple instances | Bank with multiple tellers -- send customers to least busy |
-| **Circuit Breaker** | Stop calling failing services | Electrical fuse -- cut power before damage spreads |
-| **Rate Limiting** | Prevent abuse | Bouncer at a club -- max capacity enforced |
-| **Caching** | Return cached responses | Receptionist with notes -- answer without calling the office |
-| **Request Transform** | Modify request before forwarding | Translator at a conference |
-| **Response Transform** | Modify response before returning | Editor reviewing before publishing |
-| **Auth & Security** | Verify credentials before routing | Security checkpoint at building entrance |
+| Responsibility         | What it means                             | Analogy                                                      |
+| ---------------------- | ----------------------------------------- | ------------------------------------------------------------ |
+| **Routing**            | Direct request to correct service         | Airport traffic control directing planes to runways          |
+| **Load Balancing**     | Distribute load across multiple instances | Bank with multiple tellers -- send customers to least busy   |
+| **Circuit Breaker**    | Stop calling failing services             | Electrical fuse -- cut power before damage spreads           |
+| **Rate Limiting**      | Prevent abuse                             | Bouncer at a club -- max capacity enforced                   |
+| **Caching**            | Return cached responses                   | Receptionist with notes -- answer without calling the office |
+| **Request Transform**  | Modify request before forwarding          | Translator at a conference                                   |
+| **Response Transform** | Modify response before returning          | Editor reviewing before publishing                           |
+| **Auth & Security**    | Verify credentials before routing         | Security checkpoint at building entrance                     |
 
 ### 3.2 Why Not Call Services Directly?
 
@@ -224,20 +226,21 @@ Service A + Sidecar Proxy <--> Service B + Sidecar Proxy
 
 ### 3.4 Comparison with Production API Gateways
 
-| Feature | This Project | Kong | Nginx | AWS API Gateway | Spring Cloud Gateway |
-|---------|-------------|------|-------|----------------|---------------------|
-| **Language** | TypeScript/NestJS | Lua/C (OpenResty) | C | Managed Service | Java/Spring |
-| **Routing** | DB-driven, dynamic | DB-driven, dynamic | Config file, static | Console/API | Config/Code |
-| **Load Balancing** | 5 strategies (in-app) | 4 strategies (nginx) | 5+ strategies (native) | Auto (AWS internal) | Ribbon/Spring LB |
-| **Circuit Breaker** | In-memory Map | Kong plugin | Not built-in | Not built-in | Resilience4j |
-| **Rate Limiting** | Redis-backed, 4 algo | Redis/local plugin | ngx_http_limit_req | Token bucket (AWS) | Redis-backed |
-| **Caching** | Redis, 6 strategies | Redis/memory plugin | proxy_cache | CloudFront integration | Spring Cache |
-| **Auth** | Planned (JWT) | JWT/OAuth2 plugins | nginx-jwt module | Cognito/Lambda auth | Spring Security |
-| **Config** | PostgreSQL | PostgreSQL/Cassandra | nginx.conf files | AWS Console/CloudFormation | YAML/Java code |
-| **Performance** | ~5k req/s (Node) | ~30k req/s | ~50k+ req/s | Auto-scales | ~10k req/s |
-| **Best for** | Learning, small projects | Production, plugins ecosystem | High performance, static | Serverless, AWS ecosystem | Spring ecosystem |
+| Feature             | This Project             | Kong                          | Nginx                    | AWS API Gateway            | Spring Cloud Gateway |
+| ------------------- | ------------------------ | ----------------------------- | ------------------------ | -------------------------- | -------------------- |
+| **Language**        | TypeScript/NestJS        | Lua/C (OpenResty)             | C                        | Managed Service            | Java/Spring          |
+| **Routing**         | DB-driven, dynamic       | DB-driven, dynamic            | Config file, static      | Console/API                | Config/Code          |
+| **Load Balancing**  | 5 strategies (in-app)    | 4 strategies (nginx)          | 5+ strategies (native)   | Auto (AWS internal)        | Ribbon/Spring LB     |
+| **Circuit Breaker** | In-memory Map            | Kong plugin                   | Not built-in             | Not built-in               | Resilience4j         |
+| **Rate Limiting**   | Redis-backed, 4 algo     | Redis/local plugin            | ngx_http_limit_req       | Token bucket (AWS)         | Redis-backed         |
+| **Caching**         | Redis, 6 strategies      | Redis/memory plugin           | proxy_cache              | CloudFront integration     | Spring Cache         |
+| **Auth**            | Planned (JWT)            | JWT/OAuth2 plugins            | nginx-jwt module         | Cognito/Lambda auth        | Spring Security      |
+| **Config**          | PostgreSQL               | PostgreSQL/Cassandra          | nginx.conf files         | AWS Console/CloudFormation | YAML/Java code       |
+| **Performance**     | ~5k req/s (Node)         | ~30k req/s                    | ~50k+ req/s              | Auto-scales                | ~10k req/s           |
+| **Best for**        | Learning, small projects | Production, plugins ecosystem | High performance, static | Serverless, AWS ecosystem  | Spring ecosystem     |
 
 **Key takeaways:**
+
 - Kong and Nginx are battle-tested for production with tens of thousands of requests/second.
 - This project implements the same patterns (routing, circuit breaker, rate limiting, caching) but in TypeScript/NestJS -- great for understanding how gateways work internally.
 - AWS API Gateway is fully managed -- zero infrastructure, but locked to AWS.
@@ -287,16 +290,16 @@ GOOD: Gateway matches wildcard: /api/v1/gateway/users/* --> User Service
 
 ### 3.6 Best Practices
 
-| Practice | Why | This project |
-|----------|-----|-------------|
-| Keep gateway thin | Route, don't think. Business logic in services | Yes -- gateway only routes |
-| Fail fast | Circuit breaker + timeouts prevent cascading failure | Yes -- circuit breaker + retry |
-| Health checks | Know which targets are alive | Partial -- endpoint exists but returns `true` always |
-| Observability | Log every request, track metrics | Yes -- LoggingMiddleware + X-Gateway-Duration |
-| Dynamic config | Change routing without deploy | Yes -- routes in PostgreSQL |
-| Idempotent retries | Only retry safe operations (GET) or with idempotency keys | No -- retries all methods |
-| Rate limiting at edge | Block abuse before it reaches services | Yes -- global RateLimitGuard |
-| Request ID propagation | Track request across services | No -- not implemented yet |
+| Practice               | Why                                                       | This project                                         |
+| ---------------------- | --------------------------------------------------------- | ---------------------------------------------------- |
+| Keep gateway thin      | Route, don't think. Business logic in services            | Yes -- gateway only routes                           |
+| Fail fast              | Circuit breaker + timeouts prevent cascading failure      | Yes -- circuit breaker + retry                       |
+| Health checks          | Know which targets are alive                              | Partial -- endpoint exists but returns `true` always |
+| Observability          | Log every request, track metrics                          | Yes -- LoggingMiddleware + X-Gateway-Duration        |
+| Dynamic config         | Change routing without deploy                             | Yes -- routes in PostgreSQL                          |
+| Idempotent retries     | Only retry safe operations (GET) or with idempotency keys | No -- retries all methods                            |
+| Rate limiting at edge  | Block abuse before it reaches services                    | Yes -- global RateLimitGuard                         |
+| Request ID propagation | Track request across services                             | No -- not implemented yet                            |
 
 ## 4. Routing System
 
@@ -384,23 +387,25 @@ async function bootstrap() {
 ```
 
 **Line by line:**
+
 - `NestExpressApplication` -- uses Express under the hood (not Fastify). This gives access to Express-specific features like `req.ip`, `req.path`.
 - `logger: [...]` -- enables all 5 log levels. In production you'd typically disable `debug` and `verbose`.
 
 ```typescript
-  // 2. Global prefix -- all routes start with /api/v1
-  app.setGlobalPrefix(apiPrefix);  // apiPrefix = "api/v1"
+// 2. Global prefix -- all routes start with /api/v1
+app.setGlobalPrefix(apiPrefix); // apiPrefix = "api/v1"
 ```
 
 This means `@Controller('gateway')` becomes `/api/v1/gateway`. Every controller in the app gets this prefix automatically.
 
 ```typescript
-  // 3. Security middleware (runs for EVERY request, before NestJS processing)
-  app.use(helmet());       // Sets 15+ security HTTP headers
-  app.use(compression());  // Gzip compresses response bodies (saves bandwidth)
+// 3. Security middleware (runs for EVERY request, before NestJS processing)
+app.use(helmet()); // Sets 15+ security HTTP headers
+app.use(compression()); // Gzip compresses response bodies (saves bandwidth)
 ```
 
 `helmet()` adds headers like:
+
 - `X-Content-Type-Options: nosniff` -- prevents MIME-type sniffing
 - `X-Frame-Options: SAMEORIGIN` -- prevents clickjacking
 - `Strict-Transport-Security` -- forces HTTPS
@@ -408,42 +413,46 @@ This means `@Controller('gateway')` becomes `/api/v1/gateway`. Every controller 
 `compression()` compresses responses > 1KB by default. A 50KB JSON response becomes ~5KB over the wire.
 
 ```typescript
-  // 4. CORS -- controls which domains can call this API
-  app.enableCors({
-    origin: corsOrigins,           // ['*'] or ['http://localhost:3000']
-    credentials: true,             // Allow cookies/auth headers
-    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
-  });
+// 4. CORS -- controls which domains can call this API
+app.enableCors({
+  origin: corsOrigins, // ['*'] or ['http://localhost:3000']
+  credentials: true, // Allow cookies/auth headers
+  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+});
 ```
 
 **Why `credentials: true`?** Without this, browsers won't send cookies or Authorization headers in cross-origin requests.
 
 ```typescript
-  // 5. Global validation pipe
-  app.useGlobalPipes(new ValidationPipe({
-    whitelist: true,               // Strip properties not in DTO
-    forbidNonWhitelisted: true,    // Throw error if unknown property sent
-    transform: true,               // Auto-convert types (string "5" --> number 5)
+// 5. Global validation pipe
+app.useGlobalPipes(
+  new ValidationPipe({
+    whitelist: true, // Strip properties not in DTO
+    forbidNonWhitelisted: true, // Throw error if unknown property sent
+    transform: true, // Auto-convert types (string "5" --> number 5)
     transformOptions: {
-      enableImplicitConversion: true,  // Enable implicit type conversion
+      enableImplicitConversion: true, // Enable implicit type conversion
     },
-  }));
+  }),
+);
 ```
 
 **`whitelist + forbidNonWhitelisted`** together mean: if the DTO has `name` and `email`, and the client sends `{ name, email, isAdmin: true }`, NestJS rejects the request with 400. This prevents mass-assignment attacks.
 
 ```typescript
-  // 6. Global exception filter and response interceptor
-  app.useGlobalFilters(new HttpExceptionFilter());
-  app.useGlobalInterceptors(new TransformInterceptor());
+// 6. Global exception filter and response interceptor
+app.useGlobalFilters(new HttpExceptionFilter());
+app.useGlobalInterceptors(new TransformInterceptor());
 ```
 
 These two work together:
+
 - `HttpExceptionFilter` catches errors and formats them as `{ success: false, statusCode, error, message, path, timestamp }`
 - `TransformInterceptor` wraps success responses as `{ success: true, statusCode, data, timestamp }`
 
 **Execution order:**
+
 ```
 Request --> Interceptor (before) --> Controller --> Interceptor (after: wrap response)
                                                 --> Filter (only if error thrown)
@@ -485,13 +494,19 @@ NestJS matches routes in declaration order. If `@All('*path')` were first, it wo
 
 ```typescript
 const HOP_BY_HOP_HEADERS = new Set([
-  'content-length', 'transfer-encoding', 'connection',
-  'keep-alive', 'host', 'upgrade', 'expect', 'te',
+  "content-length",
+  "transfer-encoding",
+  "connection",
+  "keep-alive",
+  "host",
+  "upgrade",
+  "expect",
+  "te",
 ]);
 
 const forwardHeaders: Record<string, string> = {};
 for (const [key, value] of Object.entries(req.headers)) {
-  if (!HOP_BY_HOP_HEADERS.has(key.toLowerCase()) && typeof value === 'string') {
+  if (!HOP_BY_HOP_HEADERS.has(key.toLowerCase()) && typeof value === "string") {
     forwardHeaders[key] = value;
   }
 }
@@ -507,12 +522,12 @@ When Express parses the incoming request, it reads the body and sets `content-le
 
 ```typescript
 const gatewayRequest = {
-  path: req.path,       // e.g., "/api/v1/gateway/auth/login"
-  method: req.method,   // e.g., "POST"
+  path: req.path, // e.g., "/api/v1/gateway/auth/login"
+  method: req.method, // e.g., "POST"
   headers: forwardHeaders,
   query: req.query as Record<string, string>,
-  body: req.body,       // parsed by Express JSON middleware
-  tenantId: (req as any).user?.tenantId,  // from JWT (when auth is implemented)
+  body: req.body, // parsed by Express JSON middleware
+  tenantId: (req as any).user?.tenantId, // from JWT (when auth is implemented)
   userId: (req as any).user?.id,
 };
 ```
@@ -528,11 +543,11 @@ Object.entries(response.headers).forEach(([key, value]) => {
 });
 
 // Add gateway-specific headers (debugging/monitoring)
-res.setHeader('X-Gateway-Target', response.targetUrl);   // which backend was called
-res.setHeader('X-Gateway-Duration', response.duration.toString()); // how long it took
+res.setHeader("X-Gateway-Target", response.targetUrl); // which backend was called
+res.setHeader("X-Gateway-Duration", response.duration.toString()); // how long it took
 
-res.status(response.status);  // forward the backend's status code (200, 201, 404, etc.)
-return response.body;  // NestJS serializes this to JSON
+res.status(response.status); // forward the backend's status code (200, 201, 404, etc.)
+return response.body; // NestJS serializes this to JSON
 ```
 
 ### 5.3 Service: `routeRequest()` (`api-gateway.service.ts:68-183`)
@@ -578,69 +593,88 @@ async routeRequest(request: GatewayRequest): Promise<GatewayResponse> {
 ```
 
 **Step 1: Find matching route**
+
 ```typescript
-  const route = await this.findMatchingRoute(request);
-  if (!route) {
-    throw new HttpException('No route found for this request', HttpStatus.NOT_FOUND);
-  }
-  if (!route.enabled) {
-    throw new HttpException('This route is disabled', HttpStatus.SERVICE_UNAVAILABLE);
-  }
+const route = await this.findMatchingRoute(request);
+if (!route) {
+  throw new HttpException(
+    "No route found for this request",
+    HttpStatus.NOT_FOUND,
+  );
+}
+if (!route.enabled) {
+  throw new HttpException(
+    "This route is disabled",
+    HttpStatus.SERVICE_UNAVAILABLE,
+  );
+}
 ```
 
 Routes can be disabled via `PATCH /routes/:id { "enabled": false }` for maintenance without deleting them.
 
 **Step 2: Circuit breaker check**
+
 ```typescript
-  if (route.enableCircuitBreaker && this.isCircuitOpen(route.id)) {
-    throw new HttpException(
-      'Service temporarily unavailable (circuit breaker open)',
-      HttpStatus.SERVICE_UNAVAILABLE,
-    );
-  }
+if (route.enableCircuitBreaker && this.isCircuitOpen(route.id)) {
+  throw new HttpException(
+    "Service temporarily unavailable (circuit breaker open)",
+    HttpStatus.SERVICE_UNAVAILABLE,
+  );
+}
 ```
 
 If the circuit is OPEN, we don't even try to call the backend -- instant 503. This protects the system from cascading timeouts.
 
 **Step 3: Load balancing -- select target**
+
 ```typescript
-  const target = this.selectTarget(route);
-  if (!target) {
-    throw new HttpException('No healthy targets available', HttpStatus.SERVICE_UNAVAILABLE);
-  }
+const target = this.selectTarget(route);
+if (!target) {
+  throw new HttpException(
+    "No healthy targets available",
+    HttpStatus.SERVICE_UNAVAILABLE,
+  );
+}
 ```
 
 **Step 4: Transform + build URL + optional cache check**
-```typescript
-  const transformedRequest = this.transformRequest(request, route);
-  const targetUrl = this.buildTargetUrl(target.url, transformedRequest);
 
-  if (route.enableCaching && request.method === 'GET') {
-    const cached = await this.getCachedResponse(targetUrl);
-    if (cached) return { ...cached, targetUrl, duration: Date.now() - startTime };
-  }
+```typescript
+const transformedRequest = this.transformRequest(request, route);
+const targetUrl = this.buildTargetUrl(target.url, transformedRequest);
+
+if (route.enableCaching && request.method === "GET") {
+  const cached = await this.getCachedResponse(targetUrl);
+  if (cached) return { ...cached, targetUrl, duration: Date.now() - startTime };
+}
 ```
 
 Only GET requests are cached because GET is idempotent (same request = same response). POST/PATCH/DELETE have side effects.
 
 **Step 5: Make the actual HTTP call**
+
 ```typescript
-  const response = await this.makeRequestWithRetry(
-    targetUrl, transformedRequest, route.retryAttempts, route.requestTimeout,
-  );
+const response = await this.makeRequestWithRetry(
+  targetUrl,
+  transformedRequest,
+  route.retryAttempts,
+  route.requestTimeout,
+);
 ```
 
 **Step 6: Record success + transform response + cache**
-```typescript
-  this.recordCircuitSuccess(route.id);  // reset failure count
-  const transformedResponse = this.transformResponse(response, route);
 
-  if (route.enableCaching && request.method === 'GET') {
-    await this.cacheResponse(targetUrl, transformedResponse, route.cacheTTL);
-  }
+```typescript
+this.recordCircuitSuccess(route.id); // reset failure count
+const transformedResponse = this.transformResponse(response, route);
+
+if (route.enableCaching && request.method === "GET") {
+  await this.cacheResponse(targetUrl, transformedResponse, route.cacheTTL);
+}
 ```
 
 **Step 7: Error handling**
+
 ```typescript
   } catch (error) {
     this.recordCircuitFailure(route.id, route);  // increment failure count
@@ -680,6 +714,7 @@ private async findMatchingRoute(request: GatewayRequest): Promise<ApiRoute | nul
 **`getRoutes(tenantId)`** returns routes ordered by `priority DESC`. This is important because a route with priority 20 is checked before priority 10. When multiple routes could match the same path, the higher priority one wins.
 
 **Example priority conflict:**
+
 ```
 Route A: path="/api/v1/gateway/auth/*",    priority=10  --> all auth
 Route B: path="/api/v1/gateway/auth/admin/*", priority=20 --> admin auth only
@@ -703,6 +738,7 @@ private matchesRoute(request: GatewayRequest, route: ApiRoute): boolean {
 ```
 
 **The regex conversion:**
+
 - `*` in route path becomes `.*` in regex (match any characters)
 - `^...$` anchors ensure full path match (not partial)
 - Example: `/api/v1/gateway/auth/*` becomes `/^\/api\/v1\/gateway\/auth\/.*$/`
@@ -755,6 +791,7 @@ private roundRobinSelect(
 ```
 
 **How modulo creates rotation:**
+
 ```
 targets = [A, B, C]  (length = 3)
 
@@ -790,6 +827,7 @@ private weightedSelect(targets: Array<{ url: string; weight?: number }>) {
 ```
 
 **Visual example:**
+
 ```
 targets: [A(weight:3), B(weight:2), C(weight:1)]
 totalWeight = 6
@@ -1057,8 +1095,13 @@ private async cacheResponse(url: string, response: any, ttl: number = 60): Promi
 
 ```typescript
 @Injectable()
-export class TransformInterceptor<T> implements NestInterceptor<T, Response<T>> {
-  intercept(context: ExecutionContext, next: CallHandler): Observable<Response<T>> {
+export class TransformInterceptor<T>
+  implements NestInterceptor<T, Response<T>>
+{
+  intercept(
+    context: ExecutionContext,
+    next: CallHandler,
+  ): Observable<Response<T>> {
     const response = context.switchToHttp().getResponse();
     const statusCode = response.statusCode || HttpStatus.OK;
 
@@ -1075,6 +1118,7 @@ export class TransformInterceptor<T> implements NestInterceptor<T, Response<T>> 
 ```
 
 **How it works:**
+
 1. `next.handle()` calls the controller method and returns its result as an Observable.
 2. `map()` transforms that result by wrapping it in the standard response format.
 3. The controller returns `{ id: "123", name: "John" }`, the interceptor transforms it to `{ success: true, statusCode: 200, data: { id: "123", name: "John" }, timestamp: "..." }`.
@@ -1084,16 +1128,16 @@ export class TransformInterceptor<T> implements NestInterceptor<T, Response<T>> 
 ### 5.14 `HttpExceptionFilter` (`shared/filters/http-exception.filter.ts`)
 
 ```typescript
-@Catch()  // catch ALL exceptions, not just HttpException
+@Catch() // catch ALL exceptions, not just HttpException
 export class HttpExceptionFilter implements ExceptionFilter {
   catch(exception: unknown, host: ArgumentsHost) {
     const ctx = host.switchToHttp();
     const response = ctx.getResponse<Response>();
     const request = ctx.getRequest<Request>();
 
-    let status = HttpStatus.INTERNAL_SERVER_ERROR;  // default: 500
-    let message = 'Internal server error';
-    let error = 'InternalServerError';
+    let status = HttpStatus.INTERNAL_SERVER_ERROR; // default: 500
+    let message = "Internal server error";
+    let error = "InternalServerError";
 
     if (exception instanceof HttpException) {
       // NestJS HTTP exceptions (throw new NotFoundException(), etc.)
@@ -1132,17 +1176,17 @@ export class HttpExceptionFilter implements ExceptionFilter {
 ```typescript
 @Injectable()
 export class LoggingMiddleware implements NestMiddleware {
-  private readonly logger = new Logger('HTTP');
+  private readonly logger = new Logger("HTTP");
 
   use(req: Request, res: Response, next: NextFunction) {
     const { method, originalUrl, ip } = req;
-    const userAgent = req.get('user-agent') || '';
+    const userAgent = req.get("user-agent") || "";
     const startTime = Date.now();
 
     // Listen for response finish event
-    res.on('finish', () => {
+    res.on("finish", () => {
       const { statusCode } = res;
-      const contentLength = res.get('content-length');
+      const contentLength = res.get("content-length");
       const responseTime = Date.now() - startTime;
 
       this.logger.log(
@@ -1150,7 +1194,7 @@ export class LoggingMiddleware implements NestMiddleware {
       );
     });
 
-    next();  // pass to next middleware/handler
+    next(); // pass to next middleware/handler
   }
 }
 ```
@@ -1192,7 +1236,7 @@ targets: [
 ]
 ```
 
-Algorithm: random number * total weight, subtract each target's weight until <= 0.
+Algorithm: random number \* total weight, subtract each target's weight until <= 0.
 
 **When to use:** Mixed server sizes, canary deployments (new version gets weight=1, old version gets weight=9 --> 10% canary traffic).
 
@@ -1209,6 +1253,7 @@ Purely random selection. Statistically even over time.
 Currently implemented as round robin (simplified). In production, would track active connections per target.
 
 **How it would work in production:**
+
 ```
 Target A: 5 active connections
 Target B: 2 active connections
@@ -1221,6 +1266,7 @@ Target C: 8 active connections
 Not yet implemented in code (enum exists). Would hash client IP to always route to same target (session affinity).
 
 **How it would work:**
+
 ```
 hash("192.168.1.1") % 3 = 0 --> Target A (always)
 hash("192.168.1.2") % 3 = 2 --> Target C (always)
@@ -1230,13 +1276,13 @@ hash("192.168.1.2") % 3 = 2 --> Target C (always)
 
 ### 6.2 Comparison
 
-| Strategy | Fairness | Predictability | Session Affinity | Complexity |
-|----------|----------|---------------|------------------|------------|
-| Round Robin | High | High | No | Low |
-| Weighted | Configurable | Medium | No | Low |
-| Random | Statistical | Low | No | Low |
-| Least Connections | High | Low | No | Medium |
-| IP Hash | Varies | High | Yes | Low |
+| Strategy          | Fairness     | Predictability | Session Affinity | Complexity |
+| ----------------- | ------------ | -------------- | ---------------- | ---------- |
+| Round Robin       | High         | High           | No               | Low        |
+| Weighted          | Configurable | Medium         | No               | Low        |
+| Random            | Statistical  | Low            | No               | Low        |
+| Least Connections | High         | Low            | No               | Medium     |
+| IP Hash           | Varies       | High           | Yes              | Low        |
 
 ## 7. Circuit Breaker
 
@@ -1296,13 +1342,13 @@ With circuit breaker (threshold: 5):
 
 ### 7.4 Circuit Breaker in Production (Comparison)
 
-| Feature | This Project | Resilience4j (Java) | Polly (.NET) | Hystrix (deprecated) |
-|---------|-------------|---------------------|-------------|---------------------|
-| State storage | In-memory Map | In-memory | In-memory | In-memory |
-| Sliding window | No | Yes (count/time-based) | Yes | Yes (time-based) |
-| Failure rate % | No (count only) | Yes (configurable %) | Yes | Yes |
-| Half-open limit | 1 request | Configurable N requests | Configurable | 1 request |
-| Metrics/events | Logger only | Event publisher | Event publisher | Metrics stream |
+| Feature         | This Project    | Resilience4j (Java)     | Polly (.NET)    | Hystrix (deprecated) |
+| --------------- | --------------- | ----------------------- | --------------- | -------------------- |
+| State storage   | In-memory Map   | In-memory               | In-memory       | In-memory            |
+| Sliding window  | No              | Yes (count/time-based)  | Yes             | Yes (time-based)     |
+| Failure rate %  | No (count only) | Yes (configurable %)    | Yes             | Yes                  |
+| Half-open limit | 1 request       | Configurable N requests | Configurable    | 1 request            |
+| Metrics/events  | Logger only     | Event publisher         | Event publisher | Metrics stream       |
 
 **Sliding window** means: "50% of the last 100 requests failed" vs this project's "5 consecutive failures". Sliding window is more accurate because 5 failures in 10,000 successful requests shouldn't open the circuit.
 
@@ -1327,12 +1373,14 @@ Cap at 10 seconds to prevent excessive waits.
 **Why cap at 10s?** Without the cap, attempt 10 would wait `1000 * 2^10 = 1,024,000ms` (17 minutes). The cap prevents unreasonable waits.
 
 **Production improvement -- add jitter:**
+
 ```typescript
 // Current: deterministic delay
 const delay = Math.min(1000 * Math.pow(2, attempt), 10000);
 
 // Better: add random jitter to spread retries across time
-const delay = Math.min(1000 * Math.pow(2, attempt), 10000) * (0.5 + Math.random());
+const delay =
+  Math.min(1000 * Math.pow(2, attempt), 10000) * (0.5 + Math.random());
 ```
 
 Without jitter, if 100 requests fail at the same time, they all retry after exactly 1s, then 2s, then 4s -- creating "thundering herd" spikes. Jitter spreads them randomly across the time window.
@@ -1365,14 +1413,14 @@ All responses are wrapped by `TransformInterceptor`:
 
 ### 9.2 Security Stack
 
-| Layer | What it does | Where |
-|-------|-------------|-------|
-| Helmet | Set security HTTP headers (X-Frame-Options, CSP, etc.) | main.ts |
-| Compression | Gzip response bodies | main.ts |
-| CORS | Control cross-origin access | main.ts |
-| ValidationPipe | Reject invalid request bodies | main.ts (global) |
-| Rate Limiting | Prevent abuse | RateLimitGuard |
-| Auth (planned) | JWT validation | Per-route `requiresAuth` flag |
+| Layer          | What it does                                           | Where                         |
+| -------------- | ------------------------------------------------------ | ----------------------------- |
+| Helmet         | Set security HTTP headers (X-Frame-Options, CSP, etc.) | main.ts                       |
+| Compression    | Gzip response bodies                                   | main.ts                       |
+| CORS           | Control cross-origin access                            | main.ts                       |
+| ValidationPipe | Reject invalid request bodies                          | main.ts (global)              |
+| Rate Limiting  | Prevent abuse                                          | RateLimitGuard                |
+| Auth (planned) | JWT validation                                         | Per-route `requiresAuth` flag |
 
 ### 9.3 Logging
 
@@ -1388,29 +1436,29 @@ Format: `[HTTP] {method} {url} {status} {contentLength}b - {duration}ms - {ip} {
 
 ### Route Management
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `GET` | `/api/v1/gateway/routes` | List all routes |
-| `GET` | `/api/v1/gateway/routes/:id` | Get route by ID |
-| `GET` | `/api/v1/gateway/routes/:id/health` | Get route health (targets + circuit state) |
-| `POST` | `/api/v1/gateway/routes` | Create new route |
-| `PATCH` | `/api/v1/gateway/routes/:id` | Update route |
-| `DELETE` | `/api/v1/gateway/routes/:id` | Delete route |
+| Method   | Endpoint                            | Description                                |
+| -------- | ----------------------------------- | ------------------------------------------ |
+| `GET`    | `/api/v1/gateway/routes`            | List all routes                            |
+| `GET`    | `/api/v1/gateway/routes/:id`        | Get route by ID                            |
+| `GET`    | `/api/v1/gateway/routes/:id/health` | Get route health (targets + circuit state) |
+| `POST`   | `/api/v1/gateway/routes`            | Create new route                           |
+| `PATCH`  | `/api/v1/gateway/routes/:id`        | Update route                               |
+| `DELETE` | `/api/v1/gateway/routes/:id`        | Delete route                               |
 
 ### Proxy
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `*` | `/api/v1/gateway/*` | Catch-all proxy -- routes to matched backend service |
+| Method | Endpoint            | Description                                          |
+| ------ | ------------------- | ---------------------------------------------------- |
+| `*`    | `/api/v1/gateway/*` | Catch-all proxy -- routes to matched backend service |
 
 ### Rate Limiting Admin
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `POST` | `/api/v1/rate-limiting/rules` | Create rate limit rule |
-| `GET` | `/api/v1/rate-limiting/violations` | Get violations |
-| `GET` | `/api/v1/rate-limiting/status/:ip` | Get rate limit status for IP |
-| `POST` | `/api/v1/rate-limiting/reset` | Reset rate limit |
+| Method | Endpoint                           | Description                  |
+| ------ | ---------------------------------- | ---------------------------- |
+| `POST` | `/api/v1/rate-limiting/rules`      | Create rate limit rule       |
+| `GET`  | `/api/v1/rate-limiting/violations` | Get violations               |
+| `GET`  | `/api/v1/rate-limiting/status/:ip` | Get rate limit status for IP |
+| `POST` | `/api/v1/rate-limiting/reset`      | Reset rate limit             |
 
 ### Gateway Response Headers
 
@@ -1475,21 +1523,21 @@ erDiagram
 
 ### Environment Variables
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `PORT` | 3000 | Server port |
-| `API_PREFIX` | api/v1 | Global route prefix |
-| `DB_HOST` | localhost | PostgreSQL host |
-| `DB_PORT` | 1111 | PostgreSQL port |
-| `DB_USERNAME` | postgres | DB username |
-| `DB_PASSWORD` | postgres | DB password |
-| `DB_DATABASE` | mydb | DB name |
-| `REDIS_HOST` | localhost | Redis host |
-| `REDIS_PORT` | 1112 | Redis port |
-| `CORS_ENABLED` | true | Enable CORS |
-| `CORS_ORIGINS` | * | Allowed origins |
-| `SWAGGER_ENABLED` | true | Enable Swagger UI |
-| `NODE_ENV` | development | Environment |
+| Variable          | Default     | Description         |
+| ----------------- | ----------- | ------------------- |
+| `PORT`            | 3000        | Server port         |
+| `API_PREFIX`      | api/v1      | Global route prefix |
+| `DB_HOST`         | localhost   | PostgreSQL host     |
+| `DB_PORT`         | 1111        | PostgreSQL port     |
+| `DB_USERNAME`     | postgres    | DB username         |
+| `DB_PASSWORD`     | postgres    | DB password         |
+| `DB_DATABASE`     | mydb        | DB name             |
+| `REDIS_HOST`      | localhost   | Redis host          |
+| `REDIS_PORT`      | 1112        | Redis port          |
+| `CORS_ENABLED`    | true        | Enable CORS         |
+| `CORS_ORIGINS`    | \*          | Allowed origins     |
+| `SWAGGER_ENABLED` | true        | Enable Swagger UI   |
+| `NODE_ENV`        | development | Environment         |
 
 ## 13. Practical Example: Full Setup
 

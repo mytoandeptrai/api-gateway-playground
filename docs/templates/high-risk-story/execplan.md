@@ -41,4 +41,3 @@ Pause for human confirmation if:
 - Data migration or deletion risk appears.
 - Validation requirements need to be weakened.
 - Architecture direction changes.
-

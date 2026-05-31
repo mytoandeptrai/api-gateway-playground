@@ -11,43 +11,44 @@ Implementation:
 Task document: <task_file>.md
 Technical Design Document: <technical_design_document>.md
 ```
+
 You should first check and continue the un-checked work. Please ask permission to confirm before implementing.
 
 2.  **Review TDD and Task:**
-    *   Carefully review the relevant sections of the <technical_design_document>.md, paying close attention to:
-        *   Overview
-        *   Requirements (Functional and Non-Functional)
-        *   Technical Design (Data Model Changes, API Changes, Logic Flow, Dependencies, Security, Performance)
-    *   Thoroughly understand the specific task description from the checklist.
-    *   Ask clarifying questions if *anything* is unclear. Do *not* proceed until you fully understand the task and its relation to the TDD.
+    - Carefully review the relevant sections of the <technical_design_document>.md, paying close attention to:
+      - Overview
+      - Requirements (Functional and Non-Functional)
+      - Technical Design (Data Model Changes, API Changes, Logic Flow, Dependencies, Security, Performance)
+    - Thoroughly understand the specific task description from the checklist.
+    - Ask clarifying questions if _anything_ is unclear. Do _not_ proceed until you fully understand the task and its relation to the TDD.
 
 3.  **Implement the Task:**
-    *   Write code that adheres to the TDD and BoneNet's coding standards.
-    *   Follow Domain-Driven Design principles.
-    *   Use descriptive variable and method names.
-    *   Include comprehensive docstrings:
-    *   Write unit tests for all new functionality.
-    *   Use the appropriate design patterns (CQRS, etc.).
-    *   Reference relevant files and classes using file paths.
-    *   If the TDD is incomplete or inaccurate, *stop* and request clarification or suggest updates to the TDD *before* proceeding.
-    *   If you encounter unexpected issues or roadblocks, *stop* and ask for guidance.
+    - Write code that adheres to the TDD and BoneNet's coding standards.
+    - Follow Domain-Driven Design principles.
+    - Use descriptive variable and method names.
+    - Include comprehensive docstrings:
+    - Write unit tests for all new functionality.
+    - Use the appropriate design patterns (CQRS, etc.).
+    - Reference relevant files and classes using file paths.
+    - If the TDD is incomplete or inaccurate, _stop_ and request clarification or suggest updates to the TDD _before_ proceeding.
+    - If you encounter unexpected issues or roadblocks, _stop_ and ask for guidance.
 
 4.  **Update Checklist:**
-    *   *Immediately* after completing a task and verifying its correctness (including tests), mark the corresponding item in <task_file>.md as done.  Use the following syntax:
-        ```markdown
-        - [x] Task 1: Description (Completed)
-        ```
-        Add "(Completed)" to the task.
-    *   Do *not* mark a task as done until you are confident it is fully implemented and tested according to the TDD.
+    - _Immediately_ after completing a task and verifying its correctness (including tests), mark the corresponding item in <task_file>.md as done. Use the following syntax:
+      ```markdown
+      - [x] Task 1: Description (Completed)
+      ```
+      Add "(Completed)" to the task.
+    - Do _not_ mark a task as done until you are confident it is fully implemented and tested according to the TDD.
 
-6.  **Repeat:** Repeat steps 1-5 for each task in the checklist.
+5.  **Repeat:** Repeat steps 1-5 for each task in the checklist.
 
 ## General Principles
 
-*   Prioritize readability, maintainability, and testability.
-*   Keep it simple. Avoid over-engineering.
-*   Follow the SOLID principles.
-*   DRY (Don't Repeat Yourself).
-*   YAGNI (You Ain't Gonna Need It).
-*   **Accuracy:** The code *must* accurately reflect the TDD. If discrepancies arise, *stop* and clarify.
-* **Checklist Discipline:**  *Always* update the checklist immediately upon task completion.
+- Prioritize readability, maintainability, and testability.
+- Keep it simple. Avoid over-engineering.
+- Follow the SOLID principles.
+- DRY (Don't Repeat Yourself).
+- YAGNI (You Ain't Gonna Need It).
+- **Accuracy:** The code _must_ accurately reflect the TDD. If discrepancies arise, _stop_ and clarify.
+- **Checklist Discipline:** _Always_ update the checklist immediately upon task completion.

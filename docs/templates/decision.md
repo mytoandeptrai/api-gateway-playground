@@ -31,4 +31,3 @@ Tradeoffs:
 ## Follow-Up
 
 - Item.
-

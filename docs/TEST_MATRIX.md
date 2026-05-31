@@ -7,19 +7,19 @@ implemented until tests or validation evidence exist.
 
 ## Status Values
 
-| Status | Meaning |
-| --- | --- |
-| planned | Accepted as intended behavior, not implemented |
-| in_progress | Actively being built |
-| implemented | Implemented and proof exists |
-| changed | Contract changed after earlier implementation |
-| retired | No longer part of the product contract |
+| Status      | Meaning                                        |
+| ----------- | ---------------------------------------------- |
+| planned     | Accepted as intended behavior, not implemented |
+| in_progress | Actively being built                           |
+| implemented | Implemented and proof exists                   |
+| changed     | Contract changed after earlier implementation  |
+| retired     | No longer part of the product contract         |
 
 ## Matrix
 
-| Story | Contract | Unit | Integration | E2E | Platform | Status | Evidence |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| TBD | Add rows when story packets are created | no | no | no | no | planned | none |
+| Story | Contract                                | Unit | Integration | E2E | Platform | Status  | Evidence |
+| ----- | --------------------------------------- | ---- | ----------- | --- | -------- | ------- | -------- |
+| TBD   | Add rows when story packets are created | no   | no          | no  | no       | planned | none     |
 
 ## Evidence Rules
 

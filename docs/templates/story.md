@@ -33,13 +33,13 @@ Describe the behavior this story must make true.
 
 ## Validation
 
-| Layer | Expected proof |
-| --- | --- |
-| Unit | |
-| Integration | |
-| E2E | |
-| Platform | |
-| Release | |
+| Layer       | Expected proof |
+| ----------- | -------------- |
+| Unit        |                |
+| Integration |                |
+| E2E         |                |
+| Platform    |                |
+| Release     |                |
 
 ## Harness Delta
 

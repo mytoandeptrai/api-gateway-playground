@@ -71,13 +71,13 @@ story enters implementation and the selected stack needs them.
 
 Inner layers must not depend on outer layers.
 
-| Layer | May depend on | Must not depend on |
-| --- | --- | --- |
-| domain | nothing project-external except tiny pure utilities | framework, database, UI, provider, process/env |
-| application | domain | framework, UI, provider, database concrete clients |
-| infrastructure | domain, application | interface controllers or UI |
-| interface | all backend layers | UI state or platform shell assumptions |
-| app surfaces | API contracts and app-facing clients | domain internals directly |
+| Layer          | May depend on                                       | Must not depend on                                 |
+| -------------- | --------------------------------------------------- | -------------------------------------------------- |
+| domain         | nothing project-external except tiny pure utilities | framework, database, UI, provider, process/env     |
+| application    | domain                                              | framework, UI, provider, database concrete clients |
+| infrastructure | domain, application                                 | interface controllers or UI                        |
+| interface      | all backend layers                                  | UI state or platform shell assumptions             |
+| app surfaces   | API contracts and app-facing clients                | domain internals directly                          |
 
 ## Parse-First Boundary Rule
 

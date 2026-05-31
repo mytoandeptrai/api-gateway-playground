@@ -36,4 +36,3 @@ proposed | accepted | implemented | rejected
 ## Items
 
 No backlog items yet.
-

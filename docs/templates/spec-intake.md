@@ -18,18 +18,18 @@ What product are we building, for whom, and why?
 
 List the product contract files that should be created under `docs/product/`.
 
-| File | Purpose | Source sections |
-| --- | --- | --- |
-| `docs/product/overview.md` | | |
+| File                       | Purpose | Source sections |
+| -------------------------- | ------- | --------------- |
+| `docs/product/overview.md` |         |                 |
 
 ## Candidate Epics
 
 List only the epics that are clear enough to name. Do not create every story
 packet yet.
 
-| Epic | Description | Status |
-| --- | --- | --- |
-| E01 | | unsliced |
+| Epic | Description | Status   |
+| ---- | ----------- | -------- |
+| E01  |             | unsliced |
 
 ## Architecture Questions
 
@@ -44,13 +44,13 @@ packet yet.
 
 What proof will this project eventually need?
 
-| Layer | Expected proof |
-| --- | --- |
-| Unit | |
-| Integration | |
-| E2E | |
-| Platform | |
-| Release | |
+| Layer       | Expected proof |
+| ----------- | -------------- |
+| Unit        |                |
+| Integration |                |
+| E2E         |                |
+| Platform    |                |
+| Release     |                |
 
 ## Open Decisions
 

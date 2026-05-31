@@ -32,14 +32,14 @@ Choose lane: tiny, normal, or high-risk
 Use the input type to decide where the work should land before choosing the risk
 lane.
 
-| Type | Use when | Typical artifact |
-| --- | --- | --- |
-| New spec | Turning a user-provided project spec into harness-ready docs | Product docs, candidate epics, decisions |
-| Spec slice | Implementing selected behavior from an accepted spec | Story packet |
-| Change request | Changing, fixing, or refining accepted behavior | Story packet or direct patch |
-| New initiative | Adding a larger product area that needs multiple stories | Initiative notes plus story packets |
-| Maintenance request | Changing technical, operational, or dependency behavior | Story packet, validation report, or decision |
-| Harness improvement | Improving how humans and agents collaborate | Direct docs update or `scripts/harness backlog add` |
+| Type                | Use when                                                     | Typical artifact                                    |
+| ------------------- | ------------------------------------------------------------ | --------------------------------------------------- |
+| New spec            | Turning a user-provided project spec into harness-ready docs | Product docs, candidate epics, decisions            |
+| Spec slice          | Implementing selected behavior from an accepted spec         | Story packet                                        |
+| Change request      | Changing, fixing, or refining accepted behavior              | Story packet or direct patch                        |
+| New initiative      | Adding a larger product area that needs multiple stories     | Initiative notes plus story packets                 |
+| Maintenance request | Changing technical, operational, or dependency behavior      | Story packet, validation report, or decision        |
+| Harness improvement | Improving how humans and agents collaborate                  | Direct docs update or `scripts/harness backlog add` |
 
 Do not create or extend a monolithic spec by default after intake. Use product
 docs, stories, decisions, and initiative notes as the living surface.
@@ -86,18 +86,18 @@ Requirements:
 
 Mark one flag for each item that applies:
 
-| Risk flag | Applies when the work touches |
-| --- | --- |
-| Auth | login, logout, sessions, JWT, password, refresh token |
-| Authorization | roles, permissions, tenant or company scope |
-| Data model | schema, migrations, uniqueness, deletion, retention |
-| Audit/security | audit logs, privacy, sensitive data, access logs |
-| External systems | email, payments, cloud services, provider SDKs, queues, webhooks |
-| Public contracts | API shape, response envelope, client-visible behavior |
-| Cross-platform | desktop/mobile/browser split, native shell behavior, deep links |
-| Existing behavior | already implemented or test-covered behavior changes |
-| Weak proof | unclear or missing tests around the affected area |
-| Multi-domain | more than one product domain changes at once |
+| Risk flag         | Applies when the work touches                                    |
+| ----------------- | ---------------------------------------------------------------- |
+| Auth              | login, logout, sessions, JWT, password, refresh token            |
+| Authorization     | roles, permissions, tenant or company scope                      |
+| Data model        | schema, migrations, uniqueness, deletion, retention              |
+| Audit/security    | audit logs, privacy, sensitive data, access logs                 |
+| External systems  | email, payments, cloud services, provider SDKs, queues, webhooks |
+| Public contracts  | API shape, response envelope, client-visible behavior            |
+| Cross-platform    | desktop/mobile/browser split, native shell behavior, deep links  |
+| Existing behavior | already implemented or test-covered behavior changes             |
+| Weak proof        | unclear or missing tests around the affected area                |
+| Multi-domain      | more than one product domain changes at once                     |
 
 ## Classification
 

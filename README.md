@@ -143,37 +143,37 @@ This starts PostgreSQL, Redis, Mailpit, Kafka, Kafka UI, and MinIO. Data is pers
 
 Local infrastructure uses **sequential host ports** starting at `1111` — easy to trace, one block for all Docker services:
 
-| Host | Container | Service |
-|------|-----------|---------|
-| 1111 | 5432 | PostgreSQL |
-| 1112 | 6379 | Redis |
-| 1113 | 1025 | Mailpit SMTP |
-| 1114 | 8025 | Mailpit Web UI |
-| 1115 | 9092 | Kafka |
-| 1116 | 8080 | Kafka UI |
-| 1117 | 9000 | MinIO S3 API |
-| 1118 | 9001 | MinIO Console |
+| Host | Container | Service        |
+| ---- | --------- | -------------- |
+| 1111 | 5432      | PostgreSQL     |
+| 1112 | 6379      | Redis          |
+| 1113 | 1025      | Mailpit SMTP   |
+| 1114 | 8025      | Mailpit Web UI |
+| 1115 | 9092      | Kafka          |
+| 1116 | 8080      | Kafka UI       |
+| 1117 | 9000      | MinIO S3 API   |
+| 1118 | 9001      | MinIO Console  |
 
 > **Kafka note:** `KAFKA_ADVERTISED_LISTENERS` is set to `localhost:1115` so host clients receive the correct broker address in metadata.
 
 #### Web UI (browser)
 
-| Service | URL | Credentials |
-|---------|-----|-------------|
-| Mailpit | http://localhost:1114 | — |
-| Kafka UI | http://localhost:1116 | — |
+| Service       | URL                   | Credentials                 |
+| ------------- | --------------------- | --------------------------- |
+| Mailpit       | http://localhost:1114 | —                           |
+| Kafka UI      | http://localhost:1116 | —                           |
 | MinIO Console | http://localhost:1118 | `minioadmin` / `minioadmin` |
 
 #### App connections (NestJS, CLI, drivers)
 
 Use these from apps running on your host machine (`localhost`):
 
-| Service | Host | Port | Example |
-|---------|------|------|---------|
-| PostgreSQL | `localhost` | `1111` | `postgresql://postgres:postgres@localhost:1111/api-gateway-db` |
-| Redis | `localhost` | `1112` | `redis://localhost:1112` |
-| Mailpit SMTP | `localhost` | `1113` | No auth required in local dev |
-| Kafka | `localhost` | `1115` | `localhost:1115` (bootstrap server) |
+| Service      | Host        | Port   | Example                                                                |
+| ------------ | ----------- | ------ | ---------------------------------------------------------------------- |
+| PostgreSQL   | `localhost` | `1111` | `postgresql://postgres:postgres@localhost:1111/api-gateway-db`         |
+| Redis        | `localhost` | `1112` | `redis://localhost:1112`                                               |
+| Mailpit SMTP | `localhost` | `1113` | No auth required in local dev                                          |
+| Kafka        | `localhost` | `1115` | `localhost:1115` (bootstrap server)                                    |
 | MinIO S3 API | `localhost` | `1117` | `http://localhost:1117` — access key `minioadmin`, secret `minioadmin` |
 
 > **MinIO buckets:** MinIO starts with no buckets. Create them manually via the [MinIO Console](http://localhost:1118) or add an init sidecar in `docker-compose.yml` for fixed bucket names (e.g. `uploads`).
@@ -267,12 +267,12 @@ SWAGGER_PATH=api/docs
 
 Other services follow the same pattern with different `PORT`, `DB_SCHEMA`, and Swagger titles:
 
-| App | Port | Suggested `DB_SCHEMA` |
-|-----|------|------------------------|
-| `api` | 3001 | `api` |
-| `api-gateway` | 3002 | `gateway` |
-| `auth-service` | 3003 | `auth` |
-| `order-service` | 3004 | `orders` |
+| App             | Port | Suggested `DB_SCHEMA` |
+| --------------- | ---- | --------------------- |
+| `api`           | 3001 | `api`                 |
+| `api-gateway`   | 3002 | `gateway`             |
+| `auth-service`  | 3003 | `auth`                |
+| `order-service` | 3004 | `orders`              |
 
 ### 5. Run Migrations
 
@@ -299,26 +299,26 @@ pnpm turbo dev
 pnpm dev:services
 ```
 
-| App          | URL                     |
-|--------------|-------------------------|
-| Web          | http://localhost:3000    |
-| API          | http://localhost:3001    |
-| API Gateway  | http://localhost:3002    |
-| Auth Service | http://localhost:3003    |
-| Order Service| http://localhost:3004    |
+| App           | URL                   |
+| ------------- | --------------------- |
+| Web           | http://localhost:3000 |
+| API           | http://localhost:3001 |
+| API Gateway   | http://localhost:3002 |
+| Auth Service  | http://localhost:3003 |
+| Order Service | http://localhost:3004 |
 
 ## Commands
 
-| Command | Description |
-|---------|-------------|
-| `pnpm turbo dev` | Run all apps in development mode |
-| `pnpm dev:services` | Run backend services only |
-| `pnpm turbo build` | Build all apps |
-| `pnpm turbo lint` | Run linting |
-| `pnpm turbo check-types` | TypeScript type checking |
-| `pnpm format` | Format code with Prettier |
-| `pnpm --filter <app> migration:run` | Run database migrations |
-| `pnpm --filter <app> seed` | Run database seeds |
+| Command                             | Description                      |
+| ----------------------------------- | -------------------------------- |
+| `pnpm turbo dev`                    | Run all apps in development mode |
+| `pnpm dev:services`                 | Run backend services only        |
+| `pnpm turbo build`                  | Build all apps                   |
+| `pnpm turbo lint`                   | Run linting                      |
+| `pnpm turbo check-types`            | TypeScript type checking         |
+| `pnpm format`                       | Format code with Prettier        |
+| `pnpm --filter <app> migration:run` | Run database migrations          |
+| `pnpm --filter <app> seed`          | Run database seeds               |
 
 ### Testing
 
@@ -333,8 +333,8 @@ pnpm --filter <app> test:cov      # Coverage report
 
 Deep-dive documentation for each module is available in both English and Vietnamese:
 
-| Topic | English | Vietnamese |
-|-------|---------|------------|
-| API Gateway | [api-gateway_en.md](docs/personal/explains/api-gateway_en.md) | [api-gateway_vn.md](docs/personal/explains/api-gateway_vn.md) |
+| Topic         | English                                                           | Vietnamese                                                        |
+| ------------- | ----------------------------------------------------------------- | ----------------------------------------------------------------- |
+| API Gateway   | [api-gateway_en.md](docs/personal/explains/api-gateway_en.md)     | [api-gateway_vn.md](docs/personal/explains/api-gateway_vn.md)     |
 | Rate Limiting | [rate-limiting_en.md](docs/personal/explains/rate-limiting_en.md) | [rate-limiting_vn.md](docs/personal/explains/rate-limiting_vn.md) |
-| Caching | [caching_en.md](docs/personal/explains/caching_en.md) | [caching_vn.md](docs/personal/explains/caching_vn.md) |
+| Caching       | [caching_en.md](docs/personal/explains/caching_en.md)             | [caching_vn.md](docs/personal/explains/caching_vn.md)             |

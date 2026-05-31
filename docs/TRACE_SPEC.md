@@ -9,24 +9,24 @@ table. The schema is not changed by Phase 2.
 
 ## Field Reference
 
-| Field | Type | Required | Format | Example |
-| --- | --- | --- | --- | --- |
-| `id` | INTEGER | Automatic | SQLite autoincrement primary key. Do not set manually. | `42` |
-| `created_at` | TEXT | Automatic | SQLite `datetime('now')`. Do not set manually. | `2026-05-27 09:24:37` |
-| `task_summary` | TEXT | Yes | One sentence, at least 10 characters, naming the outcome or attempted outcome. | `Completed Phase 2 docs-only observability and taxonomy specification` |
-| `intake_id` | INTEGER | Standard+ when an intake was recorded | Integer id from the related `intake` row. | `36` |
-| `story_id` | TEXT | Standard+ when work maps to one story | Story id from the `story` table. Use the main story when one trace covers several; list the rest in `notes`. | `US-004` |
-| `agent` | TEXT | Optional for minimal; Standard+ expected | Short agent/tool name. | `codex` |
-| `actions_taken` | TEXT | Standard+ | JSON array text. With the current CLI, pass a comma-separated list and the CLI stores JSON text. | `["read PHASE2.md","drafted TRACE_SPEC.md","updated HARNESS.md"]` |
-| `files_read` | TEXT | Standard+ | JSON array text of paths or command names. With the current CLI, pass a comma-separated list. | `["PHASE2.md","docs/HARNESS.md","scripts/harness query matrix"]` |
-| `files_changed` | TEXT | Standard+ | JSON array text of changed file paths. With the current CLI, pass a comma-separated list; omit only when no files changed. | `["docs/TRACE_SPEC.md","docs/HARNESS.md"]` |
-| `decisions_made` | TEXT | Detailed | JSON array text of decision strings. Include scope decisions, validation choices, and explicit non-goals. | `["Kept Phase 2 docs-only; installer propagation remains out of scope"]` |
-| `errors` | TEXT | Standard+ if errors occurred; Detailed always | JSON array text of error or blocker strings. Until the CLI supports empty arrays directly, use `none` when a detailed trace needs explicit no-error evidence. | `["git diff --check failed before whitespace fix"]` |
-| `outcome` | TEXT | Yes before final response | One of `completed`, `blocked`, `partial`, or `failed`. | `completed` |
-| `duration_seconds` | INTEGER | Detailed when available | Positive integer estimate or measured duration. Leave null if unknown. | `1800` |
-| `token_estimate` | INTEGER | Detailed when available | Positive integer estimate. Leave null if unknown. | `24000` |
-| `harness_friction` | TEXT | Standard+ when friction exists; Detailed always | Free text naming what was hard, missing, ambiguous, or repeated. Use `none` only when the agent actively checked and found no friction. | `New Phase 2 docs are not in installer copy list; recorded as out-of-scope follow-up.` |
-| `notes` | TEXT | Optional | Free text for review context that does not fit other fields. | `Trace covers US-003, US-004, US-005, and US-006.` |
+| Field              | Type    | Required                                        | Format                                                                                                                                                        | Example                                                                                |
+| ------------------ | ------- | ----------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| `id`               | INTEGER | Automatic                                       | SQLite autoincrement primary key. Do not set manually.                                                                                                        | `42`                                                                                   |
+| `created_at`       | TEXT    | Automatic                                       | SQLite `datetime('now')`. Do not set manually.                                                                                                                | `2026-05-27 09:24:37`                                                                  |
+| `task_summary`     | TEXT    | Yes                                             | One sentence, at least 10 characters, naming the outcome or attempted outcome.                                                                                | `Completed Phase 2 docs-only observability and taxonomy specification`                 |
+| `intake_id`        | INTEGER | Standard+ when an intake was recorded           | Integer id from the related `intake` row.                                                                                                                     | `36`                                                                                   |
+| `story_id`         | TEXT    | Standard+ when work maps to one story           | Story id from the `story` table. Use the main story when one trace covers several; list the rest in `notes`.                                                  | `US-004`                                                                               |
+| `agent`            | TEXT    | Optional for minimal; Standard+ expected        | Short agent/tool name.                                                                                                                                        | `codex`                                                                                |
+| `actions_taken`    | TEXT    | Standard+                                       | JSON array text. With the current CLI, pass a comma-separated list and the CLI stores JSON text.                                                              | `["read PHASE2.md","drafted TRACE_SPEC.md","updated HARNESS.md"]`                      |
+| `files_read`       | TEXT    | Standard+                                       | JSON array text of paths or command names. With the current CLI, pass a comma-separated list.                                                                 | `["PHASE2.md","docs/HARNESS.md","scripts/harness query matrix"]`                       |
+| `files_changed`    | TEXT    | Standard+                                       | JSON array text of changed file paths. With the current CLI, pass a comma-separated list; omit only when no files changed.                                    | `["docs/TRACE_SPEC.md","docs/HARNESS.md"]`                                             |
+| `decisions_made`   | TEXT    | Detailed                                        | JSON array text of decision strings. Include scope decisions, validation choices, and explicit non-goals.                                                     | `["Kept Phase 2 docs-only; installer propagation remains out of scope"]`               |
+| `errors`           | TEXT    | Standard+ if errors occurred; Detailed always   | JSON array text of error or blocker strings. Until the CLI supports empty arrays directly, use `none` when a detailed trace needs explicit no-error evidence. | `["git diff --check failed before whitespace fix"]`                                    |
+| `outcome`          | TEXT    | Yes before final response                       | One of `completed`, `blocked`, `partial`, or `failed`.                                                                                                        | `completed`                                                                            |
+| `duration_seconds` | INTEGER | Detailed when available                         | Positive integer estimate or measured duration. Leave null if unknown.                                                                                        | `1800`                                                                                 |
+| `token_estimate`   | INTEGER | Detailed when available                         | Positive integer estimate. Leave null if unknown.                                                                                                             | `24000`                                                                                |
+| `harness_friction` | TEXT    | Standard+ when friction exists; Detailed always | Free text naming what was hard, missing, ambiguous, or repeated. Use `none` only when the agent actively checked and found no friction.                       | `New Phase 2 docs are not in installer copy list; recorded as out-of-scope follow-up.` |
+| `notes`            | TEXT    | Optional                                        | Free text for review context that does not fit other fields.                                                                                                  | `Trace covers US-003, US-004, US-005, and US-006.`                                     |
 
 ## Quality Tiers
 
@@ -92,11 +92,11 @@ Required for:
 
 ## Lane Mapping
 
-| Lane | Expected Tier | Minimum Trace Behavior |
-| --- | --- | --- |
-| Tiny | Minimal | Record summary and outcome; use Standard if friction or Harness docs changed. |
-| Normal | Standard | Record intake, actions, files read, files changed, outcome, and friction/errors. |
-| High-risk | Detailed | Record all fields or explicitly explain unavailable duration/token estimates. |
+| Lane      | Expected Tier | Minimum Trace Behavior                                                           |
+| --------- | ------------- | -------------------------------------------------------------------------------- |
+| Tiny      | Minimal       | Record summary and outcome; use Standard if friction or Harness docs changed.    |
+| Normal    | Standard      | Record intake, actions, files read, files changed, outcome, and friction/errors. |
+| High-risk | Detailed      | Record all fields or explicitly explain unavailable duration/token estimates.    |
 
 ## Friction Capture Protocol
 

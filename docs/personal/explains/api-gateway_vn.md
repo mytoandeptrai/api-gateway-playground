@@ -5,6 +5,7 @@
 API Gateway là điểm vào duy nhất cho tất cả request của client trong kiến trúc microservices. Thay vì client gọi trực tiếp từng service, client gọi gateway, gateway sẽ điều hướng request đến đúng backend service.
 
 **Không có gateway:**
+
 ```
 Client → Auth Service (:3003)
 Client → User Service (:3001)
@@ -12,6 +13,7 @@ Client → Payment Service (:3004)
 ```
 
 **Có gateway:**
+
 ```
 Client → API Gateway (:3001) → Auth Service (:3003)
                               → User Service (:3002)
@@ -151,16 +153,16 @@ graph TD
 
 ### 3.1 Các trách nhiệm chính
 
-| Trách nhiệm | Ý nghĩa | Ví dụ thực tế |
-|-------------|---------|---------------|
-| **Routing** | Điều hướng request đến đúng service | Kiểm soát không lưu sân bay điều phối máy bay đến đúng đường băng |
-| **Load Balancing** | Phân tải giữa nhiều instance | Ngân hàng có nhiều quầy — khách đến quầy ít người nhất |
-| **Circuit Breaker** | Ngắt gọi đến service đang lỗi | Cầu chì điện — ngắt điện trước khi hư hại lan rộng |
-| **Rate Limiting** | Chống lạm dụng | Bảo vệ ở cửa quán bar — giới hạn sức chứa |
-| **Caching** | Trả response đã cache | Lễ tân có sổ ghi chú — trả lời mà không cần gọi lên văn phòng |
-| **Biến đổi Request** | Chỉnh sửa request trước khi forward | Phiên dịch viên tại hội nghị |
-| **Biến đổi Response** | Chỉnh sửa response trước khi trả về | Biên tập viên xem lại trước khi xuất bản |
-| **Auth & Bảo mật** | Xác thực trước khi điều hướng | Trạm kiểm tra an ninh ở lối vào tòa nhà |
+| Trách nhiệm           | Ý nghĩa                             | Ví dụ thực tế                                                     |
+| --------------------- | ----------------------------------- | ----------------------------------------------------------------- |
+| **Routing**           | Điều hướng request đến đúng service | Kiểm soát không lưu sân bay điều phối máy bay đến đúng đường băng |
+| **Load Balancing**    | Phân tải giữa nhiều instance        | Ngân hàng có nhiều quầy — khách đến quầy ít người nhất            |
+| **Circuit Breaker**   | Ngắt gọi đến service đang lỗi       | Cầu chì điện — ngắt điện trước khi hư hại lan rộng                |
+| **Rate Limiting**     | Chống lạm dụng                      | Bảo vệ ở cửa quán bar — giới hạn sức chứa                         |
+| **Caching**           | Trả response đã cache               | Lễ tân có sổ ghi chú — trả lời mà không cần gọi lên văn phòng     |
+| **Biến đổi Request**  | Chỉnh sửa request trước khi forward | Phiên dịch viên tại hội nghị                                      |
+| **Biến đổi Response** | Chỉnh sửa response trước khi trả về | Biên tập viên xem lại trước khi xuất bản                          |
+| **Auth & Bảo mật**    | Xác thực trước khi điều hướng       | Trạm kiểm tra an ninh ở lối vào tòa nhà                           |
 
 ### 3.2 Tại sao không gọi thẳng Service?
 
@@ -224,20 +226,21 @@ Service A + Sidecar Proxy ←→ Service B + Sidecar Proxy
 
 ### 3.4 So sánh với API Gateway Production
 
-| Tính năng | Project này | Kong | Nginx | AWS API Gateway | Spring Cloud Gateway |
-|-----------|------------|------|-------|----------------|---------------------|
-| **Ngôn ngữ** | TypeScript/NestJS | Lua/C (OpenResty) | C | Managed Service | Java/Spring |
-| **Routing** | DB-driven, động | DB-driven, động | Config file, tĩnh | Console/API | Config/Code |
-| **Load Balancing** | 5 chiến lược (in-app) | 4 chiến lược (nginx) | 5+ chiến lược (native) | Auto (AWS nội bộ) | Ribbon/Spring LB |
-| **Circuit Breaker** | In-memory Map | Kong plugin | Không tích hợp | Không tích hợp | Resilience4j |
-| **Rate Limiting** | Redis-backed, 4 thuật toán | Redis/local plugin | ngx_http_limit_req | Token bucket (AWS) | Redis-backed |
-| **Caching** | Redis, 6 chiến lược | Redis/memory plugin | proxy_cache | Tích hợp CloudFront | Spring Cache |
-| **Auth** | Dự kiến (JWT) | JWT/OAuth2 plugins | nginx-jwt module | Cognito/Lambda auth | Spring Security |
-| **Cấu hình** | PostgreSQL | PostgreSQL/Cassandra | nginx.conf files | AWS Console/CloudFormation | YAML/Java code |
-| **Hiệu năng** | ~5k req/s (Node) | ~30k req/s | ~50k+ req/s | Tự động scale | ~10k req/s |
-| **Phù hợp cho** | Học tập, project nhỏ | Production, hệ sinh thái plugin | Hiệu năng cao, tĩnh | Serverless, hệ sinh thái AWS | Hệ sinh thái Spring |
+| Tính năng           | Project này                | Kong                            | Nginx                  | AWS API Gateway              | Spring Cloud Gateway |
+| ------------------- | -------------------------- | ------------------------------- | ---------------------- | ---------------------------- | -------------------- |
+| **Ngôn ngữ**        | TypeScript/NestJS          | Lua/C (OpenResty)               | C                      | Managed Service              | Java/Spring          |
+| **Routing**         | DB-driven, động            | DB-driven, động                 | Config file, tĩnh      | Console/API                  | Config/Code          |
+| **Load Balancing**  | 5 chiến lược (in-app)      | 4 chiến lược (nginx)            | 5+ chiến lược (native) | Auto (AWS nội bộ)            | Ribbon/Spring LB     |
+| **Circuit Breaker** | In-memory Map              | Kong plugin                     | Không tích hợp         | Không tích hợp               | Resilience4j         |
+| **Rate Limiting**   | Redis-backed, 4 thuật toán | Redis/local plugin              | ngx_http_limit_req     | Token bucket (AWS)           | Redis-backed         |
+| **Caching**         | Redis, 6 chiến lược        | Redis/memory plugin             | proxy_cache            | Tích hợp CloudFront          | Spring Cache         |
+| **Auth**            | Dự kiến (JWT)              | JWT/OAuth2 plugins              | nginx-jwt module       | Cognito/Lambda auth          | Spring Security      |
+| **Cấu hình**        | PostgreSQL                 | PostgreSQL/Cassandra            | nginx.conf files       | AWS Console/CloudFormation   | YAML/Java code       |
+| **Hiệu năng**       | ~5k req/s (Node)           | ~30k req/s                      | ~50k+ req/s            | Tự động scale                | ~10k req/s           |
+| **Phù hợp cho**     | Học tập, project nhỏ       | Production, hệ sinh thái plugin | Hiệu năng cao, tĩnh    | Serverless, hệ sinh thái AWS | Hệ sinh thái Spring  |
 
 **Điểm chính:**
+
 - Kong và Nginx đã được kiểm chứng trong production với hàng chục nghìn request/giây.
 - Project này triển khai cùng các pattern (routing, circuit breaker, rate limiting, caching) nhưng bằng TypeScript/NestJS — tuyệt vời để hiểu cách gateway hoạt động bên trong.
 - AWS API Gateway là fully managed — không cần hạ tầng, nhưng bị ràng buộc với AWS.
@@ -287,16 +290,16 @@ TỐT:  Gateway khớp wildcard: /api/v1/gateway/users/* → User Service
 
 ### 3.6 Best Practices
 
-| Thực hành | Lý do | Project này |
-|-----------|-------|-------------|
-| Giữ gateway gọn nhẹ | Điều hướng, không xử lý logic. Business logic ở service | Có — gateway chỉ điều hướng |
-| Thất bại nhanh | Circuit breaker + timeout ngăn lỗi lan truyền | Có — circuit breaker + retry |
-| Health check | Biết target nào đang hoạt động | Một phần — endpoint tồn tại nhưng luôn trả `true` |
-| Khả năng quan sát | Log mọi request, theo dõi metrics | Có — LoggingMiddleware + X-Gateway-Duration |
-| Cấu hình động | Thay đổi routing không cần deploy | Có — route trong PostgreSQL |
-| Retry idempotent | Chỉ retry thao tác an toàn (GET) hoặc có idempotency key | Không — retry tất cả method |
-| Rate limit ở rìa | Chặn lạm dụng trước khi đến service | Có — RateLimitGuard toàn cục |
-| Truyền Request ID | Theo dõi request xuyên suốt các service | Không — chưa triển khai |
+| Thực hành           | Lý do                                                    | Project này                                       |
+| ------------------- | -------------------------------------------------------- | ------------------------------------------------- |
+| Giữ gateway gọn nhẹ | Điều hướng, không xử lý logic. Business logic ở service  | Có — gateway chỉ điều hướng                       |
+| Thất bại nhanh      | Circuit breaker + timeout ngăn lỗi lan truyền            | Có — circuit breaker + retry                      |
+| Health check        | Biết target nào đang hoạt động                           | Một phần — endpoint tồn tại nhưng luôn trả `true` |
+| Khả năng quan sát   | Log mọi request, theo dõi metrics                        | Có — LoggingMiddleware + X-Gateway-Duration       |
+| Cấu hình động       | Thay đổi routing không cần deploy                        | Có — route trong PostgreSQL                       |
+| Retry idempotent    | Chỉ retry thao tác an toàn (GET) hoặc có idempotency key | Không — retry tất cả method                       |
+| Rate limit ở rìa    | Chặn lạm dụng trước khi đến service                      | Có — RateLimitGuard toàn cục                      |
+| Truyền Request ID   | Theo dõi request xuyên suốt các service                  | Không — chưa triển khai                           |
 
 ## 4. Hệ thống Routing
 
@@ -384,23 +387,25 @@ async function bootstrap() {
 ```
 
 **Từng dòng:**
+
 - `NestExpressApplication` — dùng Express bên dưới (không phải Fastify). Cho phép truy cập các tính năng Express như `req.ip`, `req.path`.
 - `logger: [...]` — bật cả 5 mức log. Trong production thường tắt `debug` và `verbose`.
 
 ```typescript
-  // 2. Global prefix — tất cả route bắt đầu bằng /api/v1
-  app.setGlobalPrefix(apiPrefix);  // apiPrefix = "api/v1"
+// 2. Global prefix — tất cả route bắt đầu bằng /api/v1
+app.setGlobalPrefix(apiPrefix); // apiPrefix = "api/v1"
 ```
 
 Nghĩa là `@Controller('gateway')` sẽ thành `/api/v1/gateway`. Mọi controller trong app đều tự động nhận prefix này.
 
 ```typescript
-  // 3. Middleware bảo mật (chạy cho MỌI request, trước khi NestJS xử lý)
-  app.use(helmet());       // Set 15+ security HTTP headers
-  app.use(compression());  // Nén response body bằng Gzip (tiết kiệm bandwidth)
+// 3. Middleware bảo mật (chạy cho MỌI request, trước khi NestJS xử lý)
+app.use(helmet()); // Set 15+ security HTTP headers
+app.use(compression()); // Nén response body bằng Gzip (tiết kiệm bandwidth)
 ```
 
 `helmet()` thêm các header như:
+
 - `X-Content-Type-Options: nosniff` — ngăn MIME-type sniffing
 - `X-Frame-Options: SAMEORIGIN` — ngăn clickjacking
 - `Strict-Transport-Security` — bắt buộc HTTPS
@@ -408,42 +413,46 @@ Nghĩa là `@Controller('gateway')` sẽ thành `/api/v1/gateway`. Mọi control
 `compression()` nén response > 1KB theo mặc định. Response JSON 50KB trở thành ~5KB qua đường truyền.
 
 ```typescript
-  // 4. CORS — kiểm soát domain nào được gọi API này
-  app.enableCors({
-    origin: corsOrigins,           // ['*'] hoặc ['http://localhost:3000']
-    credentials: true,             // Cho phép cookies/auth headers
-    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
-  });
+// 4. CORS — kiểm soát domain nào được gọi API này
+app.enableCors({
+  origin: corsOrigins, // ['*'] hoặc ['http://localhost:3000']
+  credentials: true, // Cho phép cookies/auth headers
+  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+});
 ```
 
 **Tại sao `credentials: true`?** Nếu không có, browser sẽ không gửi cookies hoặc Authorization headers trong cross-origin request.
 
 ```typescript
-  // 5. Global validation pipe
-  app.useGlobalPipes(new ValidationPipe({
-    whitelist: true,               // Loại bỏ property không có trong DTO
-    forbidNonWhitelisted: true,    // Throw lỗi nếu gửi property không xác định
-    transform: true,               // Tự động chuyển đổi kiểu (string "5" → number 5)
+// 5. Global validation pipe
+app.useGlobalPipes(
+  new ValidationPipe({
+    whitelist: true, // Loại bỏ property không có trong DTO
+    forbidNonWhitelisted: true, // Throw lỗi nếu gửi property không xác định
+    transform: true, // Tự động chuyển đổi kiểu (string "5" → number 5)
     transformOptions: {
-      enableImplicitConversion: true,  // Bật chuyển đổi kiểu ngầm
+      enableImplicitConversion: true, // Bật chuyển đổi kiểu ngầm
     },
-  }));
+  }),
+);
 ```
 
 **`whitelist + forbidNonWhitelisted`** kết hợp nghĩa là: nếu DTO có `name` và `email`, mà client gửi `{ name, email, isAdmin: true }`, NestJS từ chối request với 400. Điều này ngăn tấn công mass-assignment.
 
 ```typescript
-  // 6. Global exception filter và response interceptor
-  app.useGlobalFilters(new HttpExceptionFilter());
-  app.useGlobalInterceptors(new TransformInterceptor());
+// 6. Global exception filter và response interceptor
+app.useGlobalFilters(new HttpExceptionFilter());
+app.useGlobalInterceptors(new TransformInterceptor());
 ```
 
 Hai cái này hoạt động cùng nhau:
+
 - `HttpExceptionFilter` bắt lỗi và format thành `{ success: false, statusCode, error, message, path, timestamp }`
 - `TransformInterceptor` bọc response thành công thành `{ success: true, statusCode, data, timestamp }`
 
 **Thứ tự thực thi:**
+
 ```
 Request → Interceptor (trước) → Controller → Interceptor (sau: bọc response)
                                             → Filter (chỉ khi có lỗi throw)
@@ -485,13 +494,19 @@ NestJS khớp route theo thứ tự khai báo. Nếu `@All('*path')` được đ
 
 ```typescript
 const HOP_BY_HOP_HEADERS = new Set([
-  'content-length', 'transfer-encoding', 'connection',
-  'keep-alive', 'host', 'upgrade', 'expect', 'te',
+  "content-length",
+  "transfer-encoding",
+  "connection",
+  "keep-alive",
+  "host",
+  "upgrade",
+  "expect",
+  "te",
 ]);
 
 const forwardHeaders: Record<string, string> = {};
 for (const [key, value] of Object.entries(req.headers)) {
-  if (!HOP_BY_HOP_HEADERS.has(key.toLowerCase()) && typeof value === 'string') {
+  if (!HOP_BY_HOP_HEADERS.has(key.toLowerCase()) && typeof value === "string") {
     forwardHeaders[key] = value;
   }
 }
@@ -507,12 +522,12 @@ Khi Express parse request đến, nó đọc body và set `content-length: 42` (
 
 ```typescript
 const gatewayRequest = {
-  path: req.path,       // vd: "/api/v1/gateway/auth/login"
-  method: req.method,   // vd: "POST"
+  path: req.path, // vd: "/api/v1/gateway/auth/login"
+  method: req.method, // vd: "POST"
   headers: forwardHeaders,
   query: req.query as Record<string, string>,
-  body: req.body,       // đã được Express JSON middleware parse
-  tenantId: (req as any).user?.tenantId,  // từ JWT (khi auth được triển khai)
+  body: req.body, // đã được Express JSON middleware parse
+  tenantId: (req as any).user?.tenantId, // từ JWT (khi auth được triển khai)
   userId: (req as any).user?.id,
 };
 ```
@@ -528,11 +543,11 @@ Object.entries(response.headers).forEach(([key, value]) => {
 });
 
 // Thêm headers riêng của gateway (debugging/monitoring)
-res.setHeader('X-Gateway-Target', response.targetUrl);   // backend nào được gọi
-res.setHeader('X-Gateway-Duration', response.duration.toString()); // mất bao lâu
+res.setHeader("X-Gateway-Target", response.targetUrl); // backend nào được gọi
+res.setHeader("X-Gateway-Duration", response.duration.toString()); // mất bao lâu
 
-res.status(response.status);  // forward status code của backend (200, 201, 404, v.v.)
-return response.body;  // NestJS serialize thành JSON
+res.status(response.status); // forward status code của backend (200, 201, 404, v.v.)
+return response.body; // NestJS serialize thành JSON
 ```
 
 ### 5.3 Service: `routeRequest()` (`api-gateway.service.ts:68-183`)
@@ -578,69 +593,88 @@ async routeRequest(request: GatewayRequest): Promise<GatewayResponse> {
 ```
 
 **Bước 1: Tìm route khớp**
+
 ```typescript
-  const route = await this.findMatchingRoute(request);
-  if (!route) {
-    throw new HttpException('No route found for this request', HttpStatus.NOT_FOUND);
-  }
-  if (!route.enabled) {
-    throw new HttpException('This route is disabled', HttpStatus.SERVICE_UNAVAILABLE);
-  }
+const route = await this.findMatchingRoute(request);
+if (!route) {
+  throw new HttpException(
+    "No route found for this request",
+    HttpStatus.NOT_FOUND,
+  );
+}
+if (!route.enabled) {
+  throw new HttpException(
+    "This route is disabled",
+    HttpStatus.SERVICE_UNAVAILABLE,
+  );
+}
 ```
 
 Route có thể bị tắt qua `PATCH /routes/:id { "enabled": false }` để bảo trì mà không cần xóa.
 
 **Bước 2: Kiểm tra circuit breaker**
+
 ```typescript
-  if (route.enableCircuitBreaker && this.isCircuitOpen(route.id)) {
-    throw new HttpException(
-      'Service temporarily unavailable (circuit breaker open)',
-      HttpStatus.SERVICE_UNAVAILABLE,
-    );
-  }
+if (route.enableCircuitBreaker && this.isCircuitOpen(route.id)) {
+  throw new HttpException(
+    "Service temporarily unavailable (circuit breaker open)",
+    HttpStatus.SERVICE_UNAVAILABLE,
+  );
+}
 ```
 
 Nếu circuit đang MỞ, chúng ta không thử gọi backend — trả 503 ngay lập tức. Điều này bảo vệ hệ thống khỏi cascading timeout.
 
 **Bước 3: Load balancing — chọn target**
+
 ```typescript
-  const target = this.selectTarget(route);
-  if (!target) {
-    throw new HttpException('No healthy targets available', HttpStatus.SERVICE_UNAVAILABLE);
-  }
+const target = this.selectTarget(route);
+if (!target) {
+  throw new HttpException(
+    "No healthy targets available",
+    HttpStatus.SERVICE_UNAVAILABLE,
+  );
+}
 ```
 
 **Bước 4: Biến đổi + xây dựng URL + kiểm tra cache tùy chọn**
-```typescript
-  const transformedRequest = this.transformRequest(request, route);
-  const targetUrl = this.buildTargetUrl(target.url, transformedRequest);
 
-  if (route.enableCaching && request.method === 'GET') {
-    const cached = await this.getCachedResponse(targetUrl);
-    if (cached) return { ...cached, targetUrl, duration: Date.now() - startTime };
-  }
+```typescript
+const transformedRequest = this.transformRequest(request, route);
+const targetUrl = this.buildTargetUrl(target.url, transformedRequest);
+
+if (route.enableCaching && request.method === "GET") {
+  const cached = await this.getCachedResponse(targetUrl);
+  if (cached) return { ...cached, targetUrl, duration: Date.now() - startTime };
+}
 ```
 
 Chỉ request GET được cache vì GET là idempotent (cùng request = cùng response). POST/PATCH/DELETE có side effect.
 
 **Bước 5: Thực hiện HTTP call thật**
+
 ```typescript
-  const response = await this.makeRequestWithRetry(
-    targetUrl, transformedRequest, route.retryAttempts, route.requestTimeout,
-  );
+const response = await this.makeRequestWithRetry(
+  targetUrl,
+  transformedRequest,
+  route.retryAttempts,
+  route.requestTimeout,
+);
 ```
 
 **Bước 6: Ghi nhận thành công + biến đổi response + cache**
-```typescript
-  this.recordCircuitSuccess(route.id);  // reset bộ đếm lỗi
-  const transformedResponse = this.transformResponse(response, route);
 
-  if (route.enableCaching && request.method === 'GET') {
-    await this.cacheResponse(targetUrl, transformedResponse, route.cacheTTL);
-  }
+```typescript
+this.recordCircuitSuccess(route.id); // reset bộ đếm lỗi
+const transformedResponse = this.transformResponse(response, route);
+
+if (route.enableCaching && request.method === "GET") {
+  await this.cacheResponse(targetUrl, transformedResponse, route.cacheTTL);
+}
 ```
 
 **Bước 7: Xử lý lỗi**
+
 ```typescript
   } catch (error) {
     this.recordCircuitFailure(route.id, route);  // tăng bộ đếm lỗi
@@ -680,6 +714,7 @@ private async findMatchingRoute(request: GatewayRequest): Promise<ApiRoute | nul
 **`getRoutes(tenantId)`** trả về route theo thứ tự `priority DESC`. Điều này quan trọng vì route có priority 20 được kiểm tra trước priority 10. Khi nhiều route có thể khớp cùng path, route có priority cao hơn sẽ thắng.
 
 **Ví dụ xung đột priority:**
+
 ```
 Route A: path="/api/v1/gateway/auth/*",    priority=10  → tất cả auth
 Route B: path="/api/v1/gateway/auth/admin/*", priority=20 → chỉ admin auth
@@ -703,6 +738,7 @@ private matchesRoute(request: GatewayRequest, route: ApiRoute): boolean {
 ```
 
 **Chuyển đổi regex:**
+
 - `*` trong path route trở thành `.*` trong regex (khớp bất kỳ ký tự nào)
 - `^...$` neo đảm bảo khớp toàn bộ path (không phải khớp một phần)
 - Ví dụ: `/api/v1/gateway/auth/*` trở thành `/^\/api\/v1\/gateway\/auth\/.*$/`
@@ -755,6 +791,7 @@ private roundRobinSelect(
 ```
 
 **Modulo tạo ra sự xoay vòng như thế nào:**
+
 ```
 targets = [A, B, C]  (length = 3)
 
@@ -790,6 +827,7 @@ private weightedSelect(targets: Array<{ url: string; weight?: number }>) {
 ```
 
 **Ví dụ trực quan:**
+
 ```
 targets: [A(weight:3), B(weight:2), C(weight:1)]
 totalWeight = 6
@@ -1057,8 +1095,13 @@ private async cacheResponse(url: string, response: any, ttl: number = 60): Promi
 
 ```typescript
 @Injectable()
-export class TransformInterceptor<T> implements NestInterceptor<T, Response<T>> {
-  intercept(context: ExecutionContext, next: CallHandler): Observable<Response<T>> {
+export class TransformInterceptor<T>
+  implements NestInterceptor<T, Response<T>>
+{
+  intercept(
+    context: ExecutionContext,
+    next: CallHandler,
+  ): Observable<Response<T>> {
     const response = context.switchToHttp().getResponse();
     const statusCode = response.statusCode || HttpStatus.OK;
 
@@ -1075,6 +1118,7 @@ export class TransformInterceptor<T> implements NestInterceptor<T, Response<T>> 
 ```
 
 **Cách hoạt động:**
+
 1. `next.handle()` gọi method controller và trả kết quả dưới dạng Observable.
 2. `map()` biến đổi kết quả bằng cách bọc nó trong format response chuẩn.
 3. Controller trả về `{ id: "123", name: "John" }`, interceptor biến đổi thành `{ success: true, statusCode: 200, data: { id: "123", name: "John" }, timestamp: "..." }`.
@@ -1084,16 +1128,16 @@ export class TransformInterceptor<T> implements NestInterceptor<T, Response<T>> 
 ### 5.14 `HttpExceptionFilter` (`shared/filters/http-exception.filter.ts`)
 
 ```typescript
-@Catch()  // bắt TẤT CẢ exception, không chỉ HttpException
+@Catch() // bắt TẤT CẢ exception, không chỉ HttpException
 export class HttpExceptionFilter implements ExceptionFilter {
   catch(exception: unknown, host: ArgumentsHost) {
     const ctx = host.switchToHttp();
     const response = ctx.getResponse<Response>();
     const request = ctx.getRequest<Request>();
 
-    let status = HttpStatus.INTERNAL_SERVER_ERROR;  // mặc định: 500
-    let message = 'Internal server error';
-    let error = 'InternalServerError';
+    let status = HttpStatus.INTERNAL_SERVER_ERROR; // mặc định: 500
+    let message = "Internal server error";
+    let error = "InternalServerError";
 
     if (exception instanceof HttpException) {
       // NestJS HTTP exceptions (throw new NotFoundException(), v.v.)
@@ -1132,17 +1176,17 @@ export class HttpExceptionFilter implements ExceptionFilter {
 ```typescript
 @Injectable()
 export class LoggingMiddleware implements NestMiddleware {
-  private readonly logger = new Logger('HTTP');
+  private readonly logger = new Logger("HTTP");
 
   use(req: Request, res: Response, next: NextFunction) {
     const { method, originalUrl, ip } = req;
-    const userAgent = req.get('user-agent') || '';
+    const userAgent = req.get("user-agent") || "";
     const startTime = Date.now();
 
     // Lắng nghe sự kiện response hoàn thành
-    res.on('finish', () => {
+    res.on("finish", () => {
       const { statusCode } = res;
-      const contentLength = res.get('content-length');
+      const contentLength = res.get("content-length");
       const responseTime = Date.now() - startTime;
 
       this.logger.log(
@@ -1150,7 +1194,7 @@ export class LoggingMiddleware implements NestMiddleware {
       );
     });
 
-    next();  // chuyển sang middleware/handler tiếp theo
+    next(); // chuyển sang middleware/handler tiếp theo
   }
 }
 ```
@@ -1209,6 +1253,7 @@ Chọn ngẫu nhiên hoàn toàn. Theo thống kê sẽ đều theo thời gian.
 Hiện tại triển khai như round robin (đơn giản hóa). Trong production sẽ theo dõi số kết nối active mỗi target.
 
 **Cách hoạt động trong production:**
+
 ```
 Target A: 5 kết nối active
 Target B: 2 kết nối active
@@ -1221,6 +1266,7 @@ Target C: 8 kết nối active
 Chưa triển khai trong code (chỉ có enum). Sẽ hash IP của client để luôn điều hướng đến cùng target (session affinity).
 
 **Cách hoạt động:**
+
 ```
 hash("192.168.1.1") % 3 = 0 → Target A (luôn luôn)
 hash("192.168.1.2") % 3 = 2 → Target C (luôn luôn)
@@ -1230,13 +1276,13 @@ hash("192.168.1.2") % 3 = 2 → Target C (luôn luôn)
 
 ### 6.2 So sánh
 
-| Chiến lược | Công bằng | Dự đoán được | Session Affinity | Độ phức tạp |
-|-----------|----------|-------------|-----------------|------------|
-| Round Robin | Cao | Cao | Không | Thấp |
-| Weighted | Tùy chỉnh | Trung bình | Không | Thấp |
-| Random | Thống kê | Thấp | Không | Thấp |
-| Least Connections | Cao | Thấp | Không | Trung bình |
-| IP Hash | Khác nhau | Cao | Có | Thấp |
+| Chiến lược        | Công bằng | Dự đoán được | Session Affinity | Độ phức tạp |
+| ----------------- | --------- | ------------ | ---------------- | ----------- |
+| Round Robin       | Cao       | Cao          | Không            | Thấp        |
+| Weighted          | Tùy chỉnh | Trung bình   | Không            | Thấp        |
+| Random            | Thống kê  | Thấp         | Không            | Thấp        |
+| Least Connections | Cao       | Thấp         | Không            | Trung bình  |
+| IP Hash           | Khác nhau | Cao          | Có               | Thấp        |
 
 ## 7. Circuit Breaker
 
@@ -1296,13 +1342,13 @@ Có circuit breaker (ngưỡng: 5):
 
 ### 7.4 Circuit Breaker trong Production (So sánh)
 
-| Tính năng | Project này | Resilience4j (Java) | Polly (.NET) | Hystrix (deprecated) |
-|-----------|------------|---------------------|-------------|---------------------|
-| Lưu trạng thái | In-memory Map | In-memory | In-memory | In-memory |
-| Cửa sổ trượt | Không | Có (count/time-based) | Có | Có (time-based) |
-| Tỷ lệ lỗi % | Không (chỉ đếm) | Có (cấu hình %) | Có | Có |
-| Giới hạn half-open | 1 request | Cấu hình N request | Cấu hình | 1 request |
-| Metrics/events | Chỉ Logger | Event publisher | Event publisher | Metrics stream |
+| Tính năng          | Project này     | Resilience4j (Java)   | Polly (.NET)    | Hystrix (deprecated) |
+| ------------------ | --------------- | --------------------- | --------------- | -------------------- |
+| Lưu trạng thái     | In-memory Map   | In-memory             | In-memory       | In-memory            |
+| Cửa sổ trượt       | Không           | Có (count/time-based) | Có              | Có (time-based)      |
+| Tỷ lệ lỗi %        | Không (chỉ đếm) | Có (cấu hình %)       | Có              | Có                   |
+| Giới hạn half-open | 1 request       | Cấu hình N request    | Cấu hình        | 1 request            |
+| Metrics/events     | Chỉ Logger      | Event publisher       | Event publisher | Metrics stream       |
 
 **Cửa sổ trượt** nghĩa là: "50% trong 100 request gần nhất thất bại" vs "5 lỗi liên tiếp" của project này. Cửa sổ trượt chính xác hơn vì 5 lỗi trong 10.000 request thành công không nên mở circuit.
 
@@ -1327,12 +1373,14 @@ Giới hạn tối đa 10 giây để tránh đợi quá lâu.
 **Tại sao giới hạn 10 giây?** Nếu không giới hạn, lần thử 10 sẽ đợi `1000 * 2^10 = 1.024.000ms` (17 phút). Giới hạn ngăn thời gian chờ bất hợp lý.
 
 **Cải thiện cho production — thêm jitter:**
+
 ```typescript
 // Hiện tại: delay cố định
 const delay = Math.min(1000 * Math.pow(2, attempt), 10000);
 
 // Tốt hơn: thêm jitter ngẫu nhiên để phân tán retry theo thời gian
-const delay = Math.min(1000 * Math.pow(2, attempt), 10000) * (0.5 + Math.random());
+const delay =
+  Math.min(1000 * Math.pow(2, attempt), 10000) * (0.5 + Math.random());
 ```
 
 Nếu không có jitter, khi 100 request lỗi cùng lúc, tất cả đều retry sau đúng 1 giây, rồi 2 giây, rồi 4 giây — tạo ra các đợt "thundering herd" (bầy đàn ồ ạt). Jitter phân tán chúng ngẫu nhiên trong cửa sổ thời gian.
@@ -1365,14 +1413,14 @@ Tất cả response được bọc bởi `TransformInterceptor`:
 
 ### 9.2 Tầng bảo mật
 
-| Tầng | Chức năng | Vị trí |
-|------|----------|--------|
-| Helmet | Set security HTTP headers (X-Frame-Options, CSP, v.v.) | main.ts |
-| Compression | Nén response body bằng Gzip | main.ts |
-| CORS | Kiểm soát truy cập cross-origin | main.ts |
-| ValidationPipe | Từ chối request body không hợp lệ | main.ts (toàn cục) |
-| Rate Limiting | Chống lạm dụng | RateLimitGuard |
-| Auth (dự kiến) | Xác thực JWT | Cờ `requiresAuth` trên mỗi route |
+| Tầng           | Chức năng                                              | Vị trí                           |
+| -------------- | ------------------------------------------------------ | -------------------------------- |
+| Helmet         | Set security HTTP headers (X-Frame-Options, CSP, v.v.) | main.ts                          |
+| Compression    | Nén response body bằng Gzip                            | main.ts                          |
+| CORS           | Kiểm soát truy cập cross-origin                        | main.ts                          |
+| ValidationPipe | Từ chối request body không hợp lệ                      | main.ts (toàn cục)               |
+| Rate Limiting  | Chống lạm dụng                                         | RateLimitGuard                   |
+| Auth (dự kiến) | Xác thực JWT                                           | Cờ `requiresAuth` trên mỗi route |
 
 ### 9.3 Logging
 
@@ -1388,29 +1436,29 @@ Format: `[HTTP] {method} {url} {status} {contentLength}b - {thời_gian}ms - {ip
 
 ### Quản lý Route
 
-| Method | Endpoint | Mô tả |
-|--------|----------|-------|
-| `GET` | `/api/v1/gateway/routes` | Danh sách tất cả route |
-| `GET` | `/api/v1/gateway/routes/:id` | Lấy route theo ID |
-| `GET` | `/api/v1/gateway/routes/:id/health` | Sức khỏe route (targets + trạng thái circuit) |
-| `POST` | `/api/v1/gateway/routes` | Tạo route mới |
-| `PATCH` | `/api/v1/gateway/routes/:id` | Cập nhật route |
-| `DELETE` | `/api/v1/gateway/routes/:id` | Xóa route |
+| Method   | Endpoint                            | Mô tả                                         |
+| -------- | ----------------------------------- | --------------------------------------------- |
+| `GET`    | `/api/v1/gateway/routes`            | Danh sách tất cả route                        |
+| `GET`    | `/api/v1/gateway/routes/:id`        | Lấy route theo ID                             |
+| `GET`    | `/api/v1/gateway/routes/:id/health` | Sức khỏe route (targets + trạng thái circuit) |
+| `POST`   | `/api/v1/gateway/routes`            | Tạo route mới                                 |
+| `PATCH`  | `/api/v1/gateway/routes/:id`        | Cập nhật route                                |
+| `DELETE` | `/api/v1/gateway/routes/:id`        | Xóa route                                     |
 
 ### Proxy
 
-| Method | Endpoint | Mô tả |
-|--------|----------|-------|
-| `*` | `/api/v1/gateway/*` | Catch-all proxy — điều hướng đến backend service khớp |
+| Method | Endpoint            | Mô tả                                                 |
+| ------ | ------------------- | ----------------------------------------------------- |
+| `*`    | `/api/v1/gateway/*` | Catch-all proxy — điều hướng đến backend service khớp |
 
 ### Quản trị Rate Limiting
 
-| Method | Endpoint | Mô tả |
-|--------|----------|-------|
-| `POST` | `/api/v1/rate-limiting/rules` | Tạo rule rate limit |
-| `GET` | `/api/v1/rate-limiting/violations` | Lấy danh sách vi phạm |
-| `GET` | `/api/v1/rate-limiting/status/:ip` | Trạng thái rate limit theo IP |
-| `POST` | `/api/v1/rate-limiting/reset` | Reset rate limit |
+| Method | Endpoint                           | Mô tả                         |
+| ------ | ---------------------------------- | ----------------------------- |
+| `POST` | `/api/v1/rate-limiting/rules`      | Tạo rule rate limit           |
+| `GET`  | `/api/v1/rate-limiting/violations` | Lấy danh sách vi phạm         |
+| `GET`  | `/api/v1/rate-limiting/status/:ip` | Trạng thái rate limit theo IP |
+| `POST` | `/api/v1/rate-limiting/reset`      | Reset rate limit              |
 
 ### Response Headers của Gateway
 
@@ -1475,21 +1523,21 @@ erDiagram
 
 ### Biến môi trường
 
-| Biến | Mặc định | Mô tả |
-|------|---------|-------|
-| `PORT` | 3000 | Port server |
-| `API_PREFIX` | api/v1 | Prefix cho tất cả route |
-| `DB_HOST` | localhost | Host PostgreSQL |
-| `DB_PORT` | 1111 | Port PostgreSQL |
-| `DB_USERNAME` | postgres | Username DB |
-| `DB_PASSWORD` | postgres | Password DB |
-| `DB_DATABASE` | mydb | Tên DB |
-| `REDIS_HOST` | localhost | Host Redis |
-| `REDIS_PORT` | 1112 | Port Redis |
-| `CORS_ENABLED` | true | Bật CORS |
-| `CORS_ORIGINS` | * | Các origin được phép |
-| `SWAGGER_ENABLED` | true | Bật Swagger UI |
-| `NODE_ENV` | development | Môi trường |
+| Biến              | Mặc định    | Mô tả                   |
+| ----------------- | ----------- | ----------------------- |
+| `PORT`            | 3000        | Port server             |
+| `API_PREFIX`      | api/v1      | Prefix cho tất cả route |
+| `DB_HOST`         | localhost   | Host PostgreSQL         |
+| `DB_PORT`         | 1111        | Port PostgreSQL         |
+| `DB_USERNAME`     | postgres    | Username DB             |
+| `DB_PASSWORD`     | postgres    | Password DB             |
+| `DB_DATABASE`     | mydb        | Tên DB                  |
+| `REDIS_HOST`      | localhost   | Host Redis              |
+| `REDIS_PORT`      | 1112        | Port Redis              |
+| `CORS_ENABLED`    | true        | Bật CORS                |
+| `CORS_ORIGINS`    | \*          | Các origin được phép    |
+| `SWAGGER_ENABLED` | true        | Bật Swagger UI          |
+| `NODE_ENV`        | development | Môi trường              |
 
 ## 13. Ví dụ thực tế: Setup đầy đủ
 

@@ -6,14 +6,14 @@ Explain what must pass before the story is done.
 
 ## Test Plan
 
-| Layer | Cases |
-| --- | --- |
-| Unit | |
-| Integration | |
-| E2E | |
-| Platform | |
-| Performance | |
-| Logs/Audit | |
+| Layer       | Cases |
+| ----------- | ----- |
+| Unit        |       |
+| Integration |       |
+| E2E         |       |
+| Platform    |       |
+| Performance |       |
+| Logs/Audit  |       |
 
 ## Fixtures
 

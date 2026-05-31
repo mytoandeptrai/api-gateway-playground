@@ -14,14 +14,14 @@ command
 
 ## Results
 
-| Check | Result | Notes |
-| --- | --- | --- |
-| Typecheck | not run | Command does not exist yet |
-| Unit | not run | Command does not exist yet |
+| Check       | Result  | Notes                      |
+| ----------- | ------- | -------------------------- |
+| Typecheck   | not run | Command does not exist yet |
+| Unit        | not run | Command does not exist yet |
 | Integration | not run | Command does not exist yet |
-| E2E | not run | Command does not exist yet |
-| Platform | not run | Command does not exist yet |
-| Release | not run | Command does not exist yet |
+| E2E         | not run | Command does not exist yet |
+| Platform    | not run | Command does not exist yet |
+| Release     | not run | Command does not exist yet |
 
 ## Evidence
 

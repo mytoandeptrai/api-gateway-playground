@@ -252,29 +252,29 @@ Activated responsibilities:
 
 ## Current Assessment
 
-| Level | Status | Evidence |
-| --- | --- | --- |
-| H0 | Passed | Harness docs, templates, and durable records exist. |
-| H1 | Achieved | `AGENTS.md`, `docs/HARNESS.md`, `docs/FEATURE_INTAKE.md`, `docs/ARCHITECTURE.md`, `docs/templates/*`, and `docs/TEST_MATRIX.md` exist. |
-| H2 | Achieved | `scripts/harness`, `scripts/schema/001-init.sql`, durable story records, `docs/HARNESS_COMPONENTS.md`, `docs/HARNESS_MATURITY.md`, `docs/TRACE_SPEC.md`, and `docs/CONTEXT_RULES.md` define the Phase 2 surface. |
-| H3 | Not achieved | No automated trace scoring or component-level benchmark attribution exists. |
-| H4 | Not achieved | No generic verification runner or batch proof updater exists. |
-| H5 | Not achieved | No self-improvement protocol or automated evolution loop exists. |
+| Level | Status       | Evidence                                                                                                                                                                                                         |
+| ----- | ------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| H0    | Passed       | Harness docs, templates, and durable records exist.                                                                                                                                                              |
+| H1    | Achieved     | `AGENTS.md`, `docs/HARNESS.md`, `docs/FEATURE_INTAKE.md`, `docs/ARCHITECTURE.md`, `docs/templates/*`, and `docs/TEST_MATRIX.md` exist.                                                                           |
+| H2    | Achieved     | `scripts/harness`, `scripts/schema/001-init.sql`, durable story records, `docs/HARNESS_COMPONENTS.md`, `docs/HARNESS_MATURITY.md`, `docs/TRACE_SPEC.md`, and `docs/CONTEXT_RULES.md` define the Phase 2 surface. |
+| H3    | Not achieved | No automated trace scoring or component-level benchmark attribution exists.                                                                                                                                      |
+| H4    | Not achieved | No generic verification runner or batch proof updater exists.                                                                                                                                                    |
+| H5    | Not achieved | No self-improvement protocol or automated evolution loop exists.                                                                                                                                                 |
 
 ## Responsibility Activation
 
-| Responsibility | H0 | H1 | H2 | H3 | H4 | H5 |
-| --- | --- | --- | --- | --- | --- | --- |
-| Task specification | Missing | Covered | Covered | Covered | Covered | Covered |
-| Context selection | Missing | Partial | Covered | Covered | Covered | Covered |
-| Tool access | Missing | Partial | Partial | Partial | Covered | Covered |
-| Project memory | Missing | Covered | Covered | Covered | Covered | Covered |
-| Task state | Missing | Partial | Covered | Covered | Covered | Covered |
-| Observability | Missing | Missing | Partial | Covered | Covered | Covered |
-| Failure attribution | Missing | Missing | Partial | Covered | Covered | Covered |
-| Verification | Missing | Partial | Partial | Partial | Covered | Covered |
-| Permissions | Missing | Partial | Partial | Partial | Covered | Covered |
-| Entropy auditing | Missing | Missing | Partial | Covered | Covered | Covered |
+| Responsibility         | H0      | H1      | H2      | H3      | H4      | H5      |
+| ---------------------- | ------- | ------- | ------- | ------- | ------- | ------- |
+| Task specification     | Missing | Covered | Covered | Covered | Covered | Covered |
+| Context selection      | Missing | Partial | Covered | Covered | Covered | Covered |
+| Tool access            | Missing | Partial | Partial | Partial | Covered | Covered |
+| Project memory         | Missing | Covered | Covered | Covered | Covered | Covered |
+| Task state             | Missing | Partial | Covered | Covered | Covered | Covered |
+| Observability          | Missing | Missing | Partial | Covered | Covered | Covered |
+| Failure attribution    | Missing | Missing | Partial | Covered | Covered | Covered |
+| Verification           | Missing | Partial | Partial | Partial | Covered | Covered |
+| Permissions            | Missing | Partial | Partial | Partial | Covered | Covered |
+| Entropy auditing       | Missing | Missing | Partial | Covered | Covered | Covered |
 | Intervention recording | Missing | Partial | Partial | Covered | Covered | Covered |
 
 ## Phase 2 Interpretation

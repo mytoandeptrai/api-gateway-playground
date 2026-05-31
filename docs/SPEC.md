@@ -32,14 +32,12 @@
 
 ### 1.1 Mục tiêu học thuật
 
-
 | #   | Mục tiêu                                                                                                                   |
 | --- | -------------------------------------------------------------------------------------------------------------------------- |
 | 1   | Hiểu cách services giao tiếp qua Kafka trong event-driven architecture                                                     |
 | 2   | Xử lý các case thực tế: data race, idempotency, duplicate charge, distributed lock                                         |
 | 3   | Vận hành Kafka: partition ordering, duplicate message, consumer group                                                      |
 | 4   | Nắm vững patterns: Saga (Orchestrator), Compensating Transactions, Outbox Pattern, Eventual Consistency, Dead Letter Queue |
-
 
 ### 1.2 Core User Flow
 
@@ -54,7 +52,6 @@ Login → Product List → Mua ngay → Điền địa chỉ → QR Payment (15 
 
 ### Frontend
 
-
 | Tech                     | Version         | Mục đích              |
 | ------------------------ | --------------- | --------------------- |
 | Next.js                  | 15 (App Router) | Framework             |
@@ -64,9 +61,7 @@ Login → Product List → Mua ngay → Điền địa chỉ → QR Payment (15 
 | Socket.io-client         | v4              | Real-time WebSocket   |
 | TypeScript               | 5.x             | Type safety           |
 
-
 ### Backend
-
 
 | Tech          | Version | Mục đích                           |
 | ------------- | ------- | ---------------------------------- |
@@ -82,9 +77,7 @@ Login → Product List → Mua ngay → Điền địa chỉ → QR Payment (15 
 | opossum       | v8      | Circuit breaker                    |
 | pino          | v8      | Structured logging                 |
 
-
 ### DevOps
-
 
 | Tech           | Mục đích                     |
 | -------------- | ---------------------------- |
@@ -92,13 +85,11 @@ Login → Product List → Mua ngay → Điền địa chỉ → QR Payment (15 
 | pnpm           | Package manager (enforced)   |
 | Docker Compose | Local infrastructure         |
 
-
 ---
 
 ## 3. Infrastructure
 
 ### 3.1 Docker Services
-
 
 | Port | Service        | Credentials           | Mục đích         |
 | ---- | -------------- | --------------------- | ---------------- |
@@ -111,11 +102,9 @@ Login → Product List → Mua ngay → Điền địa chỉ → QR Payment (15 
 | 1117 | MinIO S3 API   | minioadmin:minioadmin | File storage     |
 | 1118 | MinIO Console  | browser               | Manage buckets   |
 
-
 ### 3.2 Database Layout
 
 Single PostgreSQL instance, **một schema per service**:
-
 
 | Schema         | Service              |
 | -------------- | -------------------- |
@@ -130,11 +119,9 @@ Single PostgreSQL instance, **một schema per service**:
 | `refund`       | refund-service       |
 | `orchestrator` | orchestrator-service |
 
-
 ---
 
 ## 4. Services & Ports
-
 
 | Service                     | Port | DB Schema      | Swagger          |
 | --------------------------- | ---- | -------------- | ---------------- |
@@ -149,7 +136,6 @@ Single PostgreSQL instance, **một schema per service**:
 | `apps/notification-service` | 3010 | `notification` | `:3010/api/docs` |
 | `apps/refund-service`       | 3011 | `refund`       | `:3011/api/docs` |
 | `apps/orchestrator-service` | 3012 | `orchestrator` | `:3012/api/docs` |
-
 
 > Tất cả FE request đi qua API Gateway (`localhost:3002`). Gateway forward đến service tương ứng và validate JWT.
 
@@ -924,9 +910,9 @@ Migration: `pnpm --filter <service> migration:generate -- src/database/migration
 
 ```typescript
 // user.entity.ts
-@Entity({ schema: 'auth' })
+@Entity({ schema: "auth" })
 export class User {
-  @PrimaryGeneratedColumn('uuid')
+  @PrimaryGeneratedColumn("uuid")
   id: string;
 
   @Column({ unique: true })
@@ -943,9 +929,9 @@ export class User {
 }
 
 // refresh-token.entity.ts
-@Entity({ schema: 'auth' })
+@Entity({ schema: "auth" })
 export class RefreshToken {
-  @PrimaryGeneratedColumn('uuid')
+  @PrimaryGeneratedColumn("uuid")
   id: string;
 
   @Column({ unique: true })
@@ -955,13 +941,13 @@ export class RefreshToken {
   userId: string;
 
   @ManyToOne(() => User, (u) => u.tokens)
-  @JoinColumn({ name: 'userId' })
+  @JoinColumn({ name: "userId" })
   user: User;
 
   @Column()
   expiresAt: Date;
 
-  @Column({ nullable: true, type: 'timestamptz' })
+  @Column({ nullable: true, type: "timestamptz" })
   revokedAt: Date | null;
 
   @CreateDateColumn()
@@ -973,18 +959,18 @@ export class RefreshToken {
 
 ```typescript
 // product.entity.ts
-@Entity({ schema: 'product' })
+@Entity({ schema: "product" })
 export class Product {
-  @PrimaryGeneratedColumn('uuid')
+  @PrimaryGeneratedColumn("uuid")
   id: string;
 
   @Column()
   name: string;
 
-  @Column({ nullable: true, type: 'text' })
+  @Column({ nullable: true, type: "text" })
   description: string | null;
 
-  @Column({ type: 'decimal', precision: 10, scale: 2 })
+  @Column({ type: "decimal", precision: 10, scale: 2 })
   price: number;
 
   @Column({ nullable: true })
@@ -1003,21 +989,21 @@ export class Product {
 ```typescript
 // enums/order-status.enum.ts
 export enum OrderStatus {
-  PENDING_PAYMENT  = 'PENDING_PAYMENT',
-  PAYMENT_RECEIVED = 'PAYMENT_RECEIVED',
-  CONFIRMED        = 'CONFIRMED',
-  PREPARING        = 'PREPARING',
-  SHIPPED          = 'SHIPPED',
-  DELIVERED        = 'DELIVERED',
-  CANCELLED        = 'CANCELLED',
-  REFUND_REQUESTED = 'REFUND_REQUESTED',
-  REFUNDED         = 'REFUNDED',
+  PENDING_PAYMENT = "PENDING_PAYMENT",
+  PAYMENT_RECEIVED = "PAYMENT_RECEIVED",
+  CONFIRMED = "CONFIRMED",
+  PREPARING = "PREPARING",
+  SHIPPED = "SHIPPED",
+  DELIVERED = "DELIVERED",
+  CANCELLED = "CANCELLED",
+  REFUND_REQUESTED = "REFUND_REQUESTED",
+  REFUNDED = "REFUNDED",
 }
 
 // order.entity.ts
-@Entity({ schema: 'orders' })
+@Entity({ schema: "orders" })
 export class Order {
-  @PrimaryGeneratedColumn('uuid')
+  @PrimaryGeneratedColumn("uuid")
   id: string;
 
   @Column()
@@ -1032,16 +1018,20 @@ export class Order {
   @Column()
   quantity: number;
 
-  @Column({ type: 'decimal', precision: 10, scale: 2 })
+  @Column({ type: "decimal", precision: 10, scale: 2 })
   unitPrice: number;
 
-  @Column({ type: 'decimal', precision: 10, scale: 2 })
+  @Column({ type: "decimal", precision: 10, scale: 2 })
   totalAmount: number;
 
-  @Column({ type: 'enum', enum: OrderStatus, default: OrderStatus.PENDING_PAYMENT })
+  @Column({
+    type: "enum",
+    enum: OrderStatus,
+    default: OrderStatus.PENDING_PAYMENT,
+  })
   status: OrderStatus;
 
-  @Column({ type: 'jsonb' })
+  @Column({ type: "jsonb" })
   shippingAddress: ShippingAddress;
 
   @Column()
@@ -1050,10 +1040,10 @@ export class Order {
   @Column({ nullable: true })
   trackingId: string | null;
 
-  @Column({ nullable: true, type: 'timestamptz' })
+  @Column({ nullable: true, type: "timestamptz" })
   deliveredAt: Date | null;
 
-  @Column({ nullable: true, type: 'text' })
+  @Column({ nullable: true, type: "text" })
   cancelReason: string | null;
 
   @Column({ nullable: true, unique: true })
@@ -1070,9 +1060,9 @@ export class Order {
 }
 
 // outbox-event.entity.ts
-@Entity({ schema: 'orders' })
+@Entity({ schema: "orders" })
 export class OutboxEvent {
-  @PrimaryGeneratedColumn('uuid')
+  @PrimaryGeneratedColumn("uuid")
   id: string;
 
   @Column()
@@ -1081,7 +1071,7 @@ export class OutboxEvent {
   @Column()
   eventType: string;
 
-  @Column({ type: 'jsonb' })
+  @Column({ type: "jsonb" })
   payload: object;
 
   @Column({ default: false })
@@ -1091,7 +1081,7 @@ export class OutboxEvent {
   createdAt: Date;
 
   @ManyToOne(() => Order, (o) => o.outboxEvents)
-  @JoinColumn({ name: 'aggregateId' })
+  @JoinColumn({ name: "aggregateId" })
   order: Order;
 }
 
@@ -1109,15 +1099,15 @@ export interface ShippingAddress {
 ```typescript
 // enums/reservation-status.enum.ts
 export enum ReservationStatus {
-  HELD      = 'HELD',
-  CONFIRMED = 'CONFIRMED',
-  RELEASED  = 'RELEASED',
+  HELD = "HELD",
+  CONFIRMED = "CONFIRMED",
+  RELEASED = "RELEASED",
 }
 
 // inventory-item.entity.ts
-@Entity({ schema: 'inventory' })
+@Entity({ schema: "inventory" })
 export class InventoryItem {
-  @PrimaryGeneratedColumn('uuid')
+  @PrimaryGeneratedColumn("uuid")
   id: string;
 
   @Column({ unique: true })
@@ -1137,10 +1127,10 @@ export class InventoryItem {
 }
 
 // stock-reservation.entity.ts
-@Entity({ schema: 'inventory' })
-@Unique(['sagaId', 'productId'])
+@Entity({ schema: "inventory" })
+@Unique(["sagaId", "productId"])
 export class StockReservation {
-  @PrimaryGeneratedColumn('uuid')
+  @PrimaryGeneratedColumn("uuid")
   id: string;
 
   @Column()
@@ -1155,21 +1145,25 @@ export class StockReservation {
   @Column()
   quantity: number;
 
-  @Column({ type: 'enum', enum: ReservationStatus, default: ReservationStatus.HELD })
+  @Column({
+    type: "enum",
+    enum: ReservationStatus,
+    default: ReservationStatus.HELD,
+  })
   status: ReservationStatus;
 
   @CreateDateColumn()
   createdAt: Date;
 
   @ManyToOne(() => InventoryItem, (i) => i.reservations)
-  @JoinColumn({ name: 'productId', referencedColumnName: 'productId' })
+  @JoinColumn({ name: "productId", referencedColumnName: "productId" })
   item: InventoryItem;
 }
 
 // processed-event.entity.ts  — idempotency guard
-@Entity({ schema: 'inventory' })
+@Entity({ schema: "inventory" })
 export class ProcessedEvent {
-  @PrimaryGeneratedColumn('uuid')
+  @PrimaryGeneratedColumn("uuid")
   id: string;
 
   @Column({ unique: true })
@@ -1185,17 +1179,17 @@ export class ProcessedEvent {
 ```typescript
 // enums/payment-status.enum.ts
 export enum PaymentStatus {
-  PENDING   = 'PENDING',
-  COMPLETED = 'COMPLETED',
-  FAILED    = 'FAILED',
-  EXPIRED   = 'EXPIRED',
-  REFUNDED  = 'REFUNDED',
+  PENDING = "PENDING",
+  COMPLETED = "COMPLETED",
+  FAILED = "FAILED",
+  EXPIRED = "EXPIRED",
+  REFUNDED = "REFUNDED",
 }
 
 // payment-intent.entity.ts
-@Entity({ schema: 'payment' })
+@Entity({ schema: "payment" })
 export class PaymentIntent {
-  @PrimaryGeneratedColumn('uuid')
+  @PrimaryGeneratedColumn("uuid")
   id: string;
 
   @Column({ unique: true })
@@ -1204,19 +1198,19 @@ export class PaymentIntent {
   @Column({ unique: true })
   idempotencyKey: string;
 
-  @Column({ type: 'decimal', precision: 10, scale: 2 })
+  @Column({ type: "decimal", precision: 10, scale: 2 })
   amount: number;
 
   @Column({ nullable: true, unique: true })
   vnpTxnRef: string | null;
 
-  @Column({ type: 'enum', enum: PaymentStatus, default: PaymentStatus.PENDING })
+  @Column({ type: "enum", enum: PaymentStatus, default: PaymentStatus.PENDING })
   status: PaymentStatus;
 
-  @Column({ nullable: true, type: 'timestamptz' })
+  @Column({ nullable: true, type: "timestamptz" })
   paidAt: Date | null;
 
-  @Column({ nullable: true, type: 'timestamptz' })
+  @Column({ nullable: true, type: "timestamptz" })
   refundedAt: Date | null;
 
   @CreateDateColumn()
@@ -1230,9 +1224,9 @@ export class PaymentIntent {
 }
 
 // processed-webhook.entity.ts  — VNPay IPN idempotency guard
-@Entity({ schema: 'payment' })
+@Entity({ schema: "payment" })
 export class ProcessedWebhook {
-  @PrimaryGeneratedColumn('uuid')
+  @PrimaryGeneratedColumn("uuid")
   id: string;
 
   @Column({ unique: true })
@@ -1243,9 +1237,9 @@ export class ProcessedWebhook {
 }
 
 // outbox-event.entity.ts
-@Entity({ schema: 'payment' })
+@Entity({ schema: "payment" })
 export class OutboxEvent {
-  @PrimaryGeneratedColumn('uuid')
+  @PrimaryGeneratedColumn("uuid")
   id: string;
 
   @Column()
@@ -1254,7 +1248,7 @@ export class OutboxEvent {
   @Column()
   eventType: string;
 
-  @Column({ type: 'jsonb' })
+  @Column({ type: "jsonb" })
   payload: object;
 
   @Column({ default: false })
@@ -1264,7 +1258,7 @@ export class OutboxEvent {
   createdAt: Date;
 
   @ManyToOne(() => PaymentIntent, (p) => p.outboxEvents)
-  @JoinColumn({ name: 'aggregateId' })
+  @JoinColumn({ name: "aggregateId" })
   intent: PaymentIntent;
 }
 ```
@@ -1274,17 +1268,17 @@ export class OutboxEvent {
 ```typescript
 // enums/shipment-status.enum.ts
 export enum ShipmentStatus {
-  PREPARING  = 'PREPARING',
-  PICKED_UP  = 'PICKED_UP',
-  IN_TRANSIT = 'IN_TRANSIT',
-  DELIVERED  = 'DELIVERED',
-  CANCELLED  = 'CANCELLED',
+  PREPARING = "PREPARING",
+  PICKED_UP = "PICKED_UP",
+  IN_TRANSIT = "IN_TRANSIT",
+  DELIVERED = "DELIVERED",
+  CANCELLED = "CANCELLED",
 }
 
 // shipment-record.entity.ts
-@Entity({ schema: 'shipping' })
+@Entity({ schema: "shipping" })
 export class ShipmentRecord {
-  @PrimaryGeneratedColumn('uuid')
+  @PrimaryGeneratedColumn("uuid")
   id: string;
 
   @Column({ unique: true })
@@ -1293,10 +1287,14 @@ export class ShipmentRecord {
   @Column()
   sagaId: string;
 
-  @Column({ unique: true, default: () => 'gen_random_uuid()' })
+  @Column({ unique: true, default: () => "gen_random_uuid()" })
   trackingId: string;
 
-  @Column({ type: 'enum', enum: ShipmentStatus, default: ShipmentStatus.PREPARING })
+  @Column({
+    type: "enum",
+    enum: ShipmentStatus,
+    default: ShipmentStatus.PREPARING,
+  })
   status: ShipmentStatus;
 
   @CreateDateColumn()
@@ -1311,9 +1309,9 @@ export class ShipmentRecord {
 
 ```typescript
 // notification-log.entity.ts
-@Entity({ schema: 'notification' })
+@Entity({ schema: "notification" })
 export class NotificationLog {
-  @PrimaryGeneratedColumn('uuid')
+  @PrimaryGeneratedColumn("uuid")
   id: string;
 
   @Column()
@@ -1328,10 +1326,10 @@ export class NotificationLog {
   @Column()
   channel: string;
 
-  @Column({ type: 'jsonb' })
+  @Column({ type: "jsonb" })
   payload: object;
 
-  @Column({ default: 'SENT' })
+  @Column({ default: "SENT" })
   status: string;
 
   @CreateDateColumn()
@@ -1344,16 +1342,16 @@ export class NotificationLog {
 ```typescript
 // enums/refund-status.enum.ts
 export enum RefundStatus {
-  REFUND_PENDING  = 'REFUND_PENDING',
-  REFUND_APPROVED = 'REFUND_APPROVED',
-  REFUND_REJECTED = 'REFUND_REJECTED',
-  REFUNDED        = 'REFUNDED',
+  REFUND_PENDING = "REFUND_PENDING",
+  REFUND_APPROVED = "REFUND_APPROVED",
+  REFUND_REJECTED = "REFUND_REJECTED",
+  REFUNDED = "REFUNDED",
 }
 
 // refund-request.entity.ts
-@Entity({ schema: 'refund' })
+@Entity({ schema: "refund" })
 export class RefundRequest {
-  @PrimaryGeneratedColumn('uuid')
+  @PrimaryGeneratedColumn("uuid")
   id: string;
 
   @Column({ unique: true })
@@ -1362,16 +1360,20 @@ export class RefundRequest {
   @Column()
   userId: string;
 
-  @Column({ type: 'text' })
+  @Column({ type: "text" })
   reason: string;
 
-  @Column({ type: 'text', array: true, default: [] })
+  @Column({ type: "text", array: true, default: [] })
   fileUrls: string[];
 
-  @Column({ type: 'enum', enum: RefundStatus, default: RefundStatus.REFUND_PENDING })
+  @Column({
+    type: "enum",
+    enum: RefundStatus,
+    default: RefundStatus.REFUND_PENDING,
+  })
   status: RefundStatus;
 
-  @Column({ nullable: true, type: 'text' })
+  @Column({ nullable: true, type: "text" })
   reviewNote: string | null;
 
   @CreateDateColumn()
@@ -1385,9 +1387,9 @@ export class RefundRequest {
 }
 
 // outbox-event.entity.ts
-@Entity({ schema: 'refund' })
+@Entity({ schema: "refund" })
 export class OutboxEvent {
-  @PrimaryGeneratedColumn('uuid')
+  @PrimaryGeneratedColumn("uuid")
   id: string;
 
   @Column()
@@ -1396,7 +1398,7 @@ export class OutboxEvent {
   @Column()
   eventType: string;
 
-  @Column({ type: 'jsonb' })
+  @Column({ type: "jsonb" })
   payload: object;
 
   @Column({ default: false })
@@ -1406,7 +1408,7 @@ export class OutboxEvent {
   createdAt: Date;
 
   @ManyToOne(() => RefundRequest, (r) => r.outboxEvents)
-  @JoinColumn({ name: 'aggregateId' })
+  @JoinColumn({ name: "aggregateId" })
   request: RefundRequest;
 }
 ```
@@ -1416,28 +1418,28 @@ export class OutboxEvent {
 ```typescript
 // enums/saga-status.enum.ts
 export enum SagaStatus {
-  RUNNING      = 'RUNNING',
-  COMPLETED    = 'COMPLETED',
-  COMPENSATING = 'COMPENSATING',
-  COMPENSATED  = 'COMPENSATED',
-  FAILED       = 'FAILED',
+  RUNNING = "RUNNING",
+  COMPLETED = "COMPLETED",
+  COMPENSATING = "COMPENSATING",
+  COMPENSATED = "COMPENSATED",
+  FAILED = "FAILED",
 }
 
 // enums/saga-step-status.enum.ts
 export enum SagaStepStatus {
-  PENDING      = 'PENDING',
-  IN_PROGRESS  = 'IN_PROGRESS',
-  COMPLETED    = 'COMPLETED',
-  FAILED       = 'FAILED',
-  COMPENSATING = 'COMPENSATING',
-  COMPENSATED  = 'COMPENSATED',
-  SKIPPED      = 'SKIPPED',
+  PENDING = "PENDING",
+  IN_PROGRESS = "IN_PROGRESS",
+  COMPLETED = "COMPLETED",
+  FAILED = "FAILED",
+  COMPENSATING = "COMPENSATING",
+  COMPENSATED = "COMPENSATED",
+  SKIPPED = "SKIPPED",
 }
 
 // saga-instance.entity.ts
-@Entity({ schema: 'orchestrator' })
+@Entity({ schema: "orchestrator" })
 export class SagaInstance {
-  @PrimaryGeneratedColumn('uuid')
+  @PrimaryGeneratedColumn("uuid")
   id: string;
 
   @Column()
@@ -1449,7 +1451,7 @@ export class SagaInstance {
   @Column()
   userId: string;
 
-  @Column({ type: 'enum', enum: SagaStatus, default: SagaStatus.RUNNING })
+  @Column({ type: "enum", enum: SagaStatus, default: SagaStatus.RUNNING })
   status: SagaStatus;
 
   @Column()
@@ -1466,9 +1468,9 @@ export class SagaInstance {
 }
 
 // saga-step.entity.ts
-@Entity({ schema: 'orchestrator' })
+@Entity({ schema: "orchestrator" })
 export class SagaStep {
-  @PrimaryGeneratedColumn('uuid')
+  @PrimaryGeneratedColumn("uuid")
   id: string;
 
   @Column()
@@ -1477,35 +1479,39 @@ export class SagaStep {
   @Column()
   stepName: string;
 
-  @Column({ type: 'enum', enum: SagaStepStatus, default: SagaStepStatus.PENDING })
+  @Column({
+    type: "enum",
+    enum: SagaStepStatus,
+    default: SagaStepStatus.PENDING,
+  })
   status: SagaStepStatus;
 
   @Column({ nullable: true })
   commandTopic: string | null;
 
-  @Column({ nullable: true, type: 'jsonb' })
+  @Column({ nullable: true, type: "jsonb" })
   payload: object | null;
 
-  @Column({ nullable: true, type: 'jsonb' })
+  @Column({ nullable: true, type: "jsonb" })
   result: object | null;
 
   @Column({ default: 0 })
   retryCount: number;
 
-  @Column({ nullable: true, type: 'text' })
+  @Column({ nullable: true, type: "text" })
   failedReason: string | null;
 
-  @Column({ nullable: true, type: 'timestamptz' })
+  @Column({ nullable: true, type: "timestamptz" })
   startedAt: Date | null;
 
-  @Column({ nullable: true, type: 'timestamptz' })
+  @Column({ nullable: true, type: "timestamptz" })
   completedAt: Date | null;
 
   @CreateDateColumn()
   createdAt: Date;
 
   @ManyToOne(() => SagaInstance, (s) => s.steps)
-  @JoinColumn({ name: 'sagaId' })
+  @JoinColumn({ name: "sagaId" })
   saga: SagaInstance;
 }
 ```
@@ -1520,19 +1526,18 @@ Mọi event đều wrap trong envelope này:
 
 ```typescript
 interface KafkaEvent<T = unknown> {
-  eventId: string;        // UUID — dùng cho idempotency
-  eventType: string;      // VD: "inventory.stock_reserved"
+  eventId: string; // UUID — dùng cho idempotency
+  eventType: string; // VD: "inventory.stock_reserved"
   sagaId: string;
   orderId: string;
   userId: string;
-  correlationId: string;  // Trace request xuyên suốt
-  timestamp: string;      // ISO 8601
+  correlationId: string; // Trace request xuyên suốt
+  timestamp: string; // ISO 8601
   payload: T;
 }
 ```
 
 ### 8.2 Topic Registry
-
 
 | Topic                          | Publisher            | Consumers                  | Loại    |
 | ------------------------------ | -------------------- | -------------------------- | ------- |
@@ -1561,7 +1566,6 @@ interface KafkaEvent<T = unknown> {
 | `refund.validated`             | Refund               | Orchestrator               | Event   |
 | `refund.status_updated`        | Orchestrator         | Refund, Notification       | Command |
 | `*.dlq`                        | Kafka (auto)         | Manual intervention        | DLQ     |
-
 
 ### 8.3 Key Payload Schemas
 
@@ -1679,17 +1683,15 @@ interface RefundValidatedPayload {
 
 ### 9.2 Compensation Matrix
 
-
 | Step khi fail           | Release Stock | Refund Payment | Cancel Order | Notify |
 | ----------------------- | ------------- | -------------- | ------------ | ------ |
-| RESERVE_INVENTORY       | —             | —              | ✅            | ✅      |
-| AWAIT_PAYMENT (timeout) | ✅             | —              | ✅            | ✅      |
-| AWAIT_PAYMENT (fail)    | ✅             | —              | ✅            | ✅      |
-| CONFIRM_INVENTORY       | ✅             | ✅*             | ✅            | ✅      |
-| CREATE_SHIPPING         | ✅             | ✅              | ✅            | ✅      |
+| RESERVE_INVENTORY       | —             | —              | ✅           | ✅     |
+| AWAIT_PAYMENT (timeout) | ✅            | —              | ✅           | ✅     |
+| AWAIT_PAYMENT (fail)    | ✅            | —              | ✅           | ✅     |
+| CONFIRM_INVENTORY       | ✅            | ✅\*           | ✅           | ✅     |
+| CREATE_SHIPPING         | ✅            | ✅             | ✅           | ✅     |
 
-
-> *Refund chỉ xảy ra nếu `payment.completed` đã được nhận trước đó.
+> \*Refund chỉ xảy ra nếu `payment.completed` đã được nhận trước đó.
 
 ### 9.3 Refund Saga Flow
 
@@ -1726,7 +1728,6 @@ interface RefundValidatedPayload {
 
 ### 9.4 Retry & Timeout Policy
 
-
 | Parameter            | Value                                                  |
 | -------------------- | ------------------------------------------------------ |
 | Max retry per step   | 3                                                      |
@@ -1734,7 +1735,6 @@ interface RefundValidatedPayload {
 | Step timeout         | 30 giây                                                |
 | Sau 3 lần retry fail | Message → DLQ, SagaStep = FAILED, trigger compensation |
 | Payment step timeout | 15 phút (business rule)                                |
-
 
 ---
 
@@ -1778,7 +1778,6 @@ Background Worker — dùng @nestjs/schedule (@Cron every 5 giây)
 
 ### 11.1 Route Map
 
-
 | Route                     | Component         | Auth | Mô tả                        |
 | ------------------------- | ----------------- | ---- | ---------------------------- |
 | `/login`                  | `LoginPage`       | No   | Form đăng nhập               |
@@ -1789,9 +1788,7 @@ Background Worker — dùng @nestjs/schedule (@Cron every 5 giây)
 | `/orders/:orderId`        | `OrderDetailPage` | Yes  | Chi tiết + timeline          |
 | `/orders/:orderId/refund` | `RefundPage`      | Yes  | Form upload + lý do          |
 
-
 ### 11.2 Shared Components
-
 
 | Component           | Mô tả                                      |
 | ------------------- | ------------------------------------------ |
@@ -1803,7 +1800,6 @@ Background Worker — dùng @nestjs/schedule (@Cron every 5 giây)
 | `FileUploadZone`    | Drag & drop, preview, validate type/size   |
 | `NotificationToast` | WebSocket-triggered toast, auto-dismiss 5s |
 | `ProtectedRoute`    | HOC redirect về /login nếu chưa auth       |
-
 
 ### 11.3 Data Fetching Strategy
 
@@ -2047,12 +2043,10 @@ NEXT_PUBLIC_WS_URL=http://localhost:3010
 
 Các quyết định đã được chốt:
 
-| # | Quyết định | Chi tiết |
-|---|---|---|
-| 1 | **JWT storage** | `accessToken` → Zustand in-memory (không persist). `refreshToken` → httpOnly cookie. App init → gọi silent refresh để lấy lại accessToken nếu cookie còn hạn |
-| 2 | **WebSocket** | Socket.io với NestJS `@WebSocketGateway` built-in |
-| 3 | **Shipping mock interval** | Config qua env `MOCK_SHIPPING_INTERVAL_MS` |
-| 4 | **AI Refund Validation V1** | Approve nếu: ít nhất 1 file hợp lệ + `reason.length >= 20`. Reject kèm lý do cụ thể |
-| 5 | **Seed user** | `test@nextmart.com` / `Test@123` |
-
-
+| #   | Quyết định                  | Chi tiết                                                                                                                                                     |
+| --- | --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 1   | **JWT storage**             | `accessToken` → Zustand in-memory (không persist). `refreshToken` → httpOnly cookie. App init → gọi silent refresh để lấy lại accessToken nếu cookie còn hạn |
+| 2   | **WebSocket**               | Socket.io với NestJS `@WebSocketGateway` built-in                                                                                                            |
+| 3   | **Shipping mock interval**  | Config qua env `MOCK_SHIPPING_INTERVAL_MS`                                                                                                                   |
+| 4   | **AI Refund Validation V1** | Approve nếu: ít nhất 1 file hợp lệ + `reason.length >= 20`. Reject kèm lý do cụ thể                                                                          |
+| 5   | **Seed user**               | `test@nextmart.com` / `Test@123`                                                                                                                             |

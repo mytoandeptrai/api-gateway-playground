@@ -90,6 +90,7 @@ Window 1 (00:00-01:00)    Window 2 (01:00-02:00)
 ```
 
 **How it works in code** (`checkFixedWindow`):
+
 1. Calculate which window we're in: `currentWindow = floor(now / windowMs)`
 2. Redis key: `ratelimit:{ruleId}:{scope}:{currentWindow}`
 3. Get counter from Redis → check if < maxRequests
@@ -120,6 +121,7 @@ Time: ──────[===========60s window===========]──────>
 ```
 
 **How it works in code** (`checkSlidingWindow`):
+
 1. Uses Redis Sorted Set — each request stored with timestamp as score
 2. Remove old entries: `ZREMRANGEBYSCORE key 0 (now - windowMs)`
 3. Count remaining: `ZCARD key`
@@ -147,6 +149,7 @@ Wait 3s: [TTTTTTTTTT] 10 tokens  (refilled: 4 + 2*3 = 10, capped)
 ```
 
 **How it works in code** (`checkTokenBucket`):
+
 1. Redis stores: `{ tokens: number, lastRefill: timestamp }`
 2. On check: calculate tokens to add based on elapsed time
 3. `tokens = min(burstSize, tokens + elapsed * refillRate)`
@@ -177,6 +180,7 @@ Wait 3s: [TTTTTTTTTT] 10 tokens  (refilled: 4 + 2*3 = 10, capped)
 ```
 
 **How it works in code** (`checkLeakyBucket`):
+
 1. Redis stores: `{ queueSize: number, lastLeak: timestamp }`
 2. On check: calculate leaked requests based on elapsed time
 3. `queueSize = max(0, queueSize - elapsed * leakRate)`
@@ -189,12 +193,12 @@ Wait 3s: [TTTTTTTTTT] 10 tokens  (refilled: 4 + 2*3 = 10, capped)
 
 ### 3.3 Algorithm Comparison
 
-| Algorithm | Burst Tolerance | Memory | Accuracy | Complexity |
-|-----------|----------------|--------|----------|------------|
-| Fixed Window | No (boundary issue) | Low (1 counter) | Low | Simple |
-| Sliding Window | No | High (all timestamps) | High | Medium |
-| Token Bucket | Yes (up to burst size) | Low (2 values) | Medium | Medium |
-| Leaky Bucket | No (smooth output) | Low (2 values) | High | Medium |
+| Algorithm      | Burst Tolerance        | Memory                | Accuracy | Complexity |
+| -------------- | ---------------------- | --------------------- | -------- | ---------- |
+| Fixed Window   | No (boundary issue)    | Low (1 counter)       | Low      | Simple     |
+| Sliding Window | No                     | High (all timestamps) | High     | Medium     |
+| Token Bucket   | Yes (up to burst size) | Low (2 values)        | Medium   | Medium     |
+| Leaky Bucket   | No (smooth output)     | Low (2 values)        | High     | Medium     |
 
 ### 3.4 Decision Guide
 
@@ -213,13 +217,13 @@ graph TD
 
 Rate limiting rules can target different scopes:
 
-| Scope | What it means | Example |
-|-------|--------------|---------|
-| `GLOBAL` | All requests regardless of who | 10000 req/min for entire API |
-| `TENANT` | Per organization/company | Tenant A: 1000 req/hour |
-| `USER` | Per authenticated user | User X: 100 req/min |
-| `IP` | Per IP address | 192.168.1.1: 60 req/min |
-| `ENDPOINT` | Per specific API route | POST /auth/login: 5 req/min |
+| Scope      | What it means                  | Example                      |
+| ---------- | ------------------------------ | ---------------------------- |
+| `GLOBAL`   | All requests regardless of who | 10000 req/min for entire API |
+| `TENANT`   | Per organization/company       | Tenant A: 1000 req/hour      |
+| `USER`     | Per authenticated user         | User X: 100 req/min          |
+| `IP`       | Per IP address                 | 192.168.1.1: 60 req/min      |
+| `ENDPOINT` | Per specific API route         | POST /auth/login: 5 req/min  |
 
 Multiple scopes can apply simultaneously. The **most restrictive rule wins** — if global allows but IP doesn't, request is blocked.
 
@@ -255,6 +259,7 @@ export class UsersController { ... }
 ```
 
 The guard automatically:
+
 1. Extracts IP, user, tenant from the request
 2. Queries DB for matching rules
 3. Checks Redis counters
@@ -392,26 +397,26 @@ erDiagram
 
 ## 7. Redis Key Structure
 
-| Algorithm | Redis Key Pattern | Data Structure |
-|-----------|------------------|----------------|
-| Token Bucket | `ratelimit:{ruleId}:{scope}` | String: `{"tokens": 8, "lastRefill": 1708300000}` |
-| Sliding Window | `ratelimit:{ruleId}:{scope}:requests` | Sorted Set: score=timestamp, member=`{timestamp}-{random}` |
-| Fixed Window | `ratelimit:{ruleId}:{scope}:{windowNumber}` | String: counter (integer) |
-| Leaky Bucket | `ratelimit:{ruleId}:{scope}` | String: `{"queueSize": 3, "lastLeak": 1708300000}` |
+| Algorithm      | Redis Key Pattern                           | Data Structure                                             |
+| -------------- | ------------------------------------------- | ---------------------------------------------------------- |
+| Token Bucket   | `ratelimit:{ruleId}:{scope}`                | String: `{"tokens": 8, "lastRefill": 1708300000}`          |
+| Sliding Window | `ratelimit:{ruleId}:{scope}:requests`       | Sorted Set: score=timestamp, member=`{timestamp}-{random}` |
+| Fixed Window   | `ratelimit:{ruleId}:{scope}:{windowNumber}` | String: counter (integer)                                  |
+| Leaky Bucket   | `ratelimit:{ruleId}:{scope}`                | String: `{"queueSize": 3, "lastLeak": 1708300000}`         |
 
 All keys have TTL = `windowSeconds * 2` to auto-cleanup.
 
 ## 8. Presets Reference
 
-| Preset | Max Requests | Window | Algorithm | Use Case |
-|--------|-------------|--------|-----------|----------|
-| `STRICT` | 10 | 60s | Sliding Window | Sensitive endpoints |
-| `STANDARD` | 60 | 60s | Sliding Window | Normal API usage |
-| `RELAXED` | 300 | 60s | Token Bucket | High-traffic endpoints |
-| `API` | 1000 | 3600s | Sliding Window | Hourly API quota |
-| `BURST` | 100 | 60s | Token Bucket | Burst-tolerant endpoints |
-| `AUTH` | 5 | 60s | Fixed Window | Login/register |
-| `PUBLIC_API` | 100 | 3600s | Sliding Window | Public-facing APIs |
+| Preset       | Max Requests | Window | Algorithm      | Use Case                 |
+| ------------ | ------------ | ------ | -------------- | ------------------------ |
+| `STRICT`     | 10           | 60s    | Sliding Window | Sensitive endpoints      |
+| `STANDARD`   | 60           | 60s    | Sliding Window | Normal API usage         |
+| `RELAXED`    | 300          | 60s    | Token Bucket   | High-traffic endpoints   |
+| `API`        | 1000         | 3600s  | Sliding Window | Hourly API quota         |
+| `BURST`      | 100          | 60s    | Token Bucket   | Burst-tolerant endpoints |
+| `AUTH`       | 5            | 60s    | Fixed Window   | Login/register           |
+| `PUBLIC_API` | 100          | 3600s  | Sliding Window | Public-facing APIs       |
 
 ## 9. Open Questions
 

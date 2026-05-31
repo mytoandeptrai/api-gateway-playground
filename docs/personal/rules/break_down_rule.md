@@ -16,14 +16,14 @@ Generate a Markdown checklist representing the task breakdown.
 2.  **Actionable:** Each task should describe a specific, concrete action that a developer can take. Use verbs like "Create", "Implement", "Add", "Update", "Refactor", "Test", "Document", etc.
 3.  **Dependencies:** Identify any dependencies between tasks. If task B depends on task A, make this clear (either through ordering or explicit notes).
 4.  **Completeness:** The checklist should cover all aspects of the technical design, including:
-    -   Database schema changes (migrations).
-    -   API endpoint creation/modification.
-    -   UI changes.
-    -   Business logic implementation.
-    -   Unit test creation.
-    -   Integration test creation (if applicable).
-    -   Documentation updates.
-    -   Addressing any open questions.
+    - Database schema changes (migrations).
+    - API endpoint creation/modification.
+    - UI changes.
+    - Business logic implementation.
+    - Unit test creation.
+    - Integration test creation (if applicable).
+    - Documentation updates.
+    - Addressing any open questions.
 5.  **Clarity:** Use clear and concise language. Avoid jargon or ambiguity.
 6.  **Checklist Format:** Use Markdown's checklist syntax:
     ```
@@ -31,14 +31,14 @@ Generate a Markdown checklist representing the task breakdown.
     - [ ] Task 2: Description of task 2
     - [ ] Task 3: Description of task 3 (depends on Task 2)
     ```
-7. **Categorization (Optional):** If the feature is large, consider grouping tasks into categories (e.g., "Database", "API", "UI", "Testing").
-8. **Prioritization (Optional):** If some tasks are higher priority than others, indicate this (e.g., using "(High Priority)" or a similar marker).
+7.  **Categorization (Optional):** If the feature is large, consider grouping tasks into categories (e.g., "Database", "API", "UI", "Testing").
+8.  **Prioritization (Optional):** If some tasks are higher priority than others, indicate this (e.g., using "(High Priority)" or a similar marker).
 
 ## Example
 
 **Input (Technical Design Document - Excerpt):**
 
-```markdown
+````markdown
 ## CreateCategoryCommand
 
 **Overview:** This command creates a new BonfigurationCategory.
@@ -46,6 +46,7 @@ Generate a Markdown checklist representing the task breakdown.
 **Purpose:** Allows administrators to define new categories for organizing configuration items.
 
 **Design:**
+
 - Takes a `CreateCategoryCommand` as input.
 - Uses `IUnitOfWork` to interact with the database.
 - Checks for existing categories with the same name.
@@ -54,23 +55,29 @@ Generate a Markdown checklist representing the task breakdown.
 - Saves changes to the database.
 
 **Dependencies:**
+
 - `IUnitOfWork`
 
 **Usage:**
+
 ```csharp
 // Example usage
 var command = new CreateCategoryCommand("MyCategory", "Description of my category");
 var result = await _mediator.Send(command);
 ```
+````
 
 **Error Handling:**
+
 - Returns a `Result<Guid>` indicating success or failure.
 - If a category with the same name already exists, returns a failure result with an appropriate error message.
 - Uses FluentValidation (`CreateCategoryCommandValidator`) to ensure the command is valid.
 
 **Open Questions:**
+
 - None
-```
+
+````
 
 **Output (Task Breakdown):**
 
@@ -91,7 +98,7 @@ var result = await _mediator.Send(command);
     - [ ] Test case where category with the same name already exists.
     - [ ] Test validation failures.
 - [ ] Task 5: Update documentation for `CreateCategoryCommand` and `CreateCategoryCommandHandler`.
-```
+````
 
 **Another Example (with dependencies and categories):**
 
@@ -100,18 +107,20 @@ var result = await _mediator.Send(command);
 ```markdown
 ## UpdateBonfigurationItem Command
 
-**Overview:**  Allows updating the key, description, and validation rules of a BonfigurationItem.
+**Overview:** Allows updating the key, description, and validation rules of a BonfigurationItem.
 
 **Design:**
--   Takes an `UpdateBonfigurationItemCommand` (with `Id`, `Key`, `Description`, `ValidationRules`).
--   Retrieves the existing `BonfigurationItem` from the repository.
--   Calls the `Update()` method on the entity.
--   Saves changes using `IUnitOfWork`.
--   Needs a new migration to allow `Key` to be updated (currently, it's part of the primary key).
+
+- Takes an `UpdateBonfigurationItemCommand` (with `Id`, `Key`, `Description`, `ValidationRules`).
+- Retrieves the existing `BonfigurationItem` from the repository.
+- Calls the `Update()` method on the entity.
+- Saves changes using `IUnitOfWork`.
+- Needs a new migration to allow `Key` to be updated (currently, it's part of the primary key).
 
 **Dependencies:**
--   `IBonfigurationRepository`
--   `IUnitOfWork`
+
+- `IBonfigurationRepository`
+- `IUnitOfWork`
 
 ... (rest of the document) ...
 ```
@@ -128,18 +137,18 @@ var result = await _mediator.Send(command);
 - [ ] Task 2: Create `UpdateBonfigurationItemCommand` class.
 - [ ] Task 3: Create `UpdateBonfigurationItemCommandValidator` class.
 - [ ] Task 4: Implement `UpdateBonfigurationItemCommandHandler` class.
-    - [ ] Inject `IBonfigurationRepository` and `IUnitOfWork`.
-    - [ ] Implement `Handle` method:
-        - [ ] Retrieve existing `BonfigurationItem` by ID.
-        - [ ] Call `Update()` method on the entity.
-        - [ ] Save changes using `IUnitOfWork`.
+  - [ ] Inject `IBonfigurationRepository` and `IUnitOfWork`.
+  - [ ] Implement `Handle` method:
+    - [ ] Retrieve existing `BonfigurationItem` by ID.
+    - [ ] Call `Update()` method on the entity.
+    - [ ] Save changes using `IUnitOfWork`.
 
 **Testing:**
 
 - [ ] Task 5: Write unit tests for `UpdateBonfigurationItemCommandHandler`.
-    - [ ] Test successful update.
-    - [ ] Test case where `BonfigurationItem` is not found.
-    - [ ] Test validation failures.
+  - [ ] Test successful update.
+  - [ ] Test case where `BonfigurationItem` is not found.
+  - [ ] Test validation failures.
 
 **Documentation:**
 

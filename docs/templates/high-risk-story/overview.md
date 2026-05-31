@@ -19,4 +19,3 @@ Describe the behavior after the story is complete.
 ## Non-Goals
 
 - Item.
-

@@ -36,12 +36,10 @@ Partition 0 với replication factor = 3:
   Broker 3: [P0-Replica]  ← bản sao dự phòng
 ```
 
-
 | Môi trường | Replication Factor | Ý nghĩa                                              |
 | ---------- | ------------------ | ---------------------------------------------------- |
 | Local dev  | 1                  | Không có bản sao. Broker chết → mất data. OK để test |
 | Production | 3                  | Chịu được 2 broker chết vẫn không mất data           |
-
 
 ---
 
@@ -121,7 +119,6 @@ Nếu xử lý song song (sai thứ tự / race condition):
 
 ### Bảng tổng hợp các bài toán thực tế
 
-
 | Bài toán               | Partition Key    | Lý do                                             |
 | ---------------------- | ---------------- | ------------------------------------------------- |
 | Order Saga events      | `orderId`        | Saga steps của 1 order phải đúng thứ tự           |
@@ -130,7 +127,6 @@ Nếu xử lý song song (sai thứ tự / race condition):
 | Chat messages          | `conversationId` | Tin nhắn trong cùng conversation phải theo thứ tự |
 | User notification feed | `userId`         | Thông báo hiển thị đúng thứ tự thời gian          |
 | Audit log              | `entityId`       | Lịch sử thay đổi của 1 entity phải theo thứ tự    |
-
 
 ---
 
@@ -212,14 +208,12 @@ Consumer duy nhất:
 
 ### So sánh
 
-
 |                | Event                                | Command                                            |
 | -------------- | ------------------------------------ | -------------------------------------------------- |
 | Thì động từ    | Past tense — "đã xảy ra"             | Imperative — "hãy làm"                             |
 | Người nhận     | Không xác định, ai cần thì lấy       | 1 service cụ thể                                   |
 | Ví dụ NextMart | `payment.completed`, `order.created` | `inventory.reserve_stock`, `shipping.create_label` |
 | Pattern dùng   | Choreography, fan-out                | Orchestrator Saga                                  |
-
 
 ### Trong Orchestrator Saga của NextMart
 
@@ -284,7 +278,7 @@ Không cần lock, Kafka đảm bảo thứ tự.
 ```typescript
 const lock = await redlock.acquire(`inventory:lock:product-X`, 5000);
 try {
-  const item = await inventoryRepo.findOne({ productId: 'X' });
+  const item = await inventoryRepo.findOne({ productId: "X" });
   if (item.available < quantity) throw new InsufficientStockException();
   item.reserved += quantity;
   item.available -= quantity;
@@ -298,14 +292,12 @@ Dù 2 threads chạy song song, chỉ 1 thread giữ được lock tại 1 thờ
 
 ### So sánh 2 cách
 
-
 |                    | Partition key `productId` | Redlock                            |
 | ------------------ | ------------------------- | ---------------------------------- |
 | Cơ chế             | Kafka đảm bảo sequential  | Redis đảm bảo mutual exclusion     |
 | Bảo vệ được khi    | Chỉ qua Kafka             | Mọi luồng (Kafka, HTTP, cron, ...) |
 | Lock timeout       | Không cần                 | Cần config TTL hợp lý              |
 | Production thực tế | Thường kết hợp cả 2       | Lớp bảo vệ cuối cùng               |
-
 
 > **NextMart dùng Redlock** vì bảo vệ toàn diện hơn và là pattern quan trọng cần học.  
 > Production lớn thường dùng cả hai: partition key để giảm contention, Redlock/DB transaction làm safety net.
@@ -381,7 +373,6 @@ Mỗi khi có khách gọi (= Kafka event đến), anh tra sổ rồi phục v�
 
 ## Tóm tắt nhanh
 
-
 | Khái niệm                | Một câu ghi nhớ                                                                                                           |
 | ------------------------ | ------------------------------------------------------------------------------------------------------------------------- |
 | Partition                | Làn đường song song. Cùng làn = tuần tự. Khác làn = song song.                                                            |
@@ -391,5 +382,3 @@ Mỗi khi có khách gọi (= Kafka event đến), anh tra sổ rồi phục v�
 | Event vs Command         | Event = "đã xảy ra" (quá khứ, ai cần thì dùng). Command = "hãy làm" (mệnh lệnh, gửi đích danh).                           |
 | Race condition inventory | 2 orders cùng reserve 1 sản phẩm → Kafka không giúp vì chúng khác partition. Dùng Redlock hoặc partition key `productId`. |
 | Song song nhiều Saga     | 1 Orchestrator, N SagaInstance trong DB. Orchestrator stateless, tra DB theo sagaId mỗi khi xử lý event.                  |
-
-

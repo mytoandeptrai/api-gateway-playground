@@ -102,8 +102,9 @@ SET "user:123" → { name: "John" }  TTL: 3600s
 ```
 
 **How it works in code:**
+
 ```typescript
-await redis.setex('cache:user:123', 3600, '{"name":"John"}');
+await redis.setex("cache:user:123", 3600, '{"name":"John"}');
 // Redis automatically deletes after 3600 seconds
 ```
 
@@ -129,6 +130,7 @@ After:  [B C D E F(new)]
 ```
 
 **How it works in code:**
+
 - Uses Redis Sorted Set `cache:lru` with timestamp as score
 - On every access: `ZADD cache:lru {timestamp} {key}`
 - On eviction: `ZRANGE cache:lru 0 {10%}` → delete oldest keys
@@ -152,6 +154,7 @@ Cache full → evict D(1) then B(3) (least frequently used)
 ```
 
 **How it works in code:**
+
 - Uses Redis Sorted Set `cache:lfu` with frequency as score
 - On every access: `ZINCRBY cache:lfu 1 {key}`
 - On eviction: `ZRANGE cache:lfu 0 {10%}` → delete least used keys
@@ -218,14 +221,14 @@ Write:        App → DB → Cache (invalidate)
 
 ### 3.3 Strategy Comparison
 
-| Strategy | Write Speed | Read Speed | Consistency | Memory Efficiency |
-|----------|-----------|-----------|-------------|-------------------|
-| TTL | Fast | Fast | Low (stale until expire) | Medium |
-| LRU | Medium | Fast | Low | High (auto-evict cold) |
-| LFU | Medium | Fast | Low | High (auto-evict rare) |
-| Write-Through | Slow | Fast | High | Low (cache everything) |
-| Write-Behind | Fast | Fast | Medium (async lag) | Low |
-| Cache-Aside | Fast | Fast (hit) / Slow (miss) | Medium | High (only cache used) |
+| Strategy      | Write Speed | Read Speed               | Consistency              | Memory Efficiency      |
+| ------------- | ----------- | ------------------------ | ------------------------ | ---------------------- |
+| TTL           | Fast        | Fast                     | Low (stale until expire) | Medium                 |
+| LRU           | Medium      | Fast                     | Low                      | High (auto-evict cold) |
+| LFU           | Medium      | Fast                     | Low                      | High (auto-evict rare) |
+| Write-Through | Slow        | Fast                     | High                     | Low (cache everything) |
+| Write-Behind  | Fast        | Fast                     | Medium (async lag)       | Low                    |
+| Cache-Aside   | Fast        | Fast (hit) / Slow (miss) | Medium                   | High (only cache used) |
 
 ### 3.4 Decision Guide
 
@@ -257,30 +260,30 @@ The decorator does NOT cache anything — it only attaches config as metadata. T
 
 ### 4.2 @Cacheable Config Options
 
-| Option | Type | Description |
-|--------|------|-------------|
-| `key` | `string \| (args) => string` | Cache key. Static string or function that builds key from method args |
-| `ttl` | `number` | Time to live in seconds |
-| `strategy` | `CacheStrategy` | Which eviction strategy to use |
-| `tags` | `string[]` | Tags for group invalidation |
-| `condition` | `(args) => boolean` | Only cache if condition returns true |
+| Option      | Type                         | Description                                                           |
+| ----------- | ---------------------------- | --------------------------------------------------------------------- |
+| `key`       | `string \| (args) => string` | Cache key. Static string or function that builds key from method args |
+| `ttl`       | `number`                     | Time to live in seconds                                               |
+| `strategy`  | `CacheStrategy`              | Which eviction strategy to use                                        |
+| `tags`      | `string[]`                   | Tags for group invalidation                                           |
+| `condition` | `(args) => boolean`          | Only cache if condition returns true                                  |
 
 ### 4.3 @CacheInvalidate Config Options
 
-| Option | Type | Description |
-|--------|------|-------------|
-| `keys` | `string \| string[] \| (args) => string \| string[]` | Specific keys to invalidate |
-| `tags` | `string \| string[]` | Delete all entries with matching tags |
-| `allEntries` | `boolean` | Clear entire cache |
+| Option       | Type                                                 | Description                           |
+| ------------ | ---------------------------------------------------- | ------------------------------------- |
+| `keys`       | `string \| string[] \| (args) => string \| string[]` | Specific keys to invalidate           |
+| `tags`       | `string \| string[]`                                 | Delete all entries with matching tags |
+| `allEntries` | `boolean`                                            | Clear entire cache                    |
 
 ### 4.4 CacheKeyBuilders
 
 Utility class to generate key functions. **Important limitation:** at controller level, `args[0]` is the Express Request object, not the method parameter.
 
-| Method | What it does | Works at controller level? |
-|--------|-------------|--------------------------|
-| `fromArgs(prefix)` | Key from all args | No — serializes entire Request object |
-| `fromArg(prefix, index)` | Key from args[index] | No — args[0] is Request |
+| Method                              | What it does               | Works at controller level?                   |
+| ----------------------------------- | -------------------------- | -------------------------------------------- |
+| `fromArgs(prefix)`                  | Key from all args          | No — serializes entire Request object        |
+| `fromArg(prefix, index)`            | Key from args[index]       | No — args[0] is Request                      |
 | `fromProperty(prefix, index, prop)` | Key from args[index][prop] | No — only 1 level deep, can't do `params.id` |
 
 **Recommended approach at controller level:** Use inline arrow functions:
@@ -297,17 +300,17 @@ Utility class to generate key functions. **Important limitation:** at controller
 
 Every cache entry creates 2 Redis keys:
 
-| Key | Purpose | Example |
-|-----|---------|---------|
-| `cache:{key}` | The actual cached data | `cache:user:123` → `'{"id":"123","name":"John"}'` |
+| Key                | Purpose                           | Example                                                     |
+| ------------------ | --------------------------------- | ----------------------------------------------------------- |
+| `cache:{key}`      | The actual cached data            | `cache:user:123` → `'{"id":"123","name":"John"}'`           |
 | `cache:{key}:meta` | Metadata (hits, timestamps, tags) | `cache:user:123:meta` → `'{"hits":5,"tags":["users"],...}'` |
 
 Additional keys for eviction tracking:
 
-| Key | Strategy | Data Structure |
-|-----|----------|---------------|
-| `cache:lru` | LRU | Sorted Set: score = last access timestamp |
-| `cache:lfu` | LFU | Sorted Set: score = access frequency count |
+| Key         | Strategy | Data Structure                             |
+| ----------- | -------- | ------------------------------------------ |
+| `cache:lru` | LRU      | Sorted Set: score = last access timestamp  |
+| `cache:lfu` | LFU      | Sorted Set: score = access frequency count |
 
 ## 6. Eviction Behavior
 
@@ -344,7 +347,7 @@ export class UsersService {
     // Store in cache
     await this.cachingService.set(cacheKey, user, {
       ttl: 3600,
-      tags: ['users'],
+      tags: ["users"],
     });
 
     return user;
@@ -357,7 +360,7 @@ export class UsersService {
     await this.cachingService.delete(`user:${id}`);
 
     // Or invalidate all users cache
-    await this.cachingService.deleteByTag('users');
+    await this.cachingService.deleteByTag("users");
 
     return user;
   }
@@ -426,13 +429,13 @@ const stats = await this.cachingService.getStats();
 
 ## 8. Module Differences Across Apps
 
-| Feature | `apps/api` | `apps/api-gateway` | `apps/auth-service` |
-|---------|-----------|-------------------|-------------------|
-| CachingService | Yes | Yes | Yes |
-| @Cacheable decorator | No | Yes | Yes |
-| @CacheInvalidate decorator | No | Yes | Yes |
-| CacheInterceptor | No | Yes | Yes |
-| CacheKeyBuilders | No | Yes | Yes |
+| Feature                    | `apps/api` | `apps/api-gateway` | `apps/auth-service` |
+| -------------------------- | ---------- | ------------------ | ------------------- |
+| CachingService             | Yes        | Yes                | Yes                 |
+| @Cacheable decorator       | No         | Yes                | Yes                 |
+| @CacheInvalidate decorator | No         | Yes                | Yes                 |
+| CacheInterceptor           | No         | Yes                | Yes                 |
+| CacheKeyBuilders           | No         | Yes                | Yes                 |
 
 `apps/api` only has the service — use direct `get()/set()` calls. The other apps have the full decorator + interceptor pattern.
 

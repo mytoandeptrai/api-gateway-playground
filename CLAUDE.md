@@ -52,28 +52,28 @@ pnpm --filter web build
 
 ### Applications & Ports
 
-| App | Port | Purpose |
-|-----|------|---------|
-| `apps/web` | 3000 | Next.js 15 (App Router) frontend |
-| `apps/api` | 3001 | General NestJS API service |
-| `apps/api-gateway` | 3002 | Core gateway — routing, rate limiting, circuit breaking, caching |
-| `apps/auth-service` | 3003 | JWT auth (Passport.js) |
-| `apps/order-service` | 3004 | Order management |
+| App                  | Port | Purpose                                                          |
+| -------------------- | ---- | ---------------------------------------------------------------- |
+| `apps/web`           | 3000 | Next.js 15 (App Router) frontend                                 |
+| `apps/api`           | 3001 | General NestJS API service                                       |
+| `apps/api-gateway`   | 3002 | Core gateway — routing, rate limiting, circuit breaking, caching |
+| `apps/auth-service`  | 3003 | JWT auth (Passport.js)                                           |
+| `apps/order-service` | 3004 | Order management                                                 |
 
 ### Infrastructure Ports (Docker)
 
 All sequential for easy reference:
 
-| Port | Service | Credentials |
-|------|---------|-------------|
-| 1111 | PostgreSQL | postgres:postgres |
-| 1112 | Redis | (no auth) |
-| 1113 | Mailpit SMTP | (no auth) |
-| 1114 | Mailpit Web UI | browser |
-| 1115 | Kafka (KRaft) | (no ZooKeeper) |
-| 1116 | Kafka UI | browser |
-| 1117 | MinIO S3 API | minioadmin:minioadmin |
-| 1118 | MinIO Console | browser |
+| Port | Service        | Credentials           |
+| ---- | -------------- | --------------------- |
+| 1111 | PostgreSQL     | postgres:postgres     |
+| 1112 | Redis          | (no auth)             |
+| 1113 | Mailpit SMTP   | (no auth)             |
+| 1114 | Mailpit Web UI | browser               |
+| 1115 | Kafka (KRaft)  | (no ZooKeeper)        |
+| 1116 | Kafka UI       | browser               |
+| 1117 | MinIO S3 API   | minioadmin:minioadmin |
+| 1118 | MinIO Console  | browser               |
 
 Docker volumes live in `docker/volumes/`. Reset everything with `cd docker && docker compose down -v`.
 
@@ -86,6 +86,7 @@ Docker volumes live in `docker/volumes/`. Reset everything with `cd docker && do
 ### Database layout
 
 Single PostgreSQL instance, one schema per service:
+
 - `gateway` — api-gateway
 - `auth` — auth-service
 - `orders` — order-service
@@ -110,6 +111,7 @@ The gateway is the most complex service. Request flow:
 7. **Response transformation** — global interceptor adds envelope
 
 Key files:
+
 - `apps/api-gateway/src/modules/api-gateway/api-gateway.service.ts` — core routing, circuit breaker, load balancing
 - `apps/api-gateway/src/shared/rate-limiting/rate-limiting.service.ts` — rate limiting algorithms
 - `apps/api-gateway/src/shared/caching/` — cache decorator and interceptor
@@ -142,7 +144,7 @@ KAFKA_BROKERS=localhost:1115
 
 This project will run base on Harness Engineering, so before starting any task, please read the `AGENTS.md` file first to understand the rules and workflow.
 
-**Knowledge memory:** 
+**Knowledge memory:**
 
 - Use `memory.searchKnowledge` MCP tool before starting tasks to find prior conventions and decisions. Store decisions with `memory.storeKnowledge`. If MCP is unavailable, use the memory skill (`npx ai-devkit memory search/store`).
 - Deep-dive documentation is in `personal/explains/` — bilingual (EN/VN) guides for API gateway design, rate limiting algorithms, and caching strategies.

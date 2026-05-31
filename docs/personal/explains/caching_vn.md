@@ -102,8 +102,9 @@ SET "user:123" → { name: "John" }  TTL: 3600 giây
 ```
 
 **Cách hoạt động trong code:**
+
 ```typescript
-await redis.setex('cache:user:123', 3600, '{"name":"John"}');
+await redis.setex("cache:user:123", 3600, '{"name":"John"}');
 // Redis tự động xóa sau 3600 giây
 ```
 
@@ -129,6 +130,7 @@ Sau:   [B C D E F(mới)]
 ```
 
 **Cách hoạt động trong code:**
+
 - Dùng Redis Sorted Set `cache:lru` với timestamp làm score
 - Mỗi lần truy cập: `ZADD cache:lru {timestamp} {key}`
 - Khi evict: `ZRANGE cache:lru 0 {10%}` → xóa key cũ nhất
@@ -152,6 +154,7 @@ Cache đầy → xóa D(1) rồi B(3) (ít được dùng nhất)
 ```
 
 **Cách hoạt động trong code:**
+
 - Dùng Redis Sorted Set `cache:lfu` với tần suất làm score
 - Mỗi lần truy cập: `ZINCRBY cache:lfu 1 {key}`
 - Khi evict: `ZRANGE cache:lfu 0 {10%}` → xóa key ít dùng nhất
@@ -218,14 +221,14 @@ Ghi:         App → DB → Cache (xóa)
 
 ### 3.3 So sánh chiến lược
 
-| Chiến lược | Tốc độ ghi | Tốc độ đọc | Tính nhất quán | Hiệu quả bộ nhớ |
-|-----------|-----------|-----------|---------------|-----------------|
-| TTL | Nhanh | Nhanh | Thấp (cũ cho đến khi hết hạn) | Trung bình |
-| LRU | Trung bình | Nhanh | Thấp | Cao (tự xóa dữ liệu lạnh) |
-| LFU | Trung bình | Nhanh | Thấp | Cao (tự xóa dữ liệu hiếm) |
-| Write-Through | Chậm | Nhanh | Cao | Thấp (cache mọi thứ) |
-| Write-Behind | Nhanh | Nhanh | Trung bình (trễ bất đồng bộ) | Thấp |
-| Cache-Aside | Nhanh | Nhanh (hit) / Chậm (miss) | Trung bình | Cao (chỉ cache cái dùng) |
+| Chiến lược    | Tốc độ ghi | Tốc độ đọc                | Tính nhất quán                | Hiệu quả bộ nhớ           |
+| ------------- | ---------- | ------------------------- | ----------------------------- | ------------------------- |
+| TTL           | Nhanh      | Nhanh                     | Thấp (cũ cho đến khi hết hạn) | Trung bình                |
+| LRU           | Trung bình | Nhanh                     | Thấp                          | Cao (tự xóa dữ liệu lạnh) |
+| LFU           | Trung bình | Nhanh                     | Thấp                          | Cao (tự xóa dữ liệu hiếm) |
+| Write-Through | Chậm       | Nhanh                     | Cao                           | Thấp (cache mọi thứ)      |
+| Write-Behind  | Nhanh      | Nhanh                     | Trung bình (trễ bất đồng bộ)  | Thấp                      |
+| Cache-Aside   | Nhanh      | Nhanh (hit) / Chậm (miss) | Trung bình                    | Cao (chỉ cache cái dùng)  |
 
 ### 3.4 Hướng dẫn chọn chiến lược
 
@@ -257,30 +260,30 @@ Decorator KHÔNG cache gì cả — nó chỉ gắn config dưới dạng metada
 
 ### 4.2 Tùy chọn @Cacheable
 
-| Tùy chọn | Kiểu | Mô tả |
-|----------|------|-------|
-| `key` | `string \| (args) => string` | Cache key. Chuỗi cố định hoặc function tạo key từ args |
-| `ttl` | `number` | Thời gian sống tính bằng giây |
-| `strategy` | `CacheStrategy` | Chiến lược eviction nào sẽ dùng |
-| `tags` | `string[]` | Tag để xóa cache theo nhóm |
-| `condition` | `(args) => boolean` | Chỉ cache nếu điều kiện trả về true |
+| Tùy chọn    | Kiểu                         | Mô tả                                                  |
+| ----------- | ---------------------------- | ------------------------------------------------------ |
+| `key`       | `string \| (args) => string` | Cache key. Chuỗi cố định hoặc function tạo key từ args |
+| `ttl`       | `number`                     | Thời gian sống tính bằng giây                          |
+| `strategy`  | `CacheStrategy`              | Chiến lược eviction nào sẽ dùng                        |
+| `tags`      | `string[]`                   | Tag để xóa cache theo nhóm                             |
+| `condition` | `(args) => boolean`          | Chỉ cache nếu điều kiện trả về true                    |
 
 ### 4.3 Tùy chọn @CacheInvalidate
 
-| Tùy chọn | Kiểu | Mô tả |
-|----------|------|-------|
-| `keys` | `string \| string[] \| (args) => string \| string[]` | Key cụ thể cần xóa |
-| `tags` | `string \| string[]` | Xóa tất cả entry có tag trùng khớp |
-| `allEntries` | `boolean` | Xóa toàn bộ cache |
+| Tùy chọn     | Kiểu                                                 | Mô tả                              |
+| ------------ | ---------------------------------------------------- | ---------------------------------- |
+| `keys`       | `string \| string[] \| (args) => string \| string[]` | Key cụ thể cần xóa                 |
+| `tags`       | `string \| string[]`                                 | Xóa tất cả entry có tag trùng khớp |
+| `allEntries` | `boolean`                                            | Xóa toàn bộ cache                  |
 
 ### 4.4 CacheKeyBuilders
 
 Lớp tiện ích để tạo function cho cache key. **Hạn chế quan trọng:** ở tầng controller, `args[0]` là Express Request object, không phải parameter của method.
 
-| Method | Chức năng | Dùng được ở controller? |
-|--------|----------|------------------------|
-| `fromArgs(prefix)` | Key từ tất cả args | Không — serialize cả Request object |
-| `fromArg(prefix, index)` | Key từ args[index] | Không — args[0] là Request |
+| Method                              | Chức năng                | Dùng được ở controller?                            |
+| ----------------------------------- | ------------------------ | -------------------------------------------------- |
+| `fromArgs(prefix)`                  | Key từ tất cả args       | Không — serialize cả Request object                |
+| `fromArg(prefix, index)`            | Key từ args[index]       | Không — args[0] là Request                         |
 | `fromProperty(prefix, index, prop)` | Key từ args[index][prop] | Không — chỉ 1 cấp, không truy cập được `params.id` |
 
 **Cách khuyến nghị ở tầng controller:** Dùng inline arrow function:
@@ -297,17 +300,17 @@ Lớp tiện ích để tạo function cho cache key. **Hạn chế quan trọng
 
 Mỗi cache entry tạo 2 Redis key:
 
-| Key | Mục đích | Ví dụ |
-|-----|---------|-------|
-| `cache:{key}` | Dữ liệu cache thật | `cache:user:123` → `'{"id":"123","name":"John"}'` |
+| Key                | Mục đích                          | Ví dụ                                                       |
+| ------------------ | --------------------------------- | ----------------------------------------------------------- |
+| `cache:{key}`      | Dữ liệu cache thật                | `cache:user:123` → `'{"id":"123","name":"John"}'`           |
 | `cache:{key}:meta` | Metadata (hits, timestamps, tags) | `cache:user:123:meta` → `'{"hits":5,"tags":["users"],...}'` |
 
 Key bổ sung cho việc theo dõi eviction:
 
-| Key | Chiến lược | Cấu trúc dữ liệu |
-|-----|-----------|------------------|
-| `cache:lru` | LRU | Sorted Set: score = timestamp truy cập cuối |
-| `cache:lfu` | LFU | Sorted Set: score = số lần truy cập |
+| Key         | Chiến lược | Cấu trúc dữ liệu                            |
+| ----------- | ---------- | ------------------------------------------- |
+| `cache:lru` | LRU        | Sorted Set: score = timestamp truy cập cuối |
+| `cache:lfu` | LFU        | Sorted Set: score = số lần truy cập         |
 
 ## 6. Hành vi Eviction
 
@@ -344,7 +347,7 @@ export class UsersService {
     // Lưu vào cache
     await this.cachingService.set(cacheKey, user, {
       ttl: 3600,
-      tags: ['users'],
+      tags: ["users"],
     });
 
     return user;
@@ -357,7 +360,7 @@ export class UsersService {
     await this.cachingService.delete(`user:${id}`);
 
     // Hoặc xóa toàn bộ cache users
-    await this.cachingService.deleteByTag('users');
+    await this.cachingService.deleteByTag("users");
 
     return user;
   }
@@ -426,13 +429,13 @@ const stats = await this.cachingService.getStats();
 
 ## 8. Sự khác biệt giữa các App
 
-| Tính năng | `apps/api` | `apps/api-gateway` | `apps/auth-service` |
-|-----------|-----------|-------------------|-------------------|
-| CachingService | Có | Có | Có |
-| @Cacheable decorator | Không | Có | Có |
-| @CacheInvalidate decorator | Không | Có | Có |
-| CacheInterceptor | Không | Có | Có |
-| CacheKeyBuilders | Không | Có | Có |
+| Tính năng                  | `apps/api` | `apps/api-gateway` | `apps/auth-service` |
+| -------------------------- | ---------- | ------------------ | ------------------- |
+| CachingService             | Có         | Có                 | Có                  |
+| @Cacheable decorator       | Không      | Có                 | Có                  |
+| @CacheInvalidate decorator | Không      | Có                 | Có                  |
+| CacheInterceptor           | Không      | Có                 | Có                  |
+| CacheKeyBuilders           | Không      | Có                 | Có                  |
 
 `apps/api` chỉ có service — dùng trực tiếp `get()/set()`. Các app còn lại có đầy đủ pattern decorator + interceptor.
 
