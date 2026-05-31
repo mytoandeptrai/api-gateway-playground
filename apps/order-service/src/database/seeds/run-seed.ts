@@ -1,45 +1,39 @@
 import { faker } from '@faker-js/faker';
 import dataSource from '../data-source';
 import { Order, OrderStatus } from 'src/modules/orders/entities/order.entity';
-import { OrderItem } from 'src/modules/orders/entities/order-item.entity';
 
 async function runSeed() {
   await dataSource.initialize();
   console.log('Data source initialized. Running order seeds...');
 
   const orderRepo = dataSource.getRepository(Order);
-  const orderItemRepo = dataSource.getRepository(OrderItem);
-
   const statuses = Object.values(OrderStatus);
 
-  for (let i = 0; i < 15; i++) {
-    const itemCount = faker.number.int({ min: 1, max: 4 });
-    const items: Partial<OrderItem>[] = Array.from(
-      { length: itemCount },
-      () => ({
-        productName: faker.commerce.productName(),
-        price: parseFloat(faker.commerce.price({ min: 5, max: 200 })),
-        quantity: faker.number.int({ min: 1, max: 5 }),
-      }),
-    );
-
-    const totalAmount = items.reduce(
-      (sum, item) => sum + item.price * item.quantity,
-      0,
-    );
+  for (let i = 0; i < 10; i++) {
+    const unitPrice = parseFloat(faker.commerce.price({ min: 50000, max: 5000000 }));
+    const quantity = faker.number.int({ min: 1, max: 3 });
 
     const order = orderRepo.create({
-      customerEmail: faker.internet.email().toLowerCase(),
-      customerName: faker.person.fullName(),
+      userId: faker.string.uuid(),
+      productId: faker.string.uuid(),
+      productName: faker.commerce.productName(),
+      quantity,
+      unitPrice,
+      totalAmount: parseFloat((unitPrice * quantity).toFixed(2)),
+      shippingAddress: {
+        fullName: faker.person.fullName(),
+        phone: `09${faker.string.numeric(8)}`,
+        address: faker.location.streetAddress(),
+        city: faker.location.city(),
+      },
+      paymentDeadline: new Date(Date.now() + 15 * 60 * 1000),
       status: faker.helpers.arrayElement(statuses),
-      totalAmount: parseFloat(totalAmount.toFixed(2)),
-      items: items.map((item) => orderItemRepo.create(item)),
     });
 
     await orderRepo.save(order);
   }
 
-  console.log('Seeded 15 orders with items.');
+  console.log('Seeded 10 sample orders.');
   await dataSource.destroy();
 }
 

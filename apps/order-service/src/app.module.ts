@@ -1,26 +1,26 @@
 import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { ScheduleModule } from '@nestjs/schedule';
 import { AppController } from '@/app.controller';
 import { AppService } from '@/app.service';
 import databaseConfig from '@/config/database.config';
 import redisConfig from '@/config/redis.config';
+import jwtConfig from '@/config/jwt.config';
+import kafkaConfig from '@/config/kafka.config';
 import { CachingModule } from '@/shared/caching/caching.module';
 import { LoggingMiddleware } from '@/shared/middleware/logging.middleware';
-import kafkaConfig from '@/config/kafka.config';
 import { KafkaModule } from '@/shared/kafka/kafka.module';
 import { OrdersModule } from '@/modules/orders/orders.module';
 
 @Module({
   imports: [
-    // Configuration module - must be first
     ConfigModule.forRoot({
       isGlobal: true,
-      load: [databaseConfig, redisConfig, kafkaConfig],
+      load: [databaseConfig, redisConfig, kafkaConfig, jwtConfig],
       envFilePath: ['.env.local', '.env'],
     }),
 
-    // TypeORM Database
     TypeOrmModule.forRootAsync({
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => ({
@@ -44,21 +44,15 @@ import { OrdersModule } from '@/modules/orders/orders.module';
       }),
     }),
 
-    // Shared Module
+    ScheduleModule.forRoot(),
     CachingModule,
     KafkaModule,
-
-    // Features Modules
     OrdersModule,
   ],
   controllers: [AppController],
   providers: [AppService],
 })
 export class AppModule implements NestModule {
-  /**
-   * Configure middleware for all routes
-   * @param consumer - Middleware consumer to apply middleware
-   */
   configure(consumer: MiddlewareConsumer) {
     consumer.apply(LoggingMiddleware).forRoutes('*path');
   }
