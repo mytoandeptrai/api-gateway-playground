@@ -11,6 +11,8 @@ import { LoggingMiddleware } from '@/shared/middleware/logging.middleware';
 import kafkaConfig from '@/config/kafka.config';
 import { KafkaModule } from '@/shared/kafka/kafka.module';
 import { UsersModule } from '@/users/users.module';
+import { ScheduleModule } from '@nestjs/schedule';
+import { PaymentModule } from '@/modules/payment/payment.module';
 
 @Module({
   imports: [
@@ -49,9 +51,11 @@ import { UsersModule } from '@/users/users.module';
     SharedRedisModule,
     CachingModule,
     KafkaModule,
+    ScheduleModule.forRoot(),
 
     // Features Modules
     UsersModule,
+    PaymentModule,
   ],
   controllers: [AppController],
   providers: [AppService],
