@@ -19,8 +19,8 @@ export class RedisConfigService implements RedisOptionsFactory {
         password: this.configService.get<string>('redis.password') || undefined,
         db: this.configService.get<number>('redis.db'),
         onClientCreated(client) {
-          client.on('ready', () => logger.log('Redis connected'));
-          client.on('error', (err) => logger.error('Redis error', err));
+          client.on('ready', () => logger.log('✅ Redis connected'));
+          client.on('error', (err) => logger.error('⚠️ Redis error', err));
         },
       },
     };
