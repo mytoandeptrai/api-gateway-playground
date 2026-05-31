@@ -186,7 +186,10 @@ export class PaymentService {
 
   async getStatus(orderId: string) {
     const intent = await this.intentRepo.findOne({ where: { orderId } });
-    if (!intent) throw new BadRequestException('Payment not found');
+    if (!intent) {
+      // Saga hasn't created the PaymentIntent yet — FE should keep polling
+      return { status: 'PENDING', qrUrl: null, expiresAt: null };
+    }
     return {
       status: intent.status,
       qrUrl: intent.qrUrl,
