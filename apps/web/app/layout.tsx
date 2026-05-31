@@ -14,8 +14,8 @@ const geistMono = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "turbo-app-template starter",
-  description: "turbo-app-template starter kit",
+  title: "NextMart",
+  description: "Nền tảng mua sắm trực tuyến NextMart",
 };
 
 export default function RootLayout({

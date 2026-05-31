@@ -5,6 +5,7 @@ import { AppController } from '@/app.controller';
 import { AppService } from '@/app.service';
 import databaseConfig from '@/config/database.config';
 import redisConfig from '@/config/redis.config';
+import vnpayConfig from '@/config/vnpay.config';
 import { SharedRedisModule } from '@/shared/redis/shared-redis.module';
 import { CachingModule } from '@/shared/caching/caching.module';
 import { LoggingMiddleware } from '@/shared/middleware/logging.middleware';
@@ -19,7 +20,7 @@ import { PaymentModule } from '@/modules/payment/payment.module';
     // Configuration module - must be first
     ConfigModule.forRoot({
       isGlobal: true,
-      load: [databaseConfig, redisConfig, kafkaConfig],
+      load: [databaseConfig, redisConfig, kafkaConfig, vnpayConfig],
       envFilePath: ['.env.local', '.env'],
     }),
 

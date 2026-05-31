@@ -428,6 +428,18 @@ AC-401-5: Invalid signature
   Then return { RspCode: "97" } (signature failed)
   And không xử lý payment
   And log warning với correlationId
+
+AC-401-6: User cancel payment trên VNPay [Phase 3]
+  Given User click "Hủy" hoặc đóng trang VNPay
+  When VNPay redirect về return URL với vnp_ResponseCode != "00" (vd: "24" = cancelled)
+  Then Payment Service verify signature
+  And update PaymentIntent status = FAILED
+  And emit payment.failed event ngay lập tức (không đợi timeout)
+  And Orchestrator nhận payment.failed → trigger compensation
+  And emit inventory.release_stock
+  And emit order.cancel command
+  And notify user lý do hủy
+  Note: Phase 2 dùng timeout (15 phút) làm fallback cho case này
 ```
 
 ---

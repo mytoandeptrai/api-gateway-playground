@@ -6,3 +6,9 @@ export const getPaymentStatusApi = (orderId: string) =>
   httpInstance.get<BaseResponseType<PaymentStatusInfo>>(
     `/api/payment/${orderId}/status`,
   );
+
+export const verifyPaymentReturnApi = (params: Record<string, string>) =>
+  httpInstance.get<{ data: { RspCode: string; Message: string } }>(
+    `/api/payment/verify-return`,
+    { params },
+  );
