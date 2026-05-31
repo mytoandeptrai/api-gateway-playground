@@ -63,17 +63,26 @@ export class KafkaAdmin implements OnModuleInit, OnModuleDestroy {
     replicationFactor = 1,
   ): Promise<void> {
     try {
-      await this.admin.createTopics({
+      const created = await this.admin.createTopics({
         topics: [{ topic, numPartitions, replicationFactor }],
         waitForLeaders: true,
       });
-      this.logger.log(`[KafkaAdmin] Topic created: ${topic}`);
+      if (created) {
+        this.logger.log(`[KafkaAdmin] Topic created: ${topic}`);
+      }
     } catch (error) {
-      this.logger.error(
-        `[KafkaAdmin] Failed to create topic: ${topic}`,
-        error instanceof Error ? error.message : String(error),
-      );
-      throw error;
+      // Ignore "topic already exists" errors — idempotent
+      const msg = error instanceof Error ? error.message : String(error);
+      if (!msg.includes('TOPIC_ALREADY_EXISTS')) {
+        this.logger.error(`[KafkaAdmin] Failed to create topic: ${topic}`, msg);
+        throw error;
+      }
+    }
+  }
+
+  async ensureTopics(topics: string[], numPartitions = 3): Promise<void> {
+    for (const topic of topics) {
+      await this.createTopic(topic, numPartitions);
     }
   }
 

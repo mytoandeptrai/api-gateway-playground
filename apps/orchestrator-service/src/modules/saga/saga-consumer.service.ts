@@ -5,6 +5,7 @@ import {
   OnModuleDestroy,
 } from '@nestjs/common';
 import { KafkaConsumer } from '@/shared/kafka/utils/kafka.consumer';
+import { KafkaAdmin } from '@/shared/kafka/utils/kafka.admin';
 import { OrderSagaService } from './order-saga.service';
 
 const GROUP_ID = 'orchestrator-group';
@@ -25,12 +26,30 @@ const TOPICS = [
 export class SagaConsumerService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(SagaConsumerService.name);
 
+  // All topics used across the system — created here so services can start in any order
+  private static readonly ALL_TOPICS = [
+    'order.created', 'order.cancel', 'order.cancelled', 'order.status_updated',
+    'inventory.reserve_stock', 'inventory.stock_reserved', 'inventory.stock_insufficient',
+    'inventory.confirm_stock', 'inventory.stock_confirmed',
+    'inventory.release_stock', 'inventory.stock_released',
+    'payment.completed', 'payment.failed', 'payment.timeout',
+    'payment.refund_requested', 'payment.refunded',
+    'shipping.create_label', 'shipping.label_created',
+    'shipping.status_updated', 'shipping.delivered',
+    'notification.send',
+    'refund.requested', 'refund.validated', 'refund.status_updated',
+  ];
+
   constructor(
     private readonly kafkaConsumer: KafkaConsumer,
+    private readonly kafkaAdmin: KafkaAdmin,
     private readonly orderSagaService: OrderSagaService,
   ) {}
 
   async onModuleInit() {
+    await this.kafkaAdmin.ensureTopics(SagaConsumerService.ALL_TOPICS);
+    this.logger.log('All Kafka topics ensured');
+
     for (const topic of TOPICS) {
       const key = await this.kafkaConsumer.subscribe({
         topic,
