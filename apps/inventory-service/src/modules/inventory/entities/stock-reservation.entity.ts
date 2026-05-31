@@ -33,7 +33,11 @@ export class StockReservation {
   @Column()
   quantity: number;
 
-  @Column({ type: 'enum', enum: ReservationStatus, default: ReservationStatus.HELD })
+  @Column({
+    type: 'enum',
+    enum: ReservationStatus,
+    default: ReservationStatus.HELD,
+  })
   status: ReservationStatus;
 
   @CreateDateColumn()

@@ -32,7 +32,11 @@ export class OrdersController {
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Create a new order' })
-  @ApiResponse({ status: 201, description: 'Order created — returns orderId, totalAmount, paymentDeadline' })
+  @ApiResponse({
+    status: 201,
+    description:
+      'Order created — returns orderId, totalAmount, paymentDeadline',
+  })
   create(@Request() req: AuthRequest, @Body() dto: CreateOrderDto) {
     return this.ordersService.create(req.user.id, req.user.email, dto);
   }
@@ -54,7 +58,9 @@ export class OrdersController {
   }
 
   @Patch(':id/status')
-  @ApiOperation({ summary: 'Update order status (internal service-to-service)' })
+  @ApiOperation({
+    summary: 'Update order status (internal service-to-service)',
+  })
   updateStatus(@Param('id') id: string, @Body() dto: UpdateOrderStatusDto) {
     return this.ordersService.updateStatus(id, dto);
   }

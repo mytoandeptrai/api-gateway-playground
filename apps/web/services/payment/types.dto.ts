@@ -1,4 +1,9 @@
-export type PaymentStatus = 'PENDING' | 'COMPLETED' | 'FAILED' | 'EXPIRED' | 'REFUNDED';
+export type PaymentStatus =
+  | "PENDING"
+  | "COMPLETED"
+  | "FAILED"
+  | "EXPIRED"
+  | "REFUNDED";
 
 export type PaymentStatusInfo = {
   status: PaymentStatus;

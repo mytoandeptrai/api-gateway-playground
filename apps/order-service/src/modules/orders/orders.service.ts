@@ -40,8 +40,13 @@ export class OrdersService {
     const product = await this.fetchProduct(dto.productId);
 
     const totalAmount = product.price * dto.quantity;
-    const paymentTimeoutMinutes = this.configService.get<number>('PAYMENT_TIMEOUT_MINUTES', 15);
-    const paymentDeadline = new Date(Date.now() + paymentTimeoutMinutes * 60 * 1000);
+    const paymentTimeoutMinutes = this.configService.get<number>(
+      'PAYMENT_TIMEOUT_MINUTES',
+      15,
+    );
+    const paymentDeadline = new Date(
+      Date.now() + paymentTimeoutMinutes * 60 * 1000,
+    );
 
     return this.dataSource.transaction(async (manager) => {
       const order = manager.create(Order, {
@@ -121,12 +126,17 @@ export class OrdersService {
   }
 
   private async fetchProduct(productId: string): Promise<ProductResponse> {
-    const baseUrl = this.configService.get<string>('PRODUCT_SERVICE_URL', 'http://localhost:3005');
+    const baseUrl = this.configService.get<string>(
+      'PRODUCT_SERVICE_URL',
+      'http://localhost:3005',
+    );
     const apiPrefix = 'api/v1';
 
     try {
       const response = await firstValueFrom(
-        this.httpService.get<{ data: ProductResponse }>(`${baseUrl}/${apiPrefix}/products/${productId}`),
+        this.httpService.get<{ data: ProductResponse }>(
+          `${baseUrl}/${apiPrefix}/products/${productId}`,
+        ),
       );
       const product = response.data.data;
       if (!product) throw new BadRequestException('Product not found');
@@ -134,7 +144,9 @@ export class OrdersService {
     } catch (error) {
       if (error instanceof BadRequestException) throw error;
       this.logger.error(`Failed to fetch product ${productId}`, error);
-      throw new BadRequestException(`Product ${productId} not found or unavailable`);
+      throw new BadRequestException(
+        `Product ${productId} not found or unavailable`,
+      );
     }
   }
 }

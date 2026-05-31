@@ -1,4 +1,9 @@
-import { Injectable, Logger, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  OnModuleInit,
+  OnModuleDestroy,
+} from '@nestjs/common';
 import { KafkaConsumer } from '@/shared/kafka/utils/kafka.consumer';
 import { OrdersService } from './orders.service';
 import { OrderStatus } from './entities/order.entity';
@@ -25,7 +30,11 @@ export class OrderConsumerService implements OnModuleInit, OnModuleDestroy {
       if (!message.value) return;
       try {
         const event = JSON.parse(message.value);
-        const { orderId, trackingId } = event.payload as { orderId: string; trackingId: string; status: string };
+        const { orderId, trackingId } = event.payload as {
+          orderId: string;
+          trackingId: string;
+          status: string;
+        };
 
         await this.ordersService.updateStatus(orderId, {
           status: OrderStatus.SHIPPED,

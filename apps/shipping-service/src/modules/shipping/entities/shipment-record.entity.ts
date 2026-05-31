@@ -31,7 +31,11 @@ export class ShipmentRecord {
   @Column({ unique: true, generated: 'uuid' })
   trackingId: string;
 
-  @Column({ type: 'enum', enum: ShipmentStatus, default: ShipmentStatus.PREPARING })
+  @Column({
+    type: 'enum',
+    enum: ShipmentStatus,
+    default: ShipmentStatus.PREPARING,
+  })
   status: ShipmentStatus;
 
   @CreateDateColumn()

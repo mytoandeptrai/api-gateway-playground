@@ -1,8 +1,15 @@
-import { FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@repo/ui/components/form';
-import type { BaseFormFieldProps } from '@repo/ui/types/base-form';
-import type { FieldPath, FieldValues } from 'react-hook-form';
-import { NumericFormat, type NumericFormatProps } from 'react-number-format';
-import { Input } from '@repo/ui/components/input';
+import {
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@repo/ui/components/form";
+import type { BaseFormFieldProps } from "@repo/ui/types/base-form";
+import type { FieldPath, FieldValues } from "react-hook-form";
+import { NumericFormat, type NumericFormatProps } from "react-number-format";
+import { Input } from "@repo/ui/components/input";
 
 interface FormNumberInputProps<
   TFieldValues extends FieldValues = FieldValues,
@@ -47,7 +54,7 @@ function FormNumberInput<
             {label && (
               <FormLabel>
                 {label}
-                {required && <span className='ml-1 text-red-500'>*</span>}
+                {required && <span className="ml-1 text-red-500">*</span>}
               </FormLabel>
             )}
             <FormControl>

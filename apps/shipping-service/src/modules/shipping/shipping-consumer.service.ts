@@ -1,4 +1,9 @@
-import { Injectable, Logger, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  OnModuleInit,
+  OnModuleDestroy,
+} from '@nestjs/common';
 import { KafkaConsumer } from '@/shared/kafka/utils/kafka.consumer';
 import { ShippingService } from './shipping.service';
 

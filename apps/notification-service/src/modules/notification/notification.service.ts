@@ -33,7 +33,13 @@ export class NotificationService {
     });
   }
 
-  async send(envelope: { eventId: string; sagaId: string; orderId: string; userId: string; payload: SendPayload }) {
+  async send(envelope: {
+    eventId: string;
+    sagaId: string;
+    orderId: string;
+    userId: string;
+    payload: SendPayload;
+  }) {
     const { eventId, userId, payload } = envelope;
 
     const alreadySent = await this.logRepo.findOne({ where: { eventId } });
@@ -49,7 +55,10 @@ export class NotificationService {
     }
 
     if (channels.includes('socket')) {
-      this.gateway.emitToUser(userId, 'order.status_updated', { orderId: envelope.orderId, ...data });
+      this.gateway.emitToUser(userId, 'order.status_updated', {
+        orderId: envelope.orderId,
+        ...data,
+      });
     }
 
     await this.logRepo.save(
@@ -63,11 +72,20 @@ export class NotificationService {
       }),
     );
 
-    this.logger.log(`Notification sent: template=${template}, userId=${userId}`);
+    this.logger.log(
+      `Notification sent: template=${template}, userId=${userId}`,
+    );
   }
 
-  private async sendEmail(to: string, template: string, data: Record<string, unknown>) {
-    const from = this.configService.get<string>('MAIL_FROM', 'noreply@nextmart.local');
+  private async sendEmail(
+    to: string,
+    template: string,
+    data: Record<string, unknown>,
+  ) {
+    const from = this.configService.get<string>(
+      'MAIL_FROM',
+      'noreply@nextmart.local',
+    );
     const subject = this.getSubject(template);
     const html = this.buildHtml(template, data);
 

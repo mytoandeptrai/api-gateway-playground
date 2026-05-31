@@ -29,7 +29,11 @@ export class SagaStep {
   @Column()
   stepName: string;
 
-  @Column({ type: 'enum', enum: SagaStepStatus, default: SagaStepStatus.PENDING })
+  @Column({
+    type: 'enum',
+    enum: SagaStepStatus,
+    default: SagaStepStatus.PENDING,
+  })
   status: SagaStepStatus;
 
   @Column({ nullable: true, type: 'varchar' })

@@ -1,6 +1,6 @@
-'use client';
+"use client";
 
-import { cn } from '@repo/ui/lib/utils';
+import { cn } from "@repo/ui/lib/utils";
 
 interface LoadingScreenProps {
   className?: string;
@@ -10,7 +10,7 @@ export function LoadingScreen({ className }: LoadingScreenProps) {
   return (
     <div
       className={cn(
-        'fixed inset-0 z-50 flex flex-col items-center justify-center bg-background gap-4',
+        "fixed inset-0 z-50 flex flex-col items-center justify-center bg-background gap-4",
         className,
       )}
     >

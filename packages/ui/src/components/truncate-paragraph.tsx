@@ -1,5 +1,9 @@
-import { cn } from '@repo/ui/lib/utils';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@repo/ui/components/tooltip';
+import { cn } from "@repo/ui/lib/utils";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@repo/ui/components/tooltip";
 
 type Props = {
   truncatedContent: string;
@@ -7,14 +11,25 @@ type Props = {
   className?: string;
 };
 
-const TruncateParagraph = ({ truncatedContent, fullContent, className }: Props) => {
+const TruncateParagraph = ({
+  truncatedContent,
+  fullContent,
+  className,
+}: Props) => {
   return (
     <Tooltip>
       <TooltipTrigger asChild>
-        <span className={cn('min-w-32 max-w-32 truncate font-medium text-sm md:max-w-56', className)}>{truncatedContent}</span>
+        <span
+          className={cn(
+            "min-w-32 max-w-32 truncate font-medium text-sm md:max-w-56",
+            className,
+          )}
+        >
+          {truncatedContent}
+        </span>
       </TooltipTrigger>
       <TooltipContent>
-        <p className='text-sm'>{fullContent}</p>
+        <p className="text-sm">{fullContent}</p>
       </TooltipContent>
     </Tooltip>
   );

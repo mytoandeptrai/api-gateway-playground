@@ -6,7 +6,10 @@ import type Redis from 'ioredis';
 import Redlock from 'redlock';
 import { randomUUID } from 'crypto';
 import { InventoryItem } from './entities/inventory-item.entity';
-import { StockReservation, ReservationStatus } from './entities/stock-reservation.entity';
+import {
+  StockReservation,
+  ReservationStatus,
+} from './entities/stock-reservation.entity';
 import { ProcessedEvent } from './entities/processed-event.entity';
 import { KafkaProducer } from '@/shared/kafka/utils/kafka.producer';
 
@@ -70,29 +73,48 @@ export class InventoryService {
           orderId,
           reason: 'Insufficient stock',
         });
-        this.logger.warn(`Insufficient stock for product ${productId}: available=${item?.available ?? 0}, requested=${quantity}`);
+        this.logger.warn(
+          `Insufficient stock for product ${productId}: available=${item?.available ?? 0}, requested=${quantity}`,
+        );
         return;
       }
 
       await this.dataSource.transaction(async (manager) => {
-        await manager.update(InventoryItem, { productId }, {
-          available: item.available - quantity,
-          reserved: item.reserved + quantity,
-        });
+        await manager.update(
+          InventoryItem,
+          { productId },
+          {
+            available: item.available - quantity,
+            reserved: item.reserved + quantity,
+          },
+        );
 
-        await manager.save(StockReservation, manager.create(StockReservation, {
-          productId,
-          orderId,
-          sagaId,
-          quantity,
-          status: ReservationStatus.HELD,
-        }));
+        await manager.save(
+          StockReservation,
+          manager.create(StockReservation, {
+            productId,
+            orderId,
+            sagaId,
+            quantity,
+            status: ReservationStatus.HELD,
+          }),
+        );
 
-        await manager.save(ProcessedEvent, manager.create(ProcessedEvent, { eventId: event.eventId }));
+        await manager.save(
+          ProcessedEvent,
+          manager.create(ProcessedEvent, { eventId: event.eventId }),
+        );
       });
 
-      await this.publish('inventory.stock_reserved', event, { productId, quantity, sagaId, orderId });
-      this.logger.log(`Stock reserved: ${quantity}x ${productId} for order ${orderId}`);
+      await this.publish('inventory.stock_reserved', event, {
+        productId,
+        quantity,
+        sagaId,
+        orderId,
+      });
+      this.logger.log(
+        `Stock reserved: ${quantity}x ${productId} for order ${orderId}`,
+      );
     } finally {
       await lock.release();
     }
@@ -101,7 +123,10 @@ export class InventoryService {
   async confirmStock(event: KafkaEnvelope) {
     if (await this.isDuplicate(event.eventId)) return;
 
-    const { sagaId, orderId } = event.payload as { sagaId: string; orderId: string };
+    const { sagaId, orderId } = event.payload as {
+      sagaId: string;
+      orderId: string;
+    };
 
     await this.dataSource.transaction(async (manager) => {
       const reservation = await manager.findOne(StockReservation, {
@@ -113,16 +138,27 @@ export class InventoryService {
         return;
       }
 
-      await manager.update(StockReservation, { id: reservation.id }, {
-        status: ReservationStatus.CONFIRMED,
-      });
+      await manager.update(
+        StockReservation,
+        { id: reservation.id },
+        {
+          status: ReservationStatus.CONFIRMED,
+        },
+      );
 
-      await manager.update(InventoryItem, { productId: reservation.productId }, {
-        reserved: () => `reserved - ${reservation.quantity}`,
-        totalStock: () => `"totalStock" - ${reservation.quantity}`,
-      });
+      await manager.update(
+        InventoryItem,
+        { productId: reservation.productId },
+        {
+          reserved: () => `reserved - ${reservation.quantity}`,
+          totalStock: () => `"totalStock" - ${reservation.quantity}`,
+        },
+      );
 
-      await manager.save(ProcessedEvent, manager.create(ProcessedEvent, { eventId: event.eventId }));
+      await manager.save(
+        ProcessedEvent,
+        manager.create(ProcessedEvent, { eventId: event.eventId }),
+      );
     });
 
     await this.publish('inventory.stock_confirmed', event, { sagaId, orderId });
@@ -132,7 +168,10 @@ export class InventoryService {
   async releaseStock(event: KafkaEnvelope) {
     if (await this.isDuplicate(event.eventId)) return;
 
-    const { sagaId, orderId } = event.payload as { sagaId: string; orderId: string };
+    const { sagaId, orderId } = event.payload as {
+      sagaId: string;
+      orderId: string;
+    };
 
     await this.dataSource.transaction(async (manager) => {
       const reservation = await manager.findOne(StockReservation, {
@@ -144,16 +183,27 @@ export class InventoryService {
         return;
       }
 
-      await manager.update(StockReservation, { id: reservation.id }, {
-        status: ReservationStatus.RELEASED,
-      });
+      await manager.update(
+        StockReservation,
+        { id: reservation.id },
+        {
+          status: ReservationStatus.RELEASED,
+        },
+      );
 
-      await manager.update(InventoryItem, { productId: reservation.productId }, {
-        available: () => `available + ${reservation.quantity}`,
-        reserved: () => `reserved - ${reservation.quantity}`,
-      });
+      await manager.update(
+        InventoryItem,
+        { productId: reservation.productId },
+        {
+          available: () => `available + ${reservation.quantity}`,
+          reserved: () => `reserved - ${reservation.quantity}`,
+        },
+      );
 
-      await manager.save(ProcessedEvent, manager.create(ProcessedEvent, { eventId: event.eventId }));
+      await manager.save(
+        ProcessedEvent,
+        manager.create(ProcessedEvent, { eventId: event.eventId }),
+      );
     });
 
     await this.publish('inventory.stock_released', event, { sagaId, orderId });
@@ -161,7 +211,9 @@ export class InventoryService {
   }
 
   private async isDuplicate(eventId: string): Promise<boolean> {
-    const existing = await this.processedEventRepo.findOne({ where: { eventId } });
+    const existing = await this.processedEventRepo.findOne({
+      where: { eventId },
+    });
     if (existing) {
       this.logger.warn(`Duplicate event detected: ${eventId}`);
       return true;
@@ -175,7 +227,11 @@ export class InventoryService {
     );
   }
 
-  private async publish(topic: string, sourceEvent: KafkaEnvelope, payload: object) {
+  private async publish(
+    topic: string,
+    sourceEvent: KafkaEnvelope,
+    payload: object,
+  ) {
     const envelope: KafkaEnvelope = {
       eventId: randomUUID(),
       eventType: topic,

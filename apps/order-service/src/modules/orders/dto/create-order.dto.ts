@@ -18,7 +18,10 @@ export class ShippingAddressDto {
 
   @ApiProperty({ example: '0912345678' })
   @IsString()
-  @Matches(/^0\d{9}$/, { message: 'Phone must be a valid Vietnamese number (10 digits starting with 0)' })
+  @Matches(/^0\d{9}$/, {
+    message:
+      'Phone must be a valid Vietnamese number (10 digits starting with 0)',
+  })
   phone: string;
 
   @ApiProperty({ example: '123 Le Loi' })

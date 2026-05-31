@@ -1,13 +1,13 @@
 export type OrderStatus =
-  | 'PENDING_PAYMENT'
-  | 'PAYMENT_RECEIVED'
-  | 'CONFIRMED'
-  | 'PREPARING'
-  | 'SHIPPED'
-  | 'DELIVERED'
-  | 'CANCELLED'
-  | 'REFUND_REQUESTED'
-  | 'REFUNDED';
+  | "PENDING_PAYMENT"
+  | "PAYMENT_RECEIVED"
+  | "CONFIRMED"
+  | "PREPARING"
+  | "SHIPPED"
+  | "DELIVERED"
+  | "CANCELLED"
+  | "REFUND_REQUESTED"
+  | "REFUNDED";
 
 export type ShippingAddress = {
   fullName: string;

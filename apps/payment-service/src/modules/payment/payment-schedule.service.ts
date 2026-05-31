@@ -20,7 +20,9 @@ export class PaymentScheduleService {
     try {
       const processed = await this.paymentService.handleExpiredPayments();
       if (processed > 0) {
-        this.logger.log(`Payment timeout check done, processed ${processed} intents`);
+        this.logger.log(
+          `Payment timeout check done, processed ${processed} intents`,
+        );
       }
     } finally {
       this.isRunning = false;

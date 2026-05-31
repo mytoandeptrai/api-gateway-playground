@@ -1,9 +1,19 @@
-'use client';
+"use client";
 
-import type { FieldPath, FieldValues } from 'react-hook-form';
-import { FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@repo/ui/components/form';
-import { Textarea } from '@repo/ui/components/textarea';
-import type { BaseFormFieldProps, TextareaConfig } from '@repo/ui/types/base-form';
+import type { FieldPath, FieldValues } from "react-hook-form";
+import {
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@repo/ui/components/form";
+import { Textarea } from "@repo/ui/components/textarea";
+import type {
+  BaseFormFieldProps,
+  TextareaConfig,
+} from "@repo/ui/types/base-form";
 
 interface FormTextareaProps<
   TFieldValues extends FieldValues = FieldValues,
@@ -27,7 +37,12 @@ function FormTextarea<
   disabled,
   className,
 }: FormTextareaProps<TFieldValues, TName>) {
-  const { maxLength, showCharCount = true, rows = 4, resize = 'vertical' } = config;
+  const {
+    maxLength,
+    showCharCount = true,
+    rows = 4,
+    resize = "vertical",
+  } = config;
 
   return (
     <FormField
@@ -38,11 +53,11 @@ function FormTextarea<
           {label && (
             <FormLabel>
               {label}
-              {required && <span className='ml-1 text-red-500'>*</span>}
+              {required && <span className="ml-1 text-red-500">*</span>}
             </FormLabel>
           )}
           <FormControl>
-            <div className='space-y-2'>
+            <div className="space-y-2">
               <Textarea
                 placeholder={placeholder}
                 disabled={disabled}
@@ -52,7 +67,7 @@ function FormTextarea<
                 {...field}
               />
               {showCharCount && maxLength && (
-                <div className='text-right text-muted-foreground text-sm'>
+                <div className="text-right text-muted-foreground text-sm">
                   {field.value?.length || 0} / {maxLength}
                 </div>
               )}

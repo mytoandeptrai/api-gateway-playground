@@ -1,4 +1,4 @@
-import type { ShippingAddress } from './types.dto';
+import type { ShippingAddress } from "./types.dto";
 
 export type CreateOrderRequest = {
   productId: string;

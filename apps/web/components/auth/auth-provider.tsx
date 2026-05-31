@@ -1,9 +1,9 @@
-'use client';
+"use client";
 
-import { LoadingScreen } from '@repo/ui/components/loading-screen';
-import { useEffect, useState } from 'react';
-import { refreshApi } from '@/services/auth/api';
-import { useSessionStore } from '@/store/use-session-store';
+import { LoadingScreen } from "@repo/ui/components/loading-screen";
+import { useEffect, useState } from "react";
+import { refreshApi } from "@/services/auth/api";
+import { useSessionStore } from "@/store/use-session-store";
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isReady, setIsReady] = useState(false);

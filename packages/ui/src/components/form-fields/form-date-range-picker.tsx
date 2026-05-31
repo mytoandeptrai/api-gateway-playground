@@ -1,13 +1,27 @@
-'use client';
+"use client";
 
-import { format } from 'date-fns';
-import { CalendarIcon } from 'lucide-react';
-import type { FieldPath, FieldValues } from 'react-hook-form';
-import { Button } from '@repo/ui/components/button';  
-import { Calendar } from '@repo/ui/components/calendar';
-import { FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@repo/ui/components/form';
-import { Popover, PopoverContent, PopoverTrigger } from '@repo/ui/components/popover';
-import type { BaseFormFieldProps, DatePickerConfig } from '@repo/ui/types/base-form';
+import { format } from "date-fns";
+import { CalendarIcon } from "lucide-react";
+import type { FieldPath, FieldValues } from "react-hook-form";
+import { Button } from "@repo/ui/components/button";
+import { Calendar } from "@repo/ui/components/calendar";
+import {
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@repo/ui/components/form";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@repo/ui/components/popover";
+import type {
+  BaseFormFieldProps,
+  DatePickerConfig,
+} from "@repo/ui/types/base-form";
 
 interface FormDateRangePickerProps<
   TFieldValues extends FieldValues = FieldValues,
@@ -29,7 +43,12 @@ function FormDateRangePicker<
   disabled,
   className,
 }: FormDateRangePickerProps<TFieldValues, TName>) {
-  const { minDate, maxDate, disabledDates = [], placeholder = 'Pick a date' } = config;
+  const {
+    minDate,
+    maxDate,
+    disabledDates = [],
+    placeholder = "Pick a date",
+  } = config;
 
   return (
     <FormField
@@ -40,38 +59,39 @@ function FormDateRangePicker<
           {label && (
             <FormLabel>
               {label}
-              {required && <span className='ml-1 text-red-500'>*</span>}
+              {required && <span className="ml-1 text-red-500">*</span>}
             </FormLabel>
           )}
           <Popover>
             <PopoverTrigger asChild>
               <FormControl>
                 <Button
-                  variant='outline'
+                  variant="outline"
                   className={`w-full justify-between text-left font-normal pl-3 ${
-                    !field.value && 'text-muted-foreground'
+                    !field.value && "text-muted-foreground"
                   }`}
                   disabled={disabled}
                 >
                   {field.value?.from ? (
                     field.value.to ? (
                       <>
-                        {format(field.value.from, 'LLL dd, y')} - {format(field.value.to, 'LLL dd, y')}
+                        {format(field.value.from, "LLL dd, y")} -{" "}
+                        {format(field.value.to, "LLL dd, y")}
                       </>
                     ) : (
-                      format(field.value.from, 'LLL dd, y')
+                      format(field.value.from, "LLL dd, y")
                     )
                   ) : (
                     <span>{placeholder}</span>
                   )}
-                  <CalendarIcon className='ml-auto h-4 w-4 opacity-50' />
+                  <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
                 </Button>
               </FormControl>
             </PopoverTrigger>
-            <PopoverContent className='w-auto p-0' align='start'>
+            <PopoverContent className="w-auto p-0" align="start">
               <Calendar
                 initialFocus
-                mode='range'
+                mode="range"
                 defaultMonth={field.value?.from}
                 selected={field.value}
                 onSelect={field.onChange}
@@ -79,7 +99,9 @@ function FormDateRangePicker<
                 disabled={(date) => {
                   if (minDate && date < minDate) return true;
                   if (maxDate && date > maxDate) return true;
-                  return disabledDates.some((disabledDate) => date.getTime() === disabledDate.getTime());
+                  return disabledDates.some(
+                    (disabledDate) => date.getTime() === disabledDate.getTime(),
+                  );
                 }}
               />
             </PopoverContent>

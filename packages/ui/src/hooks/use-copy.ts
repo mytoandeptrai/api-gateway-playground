@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState } from "react";
 
 type CopyFn = (text?: string) => void;
 
@@ -15,15 +15,15 @@ export function useCopy(): [boolean, CopyFn] {
         setCopied(false);
       }, 2000);
     } else {
-      const textArea = document.createElement('textarea');
+      const textArea = document.createElement("textarea");
       textArea.value = textToCopy;
-      textArea.style.position = 'fixed';
-      textArea.style.left = '-999999px';
-      textArea.style.top = '-999999px';
+      textArea.style.position = "fixed";
+      textArea.style.left = "-999999px";
+      textArea.style.top = "-999999px";
       document.body.appendChild(textArea);
       textArea.focus();
       textArea.select();
-      document.execCommand('copy');
+      document.execCommand("copy");
       textArea.remove();
       setCopied(true);
       setTimeout(() => {

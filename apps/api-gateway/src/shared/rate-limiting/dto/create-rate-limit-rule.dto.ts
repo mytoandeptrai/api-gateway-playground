@@ -55,7 +55,9 @@ export class CreateRateLimitRuleDto {
   })
   @ValidateIf((o) => SCOPES_REQUIRING_VALUE.includes(o.scope))
   @IsString()
-  @IsNotEmpty({ message: 'scopeValue is required when scope is ip, user, or tenant' })
+  @IsNotEmpty({
+    message: 'scopeValue is required when scope is ip, user, or tenant',
+  })
   scopeValue?: string;
 
   @ApiProperty({
@@ -101,7 +103,8 @@ export class CreateRateLimitRuleDto {
   burstSize?: number;
 
   @ApiProperty({
-    description: 'Refill rate (tokens per second) — required when algorithm is token_bucket',
+    description:
+      'Refill rate (tokens per second) — required when algorithm is token_bucket',
     required: false,
   })
   @ValidateIf((o) => o.algorithm === RateLimitAlgorithm.TOKEN_BUCKET)

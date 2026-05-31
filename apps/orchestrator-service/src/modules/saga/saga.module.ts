@@ -7,10 +7,7 @@ import { OrderSagaService } from './order-saga.service';
 import { SagaConsumerService } from './saga-consumer.service';
 
 @Module({
-  imports: [
-    TypeOrmModule.forFeature([SagaInstance, SagaStep]),
-    HttpModule,
-  ],
+  imports: [TypeOrmModule.forFeature([SagaInstance, SagaStep]), HttpModule],
   providers: [OrderSagaService, SagaConsumerService],
 })
 export class SagaModule {}

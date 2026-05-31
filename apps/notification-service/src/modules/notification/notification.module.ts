@@ -7,6 +7,10 @@ import { NotificationConsumerService } from './notification-consumer.service';
 
 @Module({
   imports: [TypeOrmModule.forFeature([NotificationLog])],
-  providers: [NotificationService, NotificationGateway, NotificationConsumerService],
+  providers: [
+    NotificationService,
+    NotificationGateway,
+    NotificationConsumerService,
+  ],
 })
 export class NotificationModule {}

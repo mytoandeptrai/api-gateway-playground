@@ -1,16 +1,20 @@
-'use client';
+"use client";
 
-import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { useSessionStore } from '@/store/use-session-store';
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useSessionStore } from "@/store/use-session-store";
 
-export default function ProtectedLayout({ children }: { children: React.ReactNode }) {
+export default function ProtectedLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   const router = useRouter();
   const token = useSessionStore((s) => s.token);
 
   useEffect(() => {
     if (!token) {
-      router.replace('/login');
+      router.replace("/login");
     }
   }, [token, router]);
 

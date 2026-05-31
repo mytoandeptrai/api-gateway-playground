@@ -7,7 +7,9 @@ import { InventoryService } from './inventory.service';
 import { InventoryConsumerService } from './inventory-consumer.service';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([InventoryItem, StockReservation, ProcessedEvent])],
+  imports: [
+    TypeOrmModule.forFeature([InventoryItem, StockReservation, ProcessedEvent]),
+  ],
   providers: [InventoryService, InventoryConsumerService],
 })
 export class InventoryModule {}

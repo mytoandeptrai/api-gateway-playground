@@ -1,9 +1,19 @@
-'use client';
+"use client";
 
-import type { FieldPath, FieldValues } from 'react-hook-form';
-import { FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@repo/ui/components/form';
-import { Slider } from '@repo/ui/components/slider';
-import type { BaseFormFieldProps, SliderConfig } from '@repo/ui/types/base-form';
+import type { FieldPath, FieldValues } from "react-hook-form";
+import {
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@repo/ui/components/form";
+import { Slider } from "@repo/ui/components/slider";
+import type {
+  BaseFormFieldProps,
+  SliderConfig,
+} from "@repo/ui/types/base-form";
 
 interface FormSliderProps<
   TFieldValues extends FieldValues = FieldValues,
@@ -38,11 +48,11 @@ function FormSlider<
           {label && (
             <FormLabel>
               {label}
-              {required && <span className='ml-1 text-red-500'>*</span>}
+              {required && <span className="ml-1 text-red-500">*</span>}
             </FormLabel>
           )}
           <FormControl>
-            <div className='px-3'>
+            <div className="px-3">
               <Slider
                 min={min}
                 max={max}
@@ -52,9 +62,13 @@ function FormSlider<
                 disabled={disabled}
               />
               {showValue && (
-                <div className='mt-1 flex justify-between text-muted-foreground text-sm'>
+                <div className="mt-1 flex justify-between text-muted-foreground text-sm">
                   <span>{formatValue ? formatValue(min) : min}</span>
-                  <span>{formatValue ? formatValue(field.value || min) : field.value || min}</span>
+                  <span>
+                    {formatValue
+                      ? formatValue(field.value || min)
+                      : field.value || min}
+                  </span>
                   <span>{formatValue ? formatValue(max) : max}</span>
                 </div>
               )}

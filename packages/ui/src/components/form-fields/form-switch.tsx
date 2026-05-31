@@ -1,9 +1,15 @@
-'use client';
+"use client";
 
-import type { FieldPath, FieldValues } from 'react-hook-form';
-import { FormControl, FormDescription, FormField, FormItem, FormLabel } from '@repo/ui/components/form';
-import { Switch } from '@repo/ui/components/switch';
-import type { BaseFormFieldProps } from '@repo/ui/types/base-form';
+import type { FieldPath, FieldValues } from "react-hook-form";
+import {
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+} from "@repo/ui/components/form";
+import { Switch } from "@repo/ui/components/switch";
+import type { BaseFormFieldProps } from "@repo/ui/types/base-form";
 
 interface FormSwitchProps<
   TFieldValues extends FieldValues = FieldValues,
@@ -30,16 +36,24 @@ function FormSwitch<
       control={control}
       name={name}
       render={({ field }) => (
-        <FormItem className={`flex flex-row items-center justify-between rounded-lg border p-4 ${className}`}>
-          <div className='space-y-0.5'>
-            <FormLabel className='text-base'>
+        <FormItem
+          className={`flex flex-row items-center justify-between rounded-lg border p-4 ${className}`}
+        >
+          <div className="space-y-0.5">
+            <FormLabel className="text-base">
               {label}
-              {required && <span className='ml-1 text-red-500'>*</span>}
+              {required && <span className="ml-1 text-red-500">*</span>}
             </FormLabel>
-            {showDescription && description && <FormDescription>{description}</FormDescription>}
+            {showDescription && description && (
+              <FormDescription>{description}</FormDescription>
+            )}
           </div>
           <FormControl>
-            <Switch checked={field.value} onCheckedChange={field.onChange} disabled={disabled} />
+            <Switch
+              checked={field.value}
+              onCheckedChange={field.onChange}
+              disabled={disabled}
+            />
           </FormControl>
         </FormItem>
       )}

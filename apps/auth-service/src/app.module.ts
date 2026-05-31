@@ -32,7 +32,13 @@ import { AuthModule } from '@/modules/auth/auth.module';
 
         if (schema !== 'public') {
           const { Client } = await import('pg');
-          const pgClient = new Client({ host, port, user: username, password, database });
+          const pgClient = new Client({
+            host,
+            port,
+            user: username,
+            password,
+            database,
+          });
           await pgClient.connect();
           await pgClient.query(`CREATE SCHEMA IF NOT EXISTS "${schema}"`);
           await pgClient.end();
@@ -48,7 +54,10 @@ import { AuthModule } from '@/modules/auth/auth.module';
           schema,
           autoLoadEntities: true,
           migrations: [__dirname + '/database/migrations/*{.ts,.js}'],
-          synchronize: configService.get<boolean>('database.synchronize', false),
+          synchronize: configService.get<boolean>(
+            'database.synchronize',
+            false,
+          ),
           logging: configService.get<boolean>('database.logging', false),
           ssl: process.env.NODE_ENV === 'production',
           migrationsTableName: `migrations_${schema}`,

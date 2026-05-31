@@ -16,8 +16,8 @@ export function Welcome() {
           </span>
         </h1>
         <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-          A full-stack starter kit built with Turborepo, Next.js,
-          Shadcn, TailwindCSS, Prisma, and NestJS
+          A full-stack starter kit built with Turborepo, Next.js, Shadcn,
+          TailwindCSS, Prisma, and NestJS
         </p>
       </div>
 

@@ -33,7 +33,9 @@ export class PaymentController {
 
   @Post('refund')
   @ApiOperation({ summary: 'Internal: process refund' })
-  processRefund(@Body() body: { orderId: string; amount: number; reason: string }) {
+  processRefund(
+    @Body() body: { orderId: string; amount: number; reason: string },
+  ) {
     return this.paymentService.processRefund(body);
   }
 }

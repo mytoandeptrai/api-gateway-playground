@@ -1,5 +1,5 @@
-import type { BaseResponseType } from '@/types/base-type';
-import type { Order } from './types.dto';
+import type { BaseResponseType } from "@/types/base-type";
+import type { Order } from "./types.dto";
 
 export type CreateOrderResponse = BaseResponseType<{
   orderId: string;

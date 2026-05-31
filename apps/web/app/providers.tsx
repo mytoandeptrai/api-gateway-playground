@@ -29,9 +29,7 @@ export function Providers({ children }: { children: ReactNode }) {
       enableColorScheme
     >
       <QueryClientProvider client={_queryClient}>
-        <AuthProvider>
-          {children}
-        </AuthProvider>
+        <AuthProvider>{children}</AuthProvider>
         <ReactQueryDevtools initialIsOpen={false} />
       </QueryClientProvider>
       <Toaster richColors />

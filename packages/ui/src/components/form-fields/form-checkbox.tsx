@@ -1,9 +1,16 @@
-'use client';
+"use client";
 
-import type { FieldPath, FieldValues } from 'react-hook-form';
-import { Checkbox } from '@repo/ui/components/checkbox';  
-import { FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@repo/ui/components/form';
-import type { BaseFormFieldProps } from '@repo/ui/types/base-form';
+import type { FieldPath, FieldValues } from "react-hook-form";
+import { Checkbox } from "@repo/ui/components/checkbox";
+import {
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@repo/ui/components/form";
+import type { BaseFormFieldProps } from "@repo/ui/types/base-form";
 
 interface FormCheckboxProps<
   TFieldValues extends FieldValues = FieldValues,
@@ -30,14 +37,20 @@ function FormCheckbox<
       control={control}
       name={name}
       render={({ field }) => (
-        <FormItem className={`flex flex-row items-start space-x-1.5 space-y-0 ${className}`}>
+        <FormItem
+          className={`flex flex-row items-start space-x-1.5 space-y-0 ${className}`}
+        >
           <FormControl>
-            <Checkbox checked={field.value} onCheckedChange={field.onChange} disabled={disabled} />
+            <Checkbox
+              checked={field.value}
+              onCheckedChange={field.onChange}
+              disabled={disabled}
+            />
           </FormControl>
-          <div className='space-y-1 leading-none'>
+          <div className="space-y-1 leading-none">
             <FormLabel>
               {checkboxLabel || label}
-              {required && <span className='ml-1 text-red-500'>*</span>}
+              {required && <span className="ml-1 text-red-500">*</span>}
             </FormLabel>
             {description && <FormDescription>{description}</FormDescription>}
           </div>

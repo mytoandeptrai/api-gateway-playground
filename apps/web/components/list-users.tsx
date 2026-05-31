@@ -23,7 +23,7 @@ const ListUsers = () => {
 
     const data = await response.json();
     toast.success(
-      data.map((user: { email: string }) => `Email: ${user.email}`).join(", ")
+      data.map((user: { email: string }) => `Email: ${user.email}`).join(", "),
     );
   };
 

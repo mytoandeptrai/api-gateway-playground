@@ -9,7 +9,9 @@ import { PaymentController } from './payment.controller';
 import { OutboxWorker } from './outbox/outbox.worker';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([PaymentIntent, OutboxEvent, ProcessedWebhook])],
+  imports: [
+    TypeOrmModule.forFeature([PaymentIntent, OutboxEvent, ProcessedWebhook]),
+  ],
   providers: [PaymentService, PaymentScheduleService, OutboxWorker],
   controllers: [PaymentController],
 })

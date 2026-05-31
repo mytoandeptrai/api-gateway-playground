@@ -1,12 +1,26 @@
-'use client';
+"use client";
 
-import type { FieldPath, FieldValues } from 'react-hook-form';
-import { FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@repo/ui/components/form';
-import type { BaseFormFieldProps, FileUploadConfig } from '@repo/ui/types/base-form';
-import { InputFileDropzone, InputFileDropzoneProps } from '@/components/ui/input-file-dropzone';
+import type { FieldPath, FieldValues } from "react-hook-form";
+import {
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@repo/ui/components/form";
+import type {
+  BaseFormFieldProps,
+  FileUploadConfig,
+} from "@repo/ui/types/base-form";
+import {
+  InputFileDropzone,
+  InputFileDropzoneProps,
+} from "@/components/ui/input-file-dropzone";
 
-interface FormFileUploadConfig extends FileUploadConfig, InputFileDropzoneProps {
-}
+interface FormFileUploadConfig
+  extends FileUploadConfig,
+    InputFileDropzoneProps {}
 
 interface FormFileUploadProps<
   TFieldValues extends FieldValues = FieldValues,
@@ -28,7 +42,15 @@ function FormFileUpload<
   disabled,
   className,
 }: FormFileUploadProps<TFieldValues, TName>) {
-  const { maxSize, acceptedTypes, multiple, maxFiles, onUpload, progresses, ...restConfig } = config || {};
+  const {
+    maxSize,
+    acceptedTypes,
+    multiple,
+    maxFiles,
+    onUpload,
+    progresses,
+    ...restConfig
+  } = config || {};
 
   return (
     <FormField
@@ -39,7 +61,7 @@ function FormFileUpload<
           {label && (
             <FormLabel>
               {label}
-              {required && <span className='ml-1 text-red-500'>*</span>}
+              {required && <span className="ml-1 text-red-500">*</span>}
             </FormLabel>
           )}
 
@@ -49,7 +71,10 @@ function FormFileUpload<
               onValueChange={field.onChange}
               onUpload={onUpload}
               progresses={progresses}
-              accept={acceptedTypes?.reduce((acc, type) => ({ ...acc, [type]: [] }), {})}
+              accept={acceptedTypes?.reduce(
+                (acc, type) => ({ ...acc, [type]: [] }),
+                {},
+              )}
               maxSize={maxSize}
               maxFiles={maxFiles}
               multiple={multiple}

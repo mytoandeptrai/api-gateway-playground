@@ -1,15 +1,22 @@
-'use client';
+"use client";
 
-import type { FieldPath, FieldValues } from 'react-hook-form';
-import { FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@repo/ui/components/form';
-import { Input } from '@repo/ui/components/input';  
-import type { BaseFormFieldProps } from '@repo/ui/types/base-form';
+import type { FieldPath, FieldValues } from "react-hook-form";
+import {
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@repo/ui/components/form";
+import { Input } from "@repo/ui/components/input";
+import type { BaseFormFieldProps } from "@repo/ui/types/base-form";
 
 interface FormInputProps<
   TFieldValues extends FieldValues = FieldValues,
   TName extends FieldPath<TFieldValues> = FieldPath<TFieldValues>,
 > extends BaseFormFieldProps<TFieldValues, TName> {
-  type?: 'text' | 'email' | 'password' | 'number' | 'tel' | 'url';
+  type?: "text" | "email" | "password" | "number" | "tel" | "url";
   placeholder?: string;
   step?: string | number;
   min?: string | number;
@@ -26,7 +33,7 @@ function FormInput<
   label,
   description,
   required,
-  type = 'text',
+  type = "text",
   placeholder,
   step,
   min,
@@ -34,7 +41,7 @@ function FormInput<
   disabled,
   className,
   readOnly,
-  suffix
+  suffix,
 }: FormInputProps<TFieldValues, TName>) {
   return (
     <FormField
@@ -45,7 +52,7 @@ function FormInput<
           {label && (
             <FormLabel>
               {label}
-              {required && <span className='ml-1 text-red-500'>*</span>}
+              {required && <span className="ml-1 text-red-500">*</span>}
             </FormLabel>
           )}
           <FormControl>
@@ -60,9 +67,11 @@ function FormInput<
               suffix={suffix}
               {...field}
               onChange={(e) => {
-                if (type === 'number') {
+                if (type === "number") {
                   const value = e.target.value;
-                  field.onChange(value === '' ? undefined : Number.parseFloat(value));
+                  field.onChange(
+                    value === "" ? undefined : Number.parseFloat(value),
+                  );
                 } else {
                   field.onChange(e.target.value);
                 }

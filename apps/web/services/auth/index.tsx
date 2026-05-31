@@ -11,4 +11,4 @@ export const useLogoutMutation = () => {
   return useMutation({
     mutationFn: () => logoutApi(),
   });
-}
+};

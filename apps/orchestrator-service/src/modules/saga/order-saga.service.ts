@@ -68,13 +68,24 @@ export class OrderSagaService {
       }),
     );
 
-    await this.createStep(saga.id, STEP.RESERVE_INVENTORY, 'inventory.reserve_stock', payload);
-    await this.publishCommand('inventory.reserve_stock', saga.id, orderId, userId, {
-      productId: payload.productId,
-      quantity: payload.quantity,
-      sagaId: saga.id,
+    await this.createStep(
+      saga.id,
+      STEP.RESERVE_INVENTORY,
+      'inventory.reserve_stock',
+      payload,
+    );
+    await this.publishCommand(
+      'inventory.reserve_stock',
+      saga.id,
       orderId,
-    });
+      userId,
+      {
+        productId: payload.productId,
+        quantity: payload.quantity,
+        sagaId: saga.id,
+        orderId,
+      },
+    );
 
     this.logger.log(`Saga ${saga.id} started for order ${orderId}`);
   }
@@ -99,11 +110,20 @@ export class OrderSagaService {
     const saga = await this.findRunningSaga(event.orderId);
     if (!saga) return;
 
-    await this.failStep(saga.id, STEP.RESERVE_INVENTORY, 'Sản phẩm không đủ hàng');
-    await this.sagaRepo.update(saga.id, { status: SagaStatus.COMPENSATED, currentStep: 'CANCELLED' });
+    await this.failStep(
+      saga.id,
+      STEP.RESERVE_INVENTORY,
+      'Sản phẩm không đủ hàng',
+    );
+    await this.sagaRepo.update(saga.id, {
+      status: SagaStatus.COMPENSATED,
+      currentStep: 'CANCELLED',
+    });
 
     await this.cancelOrder(saga.orderId, 'Sản phẩm hết hàng');
-    await this.sendNotification(saga, 'order-cancelled', { reason: 'Sản phẩm hết hàng' });
+    await this.sendNotification(saga, 'order-cancelled', {
+      reason: 'Sản phẩm hết hàng',
+    });
 
     this.logger.log(`Saga ${saga.id}: inventory insufficient, order cancelled`);
   }
@@ -115,16 +135,29 @@ export class OrderSagaService {
     if (!saga) return;
 
     await this.completeStep(saga.id, STEP.AWAIT_PAYMENT, event.payload);
-    await this.createStep(saga.id, STEP.CONFIRM_INVENTORY, 'inventory.confirm_stock', event.payload);
-    await this.sagaRepo.update(saga.id, { currentStep: STEP.CONFIRM_INVENTORY });
+    await this.createStep(
+      saga.id,
+      STEP.CONFIRM_INVENTORY,
+      'inventory.confirm_stock',
+      event.payload,
+    );
+    await this.sagaRepo.update(saga.id, {
+      currentStep: STEP.CONFIRM_INVENTORY,
+    });
 
     await this.updateOrderStatus(saga.orderId, 'PAYMENT_RECEIVED');
-    await this.publishCommand('inventory.confirm_stock', saga.id, saga.orderId, saga.userId, {
-      productId: event.payload.productId,
-      quantity: event.payload.quantity,
-      sagaId: saga.id,
-      orderId: saga.orderId,
-    });
+    await this.publishCommand(
+      'inventory.confirm_stock',
+      saga.id,
+      saga.orderId,
+      saga.userId,
+      {
+        productId: event.payload.productId,
+        quantity: event.payload.quantity,
+        sagaId: saga.id,
+        orderId: saga.orderId,
+      },
+    );
 
     this.logger.log(`Saga ${saga.id}: payment completed, confirming inventory`);
   }
@@ -133,14 +166,24 @@ export class OrderSagaService {
     const saga = await this.findRunningSaga(event.orderId);
     if (!saga) return;
 
-    await this.failStep(saga.id, STEP.AWAIT_PAYMENT, 'Hết thời gian thanh toán');
+    await this.failStep(
+      saga.id,
+      STEP.AWAIT_PAYMENT,
+      'Hết thời gian thanh toán',
+    );
     await this.sagaRepo.update(saga.id, { status: SagaStatus.COMPENSATING });
 
     // Compensation: release stock
-    await this.publishCommand('inventory.release_stock', saga.id, saga.orderId, saga.userId, {
-      sagaId: saga.id,
-      orderId: saga.orderId,
-    });
+    await this.publishCommand(
+      'inventory.release_stock',
+      saga.id,
+      saga.orderId,
+      saga.userId,
+      {
+        sagaId: saga.id,
+        orderId: saga.orderId,
+      },
+    );
 
     this.logger.log(`Saga ${saga.id}: payment timeout, releasing stock`);
   }
@@ -152,17 +195,30 @@ export class OrderSagaService {
     if (!saga) return;
 
     await this.completeStep(saga.id, STEP.CONFIRM_INVENTORY, event.payload);
-    await this.createStep(saga.id, STEP.CREATE_SHIPPING, 'shipping.create_label', null);
+    await this.createStep(
+      saga.id,
+      STEP.CREATE_SHIPPING,
+      'shipping.create_label',
+      null,
+    );
     await this.sagaRepo.update(saga.id, { currentStep: STEP.CREATE_SHIPPING });
 
     await this.updateOrderStatus(saga.orderId, 'CONFIRMED');
-    await this.publishCommand('shipping.create_label', saga.id, saga.orderId, saga.userId, {
-      sagaId: saga.id,
-      orderId: saga.orderId,
-      userId: saga.userId,
-    });
+    await this.publishCommand(
+      'shipping.create_label',
+      saga.id,
+      saga.orderId,
+      saga.userId,
+      {
+        sagaId: saga.id,
+        orderId: saga.orderId,
+        userId: saga.userId,
+      },
+    );
 
-    this.logger.log(`Saga ${saga.id}: inventory confirmed, creating shipping label`);
+    this.logger.log(
+      `Saga ${saga.id}: inventory confirmed, creating shipping label`,
+    );
   }
 
   // ─── Step 4: Shipping label created ──────────────────────────────────────
@@ -179,7 +235,9 @@ export class OrderSagaService {
     await this.updateOrderStatus(saga.orderId, 'PREPARING', { trackingId });
     await this.sendNotification(saga, 'order-confirmed', { trackingId });
 
-    this.logger.log(`Saga ${saga.id}: shipping label created, trackingId=${trackingId}`);
+    this.logger.log(
+      `Saga ${saga.id}: shipping label created, trackingId=${trackingId}`,
+    );
   }
 
   // ─── Step 5: Shipping delivered ───────────────────────────────────────────
@@ -197,7 +255,9 @@ export class OrderSagaService {
     await this.updateOrderStatus(saga.orderId, 'DELIVERED');
     await this.sendNotification(saga, 'order-delivered', {});
 
-    this.logger.log(`Saga ${saga.id}: COMPLETED — order ${saga.orderId} delivered`);
+    this.logger.log(
+      `Saga ${saga.id}: COMPLETED — order ${saga.orderId} delivered`,
+    );
   }
 
   // ─── Compensation: stock released ─────────────────────────────────────────
@@ -208,9 +268,14 @@ export class OrderSagaService {
     });
     if (!saga) return;
 
-    await this.sagaRepo.update(saga.id, { status: SagaStatus.COMPENSATED, currentStep: 'CANCELLED' });
+    await this.sagaRepo.update(saga.id, {
+      status: SagaStatus.COMPENSATED,
+      currentStep: 'CANCELLED',
+    });
     await this.cancelOrder(saga.orderId, 'Hết thời gian thanh toán');
-    await this.sendNotification(saga, 'order-cancelled', { reason: 'Hết thời gian thanh toán' });
+    await this.sendNotification(saga, 'order-cancelled', {
+      reason: 'Hết thời gian thanh toán',
+    });
 
     this.logger.log(`Saga ${saga.id}: stock released, order cancelled`);
   }
@@ -255,7 +320,11 @@ export class OrderSagaService {
   private async failStep(sagaId: string, stepName: string, reason: string) {
     await this.stepRepo.update(
       { sagaId, stepName },
-      { status: SagaStepStatus.FAILED, failedReason: reason, completedAt: new Date() },
+      {
+        status: SagaStepStatus.FAILED,
+        failedReason: reason,
+        completedAt: new Date(),
+      },
     );
   }
 
@@ -283,8 +352,14 @@ export class OrderSagaService {
     });
   }
 
-  private async createPaymentQR(saga: SagaInstance, orderPayload: Record<string, unknown>) {
-    const paymentUrl = this.configService.get<string>('PAYMENT_SERVICE_URL', 'http://localhost:3008');
+  private async createPaymentQR(
+    saga: SagaInstance,
+    orderPayload: Record<string, unknown>,
+  ) {
+    const paymentUrl = this.configService.get<string>(
+      'PAYMENT_SERVICE_URL',
+      'http://localhost:3008',
+    );
     const apiPrefix = 'api/v1';
 
     try {
@@ -296,23 +371,37 @@ export class OrderSagaService {
         }),
       );
     } catch (error) {
-      this.logger.error(`Failed to create payment QR for order ${saga.orderId}: ${error}`);
+      this.logger.error(
+        `Failed to create payment QR for order ${saga.orderId}: ${error}`,
+      );
     }
   }
 
-  private async updateOrderStatus(orderId: string, status: string, extra: Record<string, unknown> = {}) {
-    const orderUrl = this.configService.get<string>('ORDER_SERVICE_URL', 'http://localhost:3006');
+  private async updateOrderStatus(
+    orderId: string,
+    status: string,
+    extra: Record<string, unknown> = {},
+  ) {
+    const orderUrl = this.configService.get<string>(
+      'ORDER_SERVICE_URL',
+      'http://localhost:3006',
+    );
     const apiPrefix = 'api/v1';
 
     try {
       await firstValueFrom(
-        this.httpService.patch(`${orderUrl}/${apiPrefix}/orders/${orderId}/status`, {
-          status,
-          ...extra,
-        }),
+        this.httpService.patch(
+          `${orderUrl}/${apiPrefix}/orders/${orderId}/status`,
+          {
+            status,
+            ...extra,
+          },
+        ),
       );
     } catch (error) {
-      this.logger.error(`Failed to update order ${orderId} status to ${status}: ${error}`);
+      this.logger.error(
+        `Failed to update order ${orderId} status to ${status}: ${error}`,
+      );
     }
   }
 
@@ -325,12 +414,18 @@ export class OrderSagaService {
     template: string,
     data: Record<string, unknown>,
   ) {
-    await this.publishCommand('notification.send', saga.id, saga.orderId, saga.userId, {
-      userId: saga.userId,
-      email: saga.userEmail,
-      template,
-      data: { orderId: saga.orderId, ...data },
-      channels: ['email', 'socket'],
-    });
+    await this.publishCommand(
+      'notification.send',
+      saga.id,
+      saga.orderId,
+      saga.userId,
+      {
+        userId: saga.userId,
+        email: saga.userEmail,
+        template,
+        data: { orderId: saga.orderId, ...data },
+        channels: ['email', 'socket'],
+      },
+    );
   }
 }

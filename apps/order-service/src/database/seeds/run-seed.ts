@@ -10,7 +10,9 @@ async function runSeed() {
   const statuses = Object.values(OrderStatus);
 
   for (let i = 0; i < 10; i++) {
-    const unitPrice = parseFloat(faker.commerce.price({ min: 50000, max: 5000000 }));
+    const unitPrice = parseFloat(
+      faker.commerce.price({ min: 50000, max: 5000000 }),
+    );
     const quantity = faker.number.int({ min: 1, max: 3 });
 
     const order = orderRepo.create({

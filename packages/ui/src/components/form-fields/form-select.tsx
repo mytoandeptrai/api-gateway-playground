@@ -1,11 +1,24 @@
-'use client';
+"use client";
 
-import type { FieldPath, FieldValues } from 'react-hook-form';
-import { FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@repo/ui/components/form';  
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@repo/ui/components/select';
-import type { BaseFormFieldProps, FormOption } from '@repo/ui/types/base-form';
-import { Show } from '@repo/ui/components/show';
-import { cn } from '@repo/ui/lib/utils';
+import type { FieldPath, FieldValues } from "react-hook-form";
+import {
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@repo/ui/components/form";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@repo/ui/components/select";
+import type { BaseFormFieldProps, FormOption } from "@repo/ui/types/base-form";
+import { Show } from "@repo/ui/components/show";
+import { cn } from "@repo/ui/lib/utils";
 
 interface FormSelectProps<
   TFieldValues extends FieldValues = FieldValues,
@@ -27,7 +40,7 @@ function FormSelect<
   description,
   required,
   options,
-  placeholder = 'Select an option',
+  placeholder = "Select an option",
   disabled,
   className,
   selectClassName,
@@ -42,14 +55,18 @@ function FormSelect<
           {label && (
             <FormLabel>
               {label}
-              {required && <span className='ml-1 text-red-500'>*</span>}
+              {required && <span className="ml-1 text-red-500">*</span>}
             </FormLabel>
           )}
-          <Select onValueChange={field.onChange} defaultValue={field.value} disabled={disabled}>
+          <Select
+            onValueChange={field.onChange}
+            defaultValue={field.value}
+            disabled={disabled}
+          >
             <FormControl>
               <SelectTrigger
                 className={cn(selectClassName, {
-                  'w-full': fullWidth,
+                  "w-full": fullWidth,
                 })}
               >
                 <SelectValue placeholder={placeholder} />
@@ -57,12 +74,16 @@ function FormSelect<
             </FormControl>
             <SelectContent>
               {options.map((option) => (
-                <SelectItem key={option.value} value={option.value} disabled={option.disabled}>
+                <SelectItem
+                  key={option.value}
+                  value={option.value}
+                  disabled={option.disabled}
+                >
                   {option.label}
                 </SelectItem>
               ))}
               <Show when={!options || options.length === 0}>
-                <SelectItem value='no-options' disabled>
+                <SelectItem value="no-options" disabled>
                   No options
                 </SelectItem>
               </Show>

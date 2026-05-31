@@ -13,7 +13,9 @@ async function runSeed() {
   );
 
   if (products.length === 0) {
-    console.log('No products found in product schema. Run product-service seed first.');
+    console.log(
+      'No products found in product schema. Run product-service seed first.',
+    );
     await dataSource.destroy();
     return;
   }
@@ -22,17 +24,21 @@ async function runSeed() {
   for (const product of products) {
     const exists = await itemRepo.findOne({ where: { productId: product.id } });
     if (!exists) {
-      await itemRepo.save(itemRepo.create({
-        productId: product.id,
-        totalStock: 100,
-        reserved: 0,
-        available: 100,
-      }));
+      await itemRepo.save(
+        itemRepo.create({
+          productId: product.id,
+          totalStock: 100,
+          reserved: 0,
+          available: 100,
+        }),
+      );
       created++;
     }
   }
 
-  console.log(`Inventory seeded: ${created} items created for ${products.length} products.`);
+  console.log(
+    `Inventory seeded: ${created} items created for ${products.length} products.`,
+  );
   await dataSource.destroy();
 }
 

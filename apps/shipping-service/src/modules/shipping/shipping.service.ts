@@ -3,7 +3,10 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ConfigService } from '@nestjs/config';
 import { randomUUID } from 'crypto';
-import { ShipmentRecord, ShipmentStatus } from './entities/shipment-record.entity';
+import {
+  ShipmentRecord,
+  ShipmentStatus,
+} from './entities/shipment-record.entity';
 import { KafkaProducer } from '@/shared/kafka/utils/kafka.producer';
 
 interface KafkaEnvelope {
@@ -57,14 +60,19 @@ export class ShippingService {
       trackingId: shipment.trackingId,
     });
 
-    this.logger.log(`Shipping label created for order ${orderId}, trackingId=${shipment.trackingId}`);
+    this.logger.log(
+      `Shipping label created for order ${orderId}, trackingId=${shipment.trackingId}`,
+    );
 
     // Start mock delivery simulation
     this.simulateDelivery(shipment);
   }
 
   private async simulateDelivery(shipment: ShipmentRecord) {
-    const intervalMs = this.configService.get<number>('MOCK_SHIPPING_INTERVAL_MS', 30000);
+    const intervalMs = this.configService.get<number>(
+      'MOCK_SHIPPING_INTERVAL_MS',
+      30000,
+    );
     const steps: ShipmentStatus[] = [
       ShipmentStatus.PICKED_UP,
       ShipmentStatus.IN_TRANSIT,
@@ -74,7 +82,9 @@ export class ShippingService {
     for (const status of steps) {
       await this.delay(intervalMs);
 
-      const updated = await this.shipmentRepo.findOne({ where: { id: shipment.id } });
+      const updated = await this.shipmentRepo.findOne({
+        where: { id: shipment.id },
+      });
       if (!updated || updated.status === ShipmentStatus.CANCELLED) break;
 
       await this.shipmentRepo.update(shipment.id, { status });
@@ -82,14 +92,22 @@ export class ShippingService {
       if (status === ShipmentStatus.DELIVERED) {
         await this.publishStatusUpdate('shipping.delivered', shipment, status);
       } else {
-        await this.publishStatusUpdate('shipping.status_updated', shipment, status);
+        await this.publishStatusUpdate(
+          'shipping.status_updated',
+          shipment,
+          status,
+        );
       }
 
       this.logger.log(`Order ${shipment.orderId} shipping status: ${status}`);
     }
   }
 
-  private async publishStatusUpdate(topic: string, shipment: ShipmentRecord, status: ShipmentStatus) {
+  private async publishStatusUpdate(
+    topic: string,
+    shipment: ShipmentRecord,
+    status: ShipmentStatus,
+  ) {
     const envelope: KafkaEnvelope = {
       eventId: randomUUID(),
       eventType: topic,
@@ -112,7 +130,11 @@ export class ShippingService {
     });
   }
 
-  private async publish(topic: string, sourceEvent: KafkaEnvelope, payload: object) {
+  private async publish(
+    topic: string,
+    sourceEvent: KafkaEnvelope,
+    payload: object,
+  ) {
     const envelope: KafkaEnvelope = {
       eventId: randomUUID(),
       eventType: topic,

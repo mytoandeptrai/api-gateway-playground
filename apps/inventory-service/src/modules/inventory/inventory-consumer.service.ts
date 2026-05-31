@@ -1,4 +1,9 @@
-import { Injectable, Logger, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  OnModuleInit,
+  OnModuleDestroy,
+} from '@nestjs/common';
 import { KafkaConsumer } from '@/shared/kafka/utils/kafka.consumer';
 import { InventoryService } from './inventory.service';
 
@@ -15,13 +20,26 @@ export class InventoryConsumerService implements OnModuleInit, OnModuleDestroy {
 
   async onModuleInit() {
     const topics = [
-      { topic: 'inventory.reserve_stock', handler: this.inventoryService.reserveStock.bind(this.inventoryService) },
-      { topic: 'inventory.confirm_stock', handler: this.inventoryService.confirmStock.bind(this.inventoryService) },
-      { topic: 'inventory.release_stock', handler: this.inventoryService.releaseStock.bind(this.inventoryService) },
+      {
+        topic: 'inventory.reserve_stock',
+        handler: this.inventoryService.reserveStock.bind(this.inventoryService),
+      },
+      {
+        topic: 'inventory.confirm_stock',
+        handler: this.inventoryService.confirmStock.bind(this.inventoryService),
+      },
+      {
+        topic: 'inventory.release_stock',
+        handler: this.inventoryService.releaseStock.bind(this.inventoryService),
+      },
     ];
 
     for (const { topic, handler } of topics) {
-      const key = await this.kafkaConsumer.subscribe({ topic, groupId: GROUP_ID, fromBeginning: false });
+      const key = await this.kafkaConsumer.subscribe({
+        topic,
+        groupId: GROUP_ID,
+        fromBeginning: false,
+      });
       await this.kafkaConsumer.run(key, async (message) => {
         if (!message.value) return;
         try {

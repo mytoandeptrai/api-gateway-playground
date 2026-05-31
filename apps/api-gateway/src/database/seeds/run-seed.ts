@@ -15,7 +15,8 @@ import {
 const rules: Partial<RateLimitRule>[] = [
   {
     name: 'Global Safety Net',
-    description: 'Overall system protection — limits total requests across all clients',
+    description:
+      'Overall system protection — limits total requests across all clients',
     scope: RateLimitScope.GLOBAL,
     algorithm: RateLimitAlgorithm.TOKEN_BUCKET,
     maxRequests: 5000,
@@ -27,7 +28,8 @@ const rules: Partial<RateLimitRule>[] = [
   },
   {
     name: 'Gateway Proxy - Standard',
-    description: 'Default rate limit for all proxy requests through the gateway',
+    description:
+      'Default rate limit for all proxy requests through the gateway',
     scope: RateLimitScope.GLOBAL,
     endpoint: '/api/v1/gateway',
     algorithm: RateLimitAlgorithm.SLIDING_WINDOW,

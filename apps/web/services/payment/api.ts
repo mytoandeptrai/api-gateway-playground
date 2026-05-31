@@ -1,6 +1,8 @@
-import httpInstance from '../http-instance';
-import type { BaseResponseType } from '@/types/base-type';
-import type { PaymentStatusInfo } from './types.dto';
+import httpInstance from "../http-instance";
+import type { BaseResponseType } from "@/types/base-type";
+import type { PaymentStatusInfo } from "./types.dto";
 
 export const getPaymentStatusApi = (orderId: string) =>
-  httpInstance.get<BaseResponseType<PaymentStatusInfo>>(`/api/payment/${orderId}/status`);
+  httpInstance.get<BaseResponseType<PaymentStatusInfo>>(
+    `/api/payment/${orderId}/status`,
+  );

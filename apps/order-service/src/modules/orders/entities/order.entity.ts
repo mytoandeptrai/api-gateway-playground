@@ -44,7 +44,11 @@ export class Order {
   @Column({ type: 'decimal', precision: 10, scale: 2 })
   totalAmount: number;
 
-  @Column({ type: 'enum', enum: OrderStatus, default: OrderStatus.PENDING_PAYMENT })
+  @Column({
+    type: 'enum',
+    enum: OrderStatus,
+    default: OrderStatus.PENDING_PAYMENT,
+  })
   status: OrderStatus;
 
   @Column({ type: 'jsonb' })

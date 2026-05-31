@@ -1,11 +1,18 @@
-import { Injectable, Logger, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  OnModuleInit,
+  OnModuleDestroy,
+} from '@nestjs/common';
 import { KafkaConsumer } from '@/shared/kafka/utils/kafka.consumer';
 import { NotificationService } from './notification.service';
 
 const GROUP_ID = 'notification-group';
 
 @Injectable()
-export class NotificationConsumerService implements OnModuleInit, OnModuleDestroy {
+export class NotificationConsumerService
+  implements OnModuleInit, OnModuleDestroy
+{
   private readonly logger = new Logger(NotificationConsumerService.name);
 
   constructor(

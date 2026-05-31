@@ -1,4 +1,4 @@
-import { ConsumerConfig, KafkaConfig, ProducerRecord } from "kafkajs";
+import { ConsumerConfig, KafkaConfig, ProducerRecord } from 'kafkajs';
 
 export type KafkaClientConfig = KafkaConfig & {
   clientId: string;
@@ -11,7 +11,7 @@ export type KafkaConsumerOptions = ConsumerConfig & {
   topic: string;
   groupId: string;
   fromBeginning?: boolean;
-  retries?: number
+  retries?: number;
 };
 
 export interface IKafkaProducer {
@@ -31,6 +31,6 @@ export interface IKafkaConsumer {
       value: string | null;
       topic: string;
       partition: number;
-    }) => Promise<void>
+    }) => Promise<void>,
   ): Promise<void>;
 }

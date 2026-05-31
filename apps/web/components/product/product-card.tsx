@@ -1,13 +1,15 @@
-'use client';
+"use client";
 
-import { Badge } from '@repo/ui/components/badge';
-import { Button } from '@repo/ui/components/button';
-import { Card, CardContent, CardFooter } from '@repo/ui/components/card';
-import { useRouter } from 'next/navigation';
-import type { Product } from '@/services/product/types.dto';
+import { Badge } from "@repo/ui/components/badge";
+import { Button } from "@repo/ui/components/button";
+import { Card, CardContent, CardFooter } from "@repo/ui/components/card";
+import { useRouter } from "next/navigation";
+import type { Product } from "@/services/product/types.dto";
 
 const formatPrice = (price: number) =>
-  new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(price);
+  new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(
+    price,
+  );
 
 export function ProductCard({ product }: { product: Product }) {
   const router = useRouter();
@@ -33,12 +35,20 @@ export function ProductCard({ product }: { product: Product }) {
       </div>
 
       <CardContent className="flex-1 p-4 space-y-1">
-        <h3 className="font-semibold text-sm leading-tight line-clamp-2">{product.name}</h3>
+        <h3 className="font-semibold text-sm leading-tight line-clamp-2">
+          {product.name}
+        </h3>
         {product.description && (
-          <p className="text-xs text-muted-foreground line-clamp-2">{product.description}</p>
+          <p className="text-xs text-muted-foreground line-clamp-2">
+            {product.description}
+          </p>
         )}
-        <p className="text-lg font-bold text-primary pt-1">{formatPrice(product.price)}</p>
-        <p className="text-xs text-muted-foreground">Còn {product.stock} sản phẩm</p>
+        <p className="text-lg font-bold text-primary pt-1">
+          {formatPrice(product.price)}
+        </p>
+        <p className="text-xs text-muted-foreground">
+          Còn {product.stock} sản phẩm
+        </p>
       </CardContent>
 
       <CardFooter className="p-4 pt-0">
@@ -47,7 +57,7 @@ export function ProductCard({ product }: { product: Product }) {
           disabled={outOfStock}
           onClick={() => router.push(`/checkout?productId=${product.id}`)}
         >
-          {outOfStock ? 'Hết hàng' : 'Mua ngay'}
+          {outOfStock ? "Hết hàng" : "Mua ngay"}
         </Button>
       </CardFooter>
     </Card>

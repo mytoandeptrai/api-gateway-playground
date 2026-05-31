@@ -1,13 +1,13 @@
-import { Check, Loader2, X } from 'lucide-react';
-import type { OrderStatus } from '@/services/order/types.dto';
+import { Check, Loader2, X } from "lucide-react";
+import type { OrderStatus } from "@/services/order/types.dto";
 
 const STEPS: { status: OrderStatus; label: string }[] = [
-  { status: 'PENDING_PAYMENT', label: 'Tạo đơn' },
-  { status: 'PAYMENT_RECEIVED', label: 'Thanh toán' },
-  { status: 'CONFIRMED', label: 'Xác nhận' },
-  { status: 'PREPARING', label: 'Đóng gói' },
-  { status: 'SHIPPED', label: 'Vận chuyển' },
-  { status: 'DELIVERED', label: 'Đã giao' },
+  { status: "PENDING_PAYMENT", label: "Tạo đơn" },
+  { status: "PAYMENT_RECEIVED", label: "Thanh toán" },
+  { status: "CONFIRMED", label: "Xác nhận" },
+  { status: "PREPARING", label: "Đóng gói" },
+  { status: "SHIPPED", label: "Vận chuyển" },
+  { status: "DELIVERED", label: "Đã giao" },
 ];
 
 const ORDER_INDEX: Record<OrderStatus, number> = {
@@ -24,7 +24,7 @@ const ORDER_INDEX: Record<OrderStatus, number> = {
 
 export function OrderTimeline({ status }: { status: OrderStatus }) {
   const currentIdx = ORDER_INDEX[status];
-  const cancelled = status === 'CANCELLED';
+  const cancelled = status === "CANCELLED";
 
   return (
     <div className="flex items-start gap-0 w-full overflow-x-auto pb-2">
@@ -33,21 +33,42 @@ export function OrderTimeline({ status }: { status: OrderStatus }) {
         const active = !cancelled && i === currentIdx;
 
         return (
-          <div key={step.status} className="flex flex-col items-center flex-1 min-w-0">
+          <div
+            key={step.status}
+            className="flex flex-col items-center flex-1 min-w-0"
+          >
             <div className="flex items-center w-full">
-              {i > 0 && <div className={`h-0.5 flex-1 ${done || active ? 'bg-primary' : 'bg-muted'}`} />}
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 border-2 ${
-                done ? 'bg-primary border-primary text-primary-foreground' :
-                active ? 'border-primary text-primary' :
-                'border-muted text-muted-foreground'
-              }`}>
-                {done ? <Check className="w-4 h-4" /> :
-                 active ? <Loader2 className="w-4 h-4 animate-spin" /> :
-                 <span className="text-xs">{i + 1}</span>}
+              {i > 0 && (
+                <div
+                  className={`h-0.5 flex-1 ${done || active ? "bg-primary" : "bg-muted"}`}
+                />
+              )}
+              <div
+                className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 border-2 ${
+                  done
+                    ? "bg-primary border-primary text-primary-foreground"
+                    : active
+                      ? "border-primary text-primary"
+                      : "border-muted text-muted-foreground"
+                }`}
+              >
+                {done ? (
+                  <Check className="w-4 h-4" />
+                ) : active ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <span className="text-xs">{i + 1}</span>
+                )}
               </div>
-              {i < STEPS.length - 1 && <div className={`h-0.5 flex-1 ${done ? 'bg-primary' : 'bg-muted'}`} />}
+              {i < STEPS.length - 1 && (
+                <div
+                  className={`h-0.5 flex-1 ${done ? "bg-primary" : "bg-muted"}`}
+                />
+              )}
             </div>
-            <span className={`text-xs mt-1 text-center ${active ? 'text-primary font-medium' : done ? 'text-foreground' : 'text-muted-foreground'}`}>
+            <span
+              className={`text-xs mt-1 text-center ${active ? "text-primary font-medium" : done ? "text-foreground" : "text-muted-foreground"}`}
+            >
               {step.label}
             </span>
           </div>
@@ -63,7 +84,9 @@ export function OrderTimeline({ status }: { status: OrderStatus }) {
             </div>
             <div className="h-0.5 flex-1 bg-muted" />
           </div>
-          <span className="text-xs mt-1 text-destructive font-medium">Đã hủy</span>
+          <span className="text-xs mt-1 text-destructive font-medium">
+            Đã hủy
+          </span>
         </div>
       )}
     </div>

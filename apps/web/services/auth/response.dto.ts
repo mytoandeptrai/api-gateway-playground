@@ -1,5 +1,5 @@
-import type { BaseResponseType } from '@/types/base-type';
-import type { AuthUser } from './types.dto';
+import type { BaseResponseType } from "@/types/base-type";
+import type { AuthUser } from "./types.dto";
 
 export type LoginResponse = BaseResponseType<{
   accessToken: string;

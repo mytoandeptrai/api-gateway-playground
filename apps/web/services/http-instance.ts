@@ -24,7 +24,6 @@ type NonNullableObject<T> = {
     : NonNullable<T[K]>;
 };
 
-
 type ErrorResponseData = {
   retryAfter?: number;
   blockDuration?: number;
@@ -137,7 +136,7 @@ class HttpInstance {
     const originalRequest = error.config!;
     const data = error.response?.data as unknown as ErrorResponse;
     const statusCode = error.response?.status;
-    const isAuthEndpoint = originalRequest.url?.includes('/auth/');
+    const isAuthEndpoint = originalRequest.url?.includes("/auth/");
     const isTokenExpired = statusCode === 401 && !isAuthEndpoint;
 
     if (!isTokenExpired) {
