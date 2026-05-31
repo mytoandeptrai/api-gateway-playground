@@ -4,7 +4,9 @@ import { Order, OrderStatus } from 'src/modules/orders/entities/order.entity';
 
 async function runSeed() {
   await dataSource.initialize();
-  // Create tables from entities if they don't exist yet
+  // Ensure schema and tables exist before seeding
+  const schema = process.env.DB_SCHEMA || 'public';
+  await dataSource.query(`CREATE SCHEMA IF NOT EXISTS "${schema}"`);
   await dataSource.synchronize();
 
   console.log('Data source initialized. Running order seeds...');
