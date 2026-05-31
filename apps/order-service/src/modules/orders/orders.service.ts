@@ -36,7 +36,7 @@ export class OrdersService {
     private readonly configService: ConfigService,
   ) {}
 
-  async create(userId: string, dto: CreateOrderDto) {
+  async create(userId: string, userEmail: string, dto: CreateOrderDto) {
     const product = await this.fetchProduct(dto.productId);
 
     const totalAmount = product.price * dto.quantity;
@@ -71,7 +71,9 @@ export class OrdersService {
           payload: {
             orderId: order.id,
             userId,
+            userEmail,
             productId: dto.productId,
+            productName: product.name,
             quantity: dto.quantity,
             totalAmount,
             shippingAddress: dto.shippingAddress,

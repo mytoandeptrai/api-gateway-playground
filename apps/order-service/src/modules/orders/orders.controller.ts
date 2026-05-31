@@ -34,7 +34,7 @@ export class OrdersController {
   @ApiOperation({ summary: 'Create a new order' })
   @ApiResponse({ status: 201, description: 'Order created — returns orderId, totalAmount, paymentDeadline' })
   create(@Request() req: AuthRequest, @Body() dto: CreateOrderDto) {
-    return this.ordersService.create(req.user.id, dto);
+    return this.ordersService.create(req.user.id, req.user.email, dto);
   }
 
   @Get()
