@@ -10,6 +10,7 @@ import { OrdersService } from './orders.service';
 import { OrdersController } from './orders.controller';
 import { OutboxWorker } from './outbox/outbox.worker';
 import { JwtStrategy } from '@/shared/strategies/jwt.strategy';
+import { OrderConsumerService } from './order-consumer.service';
 
 @Module({
   imports: [
@@ -24,7 +25,7 @@ import { JwtStrategy } from '@/shared/strategies/jwt.strategy';
       }),
     }),
   ],
-  providers: [OrdersService, OutboxWorker, JwtStrategy],
+  providers: [OrdersService, OutboxWorker, JwtStrategy, OrderConsumerService],
   controllers: [OrdersController],
   exports: [OrdersService],
 })
