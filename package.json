@@ -8,7 +8,8 @@
     "lint": "turbo run lint",
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
     "check-types": "turbo run check-types",
-    "dev:services": "turbo run dev --concurrency=15 --filter=api-gateway --filter=auth-service --filter=order-service --filter=inventory-service --filter=orchestrator-service --filter=payment-service --filter=refund-service --filter=shipping-service --filter=notification-service --filter=product-service",
+    "dev:services": "turbo run dev --concurrency=15 --filter=api-gateway --filter=orchestrator-service --filter=auth-service --filter=order-service --filter=inventory-service --filter=payment-service --filter=refund-service --filter=shipping-service --filter=notification-service --filter=product-service",
+    "dev:fresh": "bash scripts/dev-fresh.sh",
     "only-infra": "cd docker && docker compose up -d"
   },
   "devDependencies": {
