@@ -509,6 +509,9 @@ importers:
       ioredis:
         specifier: ^5.6.1
         version: 5.9.3
+      kafkajs:
+        specifier: ^2.2.4
+        version: 2.2.4
       pg:
         specifier: ^8.13.3
         version: 8.18.0
@@ -645,6 +648,9 @@ importers:
       ioredis:
         specifier: ^5.6.1
         version: 5.9.3
+      kafkajs:
+        specifier: ^2.2.4
+        version: 2.2.4
       pg:
         specifier: ^8.13.3
         version: 8.18.0
@@ -781,6 +787,9 @@ importers:
       ioredis:
         specifier: ^5.6.1
         version: 5.9.3
+      kafkajs:
+        specifier: ^2.2.4
+        version: 2.2.4
       pg:
         specifier: ^8.13.3
         version: 8.18.0
@@ -917,6 +926,9 @@ importers:
       ioredis:
         specifier: ^5.6.1
         version: 5.9.3
+      kafkajs:
+        specifier: ^2.2.4
+        version: 2.2.4
       pg:
         specifier: ^8.13.3
         version: 8.18.0
@@ -1056,6 +1068,9 @@ importers:
       ioredis:
         specifier: ^5.6.1
         version: 5.9.3
+      kafkajs:
+        specifier: ^2.2.4
+        version: 2.2.4
       pg:
         specifier: ^8.13.3
         version: 8.18.0
@@ -1331,6 +1346,9 @@ importers:
       ioredis:
         specifier: ^5.6.1
         version: 5.9.3
+      kafkajs:
+        specifier: ^2.2.4
+        version: 2.2.4
       pg:
         specifier: ^8.13.3
         version: 8.18.0
@@ -1467,6 +1485,9 @@ importers:
       ioredis:
         specifier: ^5.6.1
         version: 5.9.3
+      kafkajs:
+        specifier: ^2.2.4
+        version: 2.2.4
       pg:
         specifier: ^8.13.3
         version: 8.18.0

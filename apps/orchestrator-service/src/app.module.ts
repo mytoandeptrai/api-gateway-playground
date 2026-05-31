@@ -8,6 +8,8 @@ import redisConfig from '@/config/redis.config';
 import { SharedRedisModule } from '@/shared/redis/shared-redis.module';
 import { CachingModule } from '@/shared/caching/caching.module';
 import { LoggingMiddleware } from '@/shared/middleware/logging.middleware';
+import kafkaConfig from '@/config/kafka.config';
+import { KafkaModule } from '@/shared/kafka/kafka.module';
 import { UsersModule } from '@/users/users.module';
 
 @Module({
@@ -15,7 +17,7 @@ import { UsersModule } from '@/users/users.module';
     // Configuration module - must be first
     ConfigModule.forRoot({
       isGlobal: true,
-      load: [databaseConfig, redisConfig],
+      load: [databaseConfig, redisConfig, kafkaConfig],
       envFilePath: ['.env.local', '.env'],
     }),
 
@@ -46,6 +48,7 @@ import { UsersModule } from '@/users/users.module';
     // Shared Module
     SharedRedisModule,
     CachingModule,
+    KafkaModule,
 
     // Features Modules
     UsersModule,
