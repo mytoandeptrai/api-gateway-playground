@@ -28,6 +28,7 @@ export class NotificationConsumerService
     });
 
     await this.kafkaConsumer.run(key, async (message) => {
+      this.logger.log(`[KAFKA] Received message`);
       if (!message.value) return;
       try {
         const event = JSON.parse(message.value);
@@ -39,7 +40,9 @@ export class NotificationConsumerService
           payload: event.payload,
         });
       } catch (err) {
-        this.logger.error(`Error processing notification.send: ${err}`);
+        this.logger.error(
+          `[KAFKA] ✗ Error processing notification.send: ${err}`,
+        );
       }
     });
 

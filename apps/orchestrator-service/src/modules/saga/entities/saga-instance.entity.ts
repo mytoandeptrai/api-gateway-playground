@@ -39,6 +39,9 @@ export class SagaInstance {
   @Column()
   currentStep: string;
 
+  @Column({ type: 'jsonb', nullable: true })
+  orderPayload: Record<string, unknown>;
+
   @CreateDateColumn()
   createdAt: Date;
 

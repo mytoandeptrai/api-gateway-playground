@@ -38,4 +38,10 @@ export class PaymentController {
   ) {
     return this.paymentService.processRefund(body);
   }
+
+  @Get('test-url')
+  @ApiOperation({ summary: 'Test: generate VNPay payment URL' })
+  testPaymentUrl() {
+    return this.paymentService.testPaymentUrl();
+  }
 }

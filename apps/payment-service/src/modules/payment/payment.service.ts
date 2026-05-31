@@ -2,7 +2,8 @@ import { Injectable, Logger, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource, LessThan } from 'typeorm';
 import { ConfigService } from '@nestjs/config';
-import { createHmac, randomUUID } from 'crypto';
+import { randomUUID, createHmac } from 'crypto';
+import * as querystring from 'qs';
 import { PaymentIntent, PaymentStatus } from './entities/payment-intent.entity';
 import { OutboxEvent } from './entities/outbox-event.entity';
 import { ProcessedWebhook } from './entities/processed-webhook.entity';
@@ -46,19 +47,16 @@ export class PaymentService {
 
     const now = new Date();
     const expiresAt = new Date(now.getTime() + timeoutMinutes * 60 * 1000);
-
-    const txnRef = body.orderId;
-    const amountInVnd = Math.round(body.amount) * 100;
     const createDate = formatVnpDate(now);
 
     const params: Record<string, string> = {
       vnp_Version: '2.1.0',
       vnp_Command: 'pay',
       vnp_TmnCode: tmnCode,
-      vnp_Amount: String(amountInVnd),
+      vnp_Amount: String(Math.round(body.amount) * 100),
       vnp_CurrCode: 'VND',
-      vnp_TxnRef: txnRef,
-      vnp_OrderInfo: `Thanh toan don hang ${txnRef}`,
+      vnp_TxnRef: body.orderId,
+      vnp_OrderInfo: `Thanh toan don hang ${body.orderId}`,
       vnp_OrderType: 'other',
       vnp_Locale: 'vn',
       vnp_ReturnUrl: returnUrl,
@@ -81,7 +79,7 @@ export class PaymentService {
         orderId: body.orderId,
         idempotencyKey: body.orderId,
         amount: body.amount,
-        vnpTxnRef: txnRef,
+        vnpTxnRef: body.orderId,
         sagaId: body.sagaId,
         userId: '',
         status: PaymentStatus.PENDING,
@@ -182,6 +180,59 @@ export class PaymentService {
 
     this.logger.log(`Payment completed for order ${txnRef}`);
     return { RspCode: '00', Message: 'Success' };
+  }
+
+  async testPaymentUrl() {
+    const tmnCode = this.configService.getOrThrow<string>('VNPAY_TMN_CODE');
+    const hashSecret = this.configService.getOrThrow<string>('VNPAY_HASH_SECRET');
+    const vnpUrl = this.configService.getOrThrow<string>('VNPAY_URL');
+    const returnUrl = this.configService.getOrThrow<string>('VNPAY_RETURN_URL');
+
+    const now = new Date();
+    const createDate = formatVnpDate(now);
+    const orderId = `TEST${formatVnpDate(now).slice(-6)}`;
+    const amount = 100000;
+    const ipAddr = '127.0.0.1';
+
+    let vnpParams: any = {
+      vnp_Version: '2.1.0',
+      vnp_Command: 'pay',
+      vnp_TmnCode: tmnCode,
+      vnp_Locale: 'vn',
+      vnp_CurrCode: 'VND',
+      vnp_TxnRef: orderId,
+      vnp_OrderInfo: `Test order ${orderId}`,
+      vnp_OrderType: 'other',
+      vnp_Amount: amount * 100,
+      vnp_ReturnUrl: returnUrl,
+      vnp_IpAddr: ipAddr,
+      vnp_CreateDate: createDate,
+    };
+
+    vnpParams = this.sortObject(vnpParams);
+
+    const signData = querystring.stringify(vnpParams, { encode: false });
+    const hmac = createHmac('sha512', hashSecret);
+    const signed = hmac.update(Buffer.from(signData, 'utf-8')).digest('hex');
+    vnpParams['vnp_SecureHash'] = signed;
+
+    const paymentUrl = `${vnpUrl}?${querystring.stringify(vnpParams, { encode: false })}`;
+
+    return {
+      orderId,
+      amount,
+      paymentUrl,
+      params: vnpParams,
+    };
+  }
+
+  private sortObject(obj: Record<string, any>): Record<string, any> {
+    const sorted: Record<string, any> = {};
+    const keys = Object.keys(obj).sort();
+    for (const key of keys) {
+      sorted[key] = obj[key];
+    }
+    return sorted;
   }
 
   async getStatus(orderId: string) {

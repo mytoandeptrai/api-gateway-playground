@@ -64,22 +64,27 @@ export class SagaConsumerService implements OnModuleInit, OnModuleDestroy {
     await this.kafkaAdmin.ensureTopics(SagaConsumerService.ALL_TOPICS);
     this.logger.log('All Kafka topics ensured');
 
-    for (const topic of TOPICS) {
-      const key = await this.kafkaConsumer.subscribe({
-        topic,
-        groupId: GROUP_ID,
-        fromBeginning: false,
-      });
-      await this.kafkaConsumer.run(key, async (message) => {
-        if (!message.value) return;
-        try {
-          const event = JSON.parse(message.value);
-          await this.route(topic, event);
-        } catch (err) {
-          this.logger.error(`Error processing ${topic}: ${err}`);
-        }
-      });
-    }
+    this.logger.log(`[KAFKA] Subscribing to topics: ${TOPICS.join(', ')}`);
+    const key = await this.kafkaConsumer.subscribe({
+      topics: [...TOPICS],
+      groupId: GROUP_ID,
+      fromBeginning: false,
+    });
+    this.logger.log(`[KAFKA] ✓ Subscribed to all orchestrator topics`);
+
+    await this.kafkaConsumer.run(key, async (message) => {
+      if (!message.value) return;
+      try {
+        const event = JSON.parse(message.value);
+        this.logger.log(
+          `[KAFKA] Received ${message.topic}: ${JSON.stringify(event).slice(0, 100)}`,
+        );
+        await this.route(message.topic, event);
+        this.logger.log(`[KAFKA] ✓ Processed ${message.topic}`);
+      } catch (err) {
+        this.logger.error(`Error processing ${message.topic}: ${err}`);
+      }
+    });
     this.logger.log('Saga consumers initialized');
   }
 

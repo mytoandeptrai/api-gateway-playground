@@ -39,6 +39,9 @@ export class OutboxWorker {
       let published = 0;
       for (const event of events) {
         try {
+          this.logger.log(
+            `[KAFKA] Publishing ${event.eventType}: ${event.aggregateId}`,
+          );
           await this.kafkaProducer.send({
             topic: event.eventType,
             messages: [
@@ -49,10 +52,11 @@ export class OutboxWorker {
             ],
           });
           await this.outboxRepo.update(event.id, { published: true });
+          this.logger.log(`[KAFKA] ✓ Published ${event.eventType}`);
           published++;
         } catch (error) {
           this.logger.error(
-            `Failed to publish outbox event ${event.id}`,
+            `[KAFKA] ✗ Failed to publish ${event.eventType}`,
             error instanceof Error ? error.stack : JSON.stringify(error),
           );
         }

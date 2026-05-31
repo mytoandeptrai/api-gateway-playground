@@ -243,9 +243,11 @@ export class InventoryService {
       payload: payload as Record<string, unknown>,
     };
 
+    this.logger.log(`[KAFKA] Publishing ${topic}: ${sourceEvent.orderId}`);
     await this.kafkaProducer.send({
       topic,
       messages: [{ key: sourceEvent.orderId, value: JSON.stringify(envelope) }],
     });
+    this.logger.log(`[KAFKA] ✓ Published ${topic}`);
   }
 }

@@ -8,7 +8,8 @@ export type KafkaClientConfig = KafkaConfig & {
 export type KafkaProducerMessage = ProducerRecord;
 
 export type KafkaConsumerOptions = ConsumerConfig & {
-  topic: string;
+  topic?: string;
+  topics?: string[];
   groupId: string;
   fromBeginning?: boolean;
   retries?: number;

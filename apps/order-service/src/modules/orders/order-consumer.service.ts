@@ -27,6 +27,7 @@ export class OrderConsumerService implements OnModuleInit, OnModuleDestroy {
     });
 
     await this.kafkaConsumer.run(key, async (message) => {
+      this.logger.log(`[KAFKA] Received message`);
       if (!message.value) return;
       try {
         const event = JSON.parse(message.value);
@@ -41,7 +42,9 @@ export class OrderConsumerService implements OnModuleInit, OnModuleDestroy {
           trackingId,
         });
       } catch (err) {
-        this.logger.error(`Error processing shipping.status_updated: ${err}`);
+        this.logger.error(
+          `[KAFKA] ✗ Error processing shipping.status_updated: ${err}`,
+        );
       }
     });
 

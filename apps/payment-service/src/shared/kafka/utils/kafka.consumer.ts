@@ -24,7 +24,8 @@ export class KafkaConsumer implements IKafkaConsumer, OnModuleDestroy {
     retries = 3,
     ...options
   }: KafkaConsumerOptions): Promise<string> {
-    const consumerKey = `${options.topic}-${options.groupId}`;
+    const topicKey = options.topics ? options.topics.join(',') : options.topic;
+    const consumerKey = `${topicKey}-${options.groupId}`;
 
     if (this.consumers.has(consumerKey)) {
       this.logger.warn(
@@ -55,12 +56,12 @@ export class KafkaConsumer implements IKafkaConsumer, OnModuleDestroy {
     }
 
     await consumer.subscribe({
-      topic: options.topic,
+      topics: options.topics ?? [options.topic!],
       fromBeginning: options.fromBeginning ?? false,
     });
     this.consumers.set(consumerKey, consumer);
     this.logger.log(
-      `[KafkaConsumer] Subscribed to ${options.topic} with group ${options.groupId}`,
+      `[KafkaConsumer] Subscribed to ${topicKey} with group ${options.groupId}`,
     );
 
     return consumerKey;

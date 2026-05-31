@@ -65,6 +65,7 @@ export class OrderSagaService {
         userEmail,
         status: SagaStatus.RUNNING,
         currentStep: STEP.RESERVE_INVENTORY,
+        orderPayload: payload,
       }),
     );
 
@@ -101,7 +102,7 @@ export class OrderSagaService {
     await this.sagaRepo.update(saga.id, { currentStep: STEP.AWAIT_PAYMENT });
 
     // Create payment QR via HTTP call to payment-service
-    await this.createPaymentQR(saga, event.payload);
+    await this.createPaymentQR(saga, saga.orderPayload);
 
     this.logger.log(`Saga ${saga.id}: inventory reserved, waiting for payment`);
   }
