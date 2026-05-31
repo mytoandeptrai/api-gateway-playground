@@ -11,6 +11,7 @@ import { LoggingMiddleware } from '@/shared/middleware/logging.middleware';
 import kafkaConfig from '@/config/kafka.config';
 import { KafkaModule } from '@/shared/kafka/kafka.module';
 import { UsersModule } from '@/users/users.module';
+import { SagaModule } from '@/modules/saga/saga.module';
 
 @Module({
   imports: [
@@ -52,6 +53,7 @@ import { UsersModule } from '@/users/users.module';
 
     // Features Modules
     UsersModule,
+    SagaModule,
   ],
   controllers: [AppController],
   providers: [AppService],
