@@ -155,6 +155,11 @@ const routes: Partial<ApiRoute>[] = [
 
 async function runSeed() {
   await dataSource.initialize();
+  // Ensure schema and tables exist before seeding
+  const schema = process.env.DB_SCHEMA || 'public';
+  await dataSource.query(`CREATE SCHEMA IF NOT EXISTS "${schema}"`);
+  await dataSource.synchronize();
+
   console.log('Data source initialized. Running gateway seeds...');
 
   // Seed rate limit rules
