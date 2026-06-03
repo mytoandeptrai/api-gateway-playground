@@ -11,7 +11,14 @@ import {
   CardTitle,
 } from "@repo/ui/components/card";
 import { Skeleton } from "@repo/ui/components/skeleton";
-import { ArrowLeft, Package, MapPin, CreditCard, Truck, RotateCcw } from "lucide-react";
+import {
+  ArrowLeft,
+  Package,
+  MapPin,
+  CreditCard,
+  Truck,
+  RotateCcw,
+} from "lucide-react";
 import { OrderStatusBadge } from "@/components/order/order-status-badge";
 import { OrderTimeline } from "@/components/order/order-timeline";
 import { useGetOrderQuery } from "@/services/order";
@@ -20,11 +27,17 @@ import { getRefundByOrderIdApi } from "@/services/refund/api";
 import type { RefundStatus } from "@/services/refund/types.dto";
 import { formatPrice, formatDate } from "@/utils/format";
 
-const REFUND_STATUS_CONFIG: Record<RefundStatus, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
-  REFUND_PENDING:  { label: "Đang xử lý",        variant: "outline" },
-  REFUND_APPROVED: { label: "Đã duyệt",           variant: "default" },
-  REFUND_REJECTED: { label: "Bị từ chối",         variant: "destructive" },
-  REFUNDED:        { label: "Đã hoàn tiền",       variant: "secondary" },
+const REFUND_STATUS_CONFIG: Record<
+  RefundStatus,
+  {
+    label: string;
+    variant: "default" | "secondary" | "destructive" | "outline";
+  }
+> = {
+  REFUND_PENDING: { label: "Đang xử lý", variant: "outline" },
+  REFUND_APPROVED: { label: "Đã duyệt", variant: "default" },
+  REFUND_REJECTED: { label: "Bị từ chối", variant: "destructive" },
+  REFUNDED: { label: "Đã hoàn tiền", variant: "secondary" },
 };
 
 export default function OrderDetailPage() {
@@ -36,7 +49,11 @@ export default function OrderDetailPage() {
 
   const order = data?.data;
 
-  const hasRefundStatus = ["DELIVERED", "REFUND_REQUESTED", "REFUNDED"].includes(order?.status ?? "");
+  const hasRefundStatus = [
+    "DELIVERED",
+    "REFUND_REQUESTED",
+    "REFUNDED",
+  ].includes(order?.status ?? "");
   const { data: refundData } = useQuery({
     queryKey: ["refund", orderId],
     queryFn: () => getRefundByOrderIdApi(orderId),
@@ -126,12 +143,17 @@ export default function OrderDetailPage() {
             </CardHeader>
             <CardContent className="text-sm space-y-1">
               {refund.status === "REFUNDED" && (
-                <p className="text-green-600 font-medium">Đã hoàn tiền thành công</p>
+                <p className="text-green-600 font-medium">
+                  Đã hoàn tiền thành công
+                </p>
               )}
               {refund.status === "REFUND_REJECTED" && refund.reviewNote && (
-                <p className="text-destructive">Lý do từ chối: {refund.reviewNote}</p>
+                <p className="text-destructive">
+                  Lý do từ chối: {refund.reviewNote}
+                </p>
               )}
-              {(refund.status === "REFUND_PENDING" || refund.status === "REFUND_APPROVED") && (
+              {(refund.status === "REFUND_PENDING" ||
+                refund.status === "REFUND_APPROVED") && (
                 <p className="text-muted-foreground">Yêu cầu đang được xử lý</p>
               )}
             </CardContent>

@@ -11,7 +11,17 @@ import { DlqService } from '@/shared/dlq/dlq.service';
 import { SagaCompensationJob } from '@/shared/dlq/saga-compensation.job';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([SagaInstance, SagaStep]), HttpModule, ScheduleModule.forRoot()],
-  providers: [OrderSagaService, SagaConsumerService, CircuitBreakerService, DlqService, SagaCompensationJob],
+  imports: [
+    TypeOrmModule.forFeature([SagaInstance, SagaStep]),
+    HttpModule,
+    ScheduleModule.forRoot(),
+  ],
+  providers: [
+    OrderSagaService,
+    SagaConsumerService,
+    CircuitBreakerService,
+    DlqService,
+    SagaCompensationJob,
+  ],
 })
 export class SagaModule {}

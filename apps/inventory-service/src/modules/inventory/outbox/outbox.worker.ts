@@ -37,7 +37,9 @@ export class OutboxWorker {
             topic: event.eventType,
             messages: [
               {
-                key: (event.payload as Record<string, unknown>)['orderId'] as string,
+                key: (event.payload as Record<string, unknown>)[
+                  'orderId'
+                ] as string,
                 value: JSON.stringify(event.payload),
               },
             ],

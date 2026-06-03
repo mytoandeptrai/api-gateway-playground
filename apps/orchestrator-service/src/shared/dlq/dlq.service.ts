@@ -4,7 +4,10 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { randomUUID } from 'crypto';
 import { KafkaProducer } from '@/shared/kafka/utils/kafka.producer';
-import { SagaInstance, SagaStatus } from '@/modules/saga/entities/saga-instance.entity';
+import {
+  SagaInstance,
+  SagaStatus,
+} from '@/modules/saga/entities/saga-instance.entity';
 
 const RETRY_DELAYS_MS = [1_000, 3_000, 9_000]; // 1s → 3s → 9s
 const MAX_RETRIES = 3;
@@ -38,7 +41,7 @@ export class DlqService {
         lastError = err;
         this.logger.warn(
           `[RETRY] ${topic} attempt ${attempt + 1}/${MAX_RETRIES} ` +
-          `sagaId=${event.sagaId ?? '?'} orderId=${event.orderId ?? '?'}: ${err}`,
+            `sagaId=${event.sagaId ?? '?'} orderId=${event.orderId ?? '?'}: ${err}`,
         );
         if (attempt < MAX_RETRIES - 1) {
           await sleep(RETRY_DELAYS_MS[attempt]);
@@ -80,17 +83,16 @@ export class DlqService {
     }
   }
 
-  private async markSagaFailed(
-    event: Record<string, unknown>,
-    reason: string,
-  ) {
+  private async markSagaFailed(event: Record<string, unknown>, reason: string) {
     const sagaId = event.sagaId as string | undefined;
     const orderId = event.orderId as string | undefined;
 
     if (!sagaId && !orderId) return;
 
     const where = sagaId ? { id: sagaId } : { orderId };
-    const saga = await this.sagaRepo.findOne({ where: where as Parameters<typeof this.sagaRepo.findOne>[0]['where'] });
+    const saga = await this.sagaRepo.findOne({
+      where: where as Parameters<typeof this.sagaRepo.findOne>[0]['where'],
+    });
     if (!saga) return;
 
     await this.sagaRepo.update(saga.id, {
@@ -104,35 +106,40 @@ export class DlqService {
 
     // Notify user so they're not left in the dark
     if (saga.userEmail) {
-      await this.kafkaProducer.send({
-        topic: 'notification.send',
-        messages: [
-          {
-            key: saga.orderId,
-            value: JSON.stringify({
-              eventId: randomUUID(),
-              eventType: 'notification.send',
-              sagaId: saga.id,
-              orderId: saga.orderId,
-              userId: saga.userId,
-              correlationId: randomUUID(),
-              timestamp: new Date().toISOString(),
-              payload: {
+      await this.kafkaProducer
+        .send({
+          topic: 'notification.send',
+          messages: [
+            {
+              key: saga.orderId,
+              value: JSON.stringify({
+                eventId: randomUUID(),
+                eventType: 'notification.send',
+                sagaId: saga.id,
+                orderId: saga.orderId,
                 userId: saga.userId,
-                email: saga.userEmail,
-                template: 'order-cancelled',
-                data: {
-                  orderId: saga.orderId,
-                  reason: 'Đơn hàng gặp sự cố kỹ thuật và đang được xử lý. Chúng tôi sẽ liên hệ lại sớm.',
+                correlationId: randomUUID(),
+                timestamp: new Date().toISOString(),
+                payload: {
+                  userId: saga.userId,
+                  email: saga.userEmail,
+                  template: 'order-cancelled',
+                  data: {
+                    orderId: saga.orderId,
+                    reason:
+                      'Đơn hàng gặp sự cố kỹ thuật và đang được xử lý. Chúng tôi sẽ liên hệ lại sớm.',
+                  },
+                  channels: ['email', 'socket'],
                 },
-                channels: ['email', 'socket'],
-              },
-            }),
-          },
-        ],
-      }).catch((err) =>
-        this.logger.error(`[DLQ] Failed to send failure notification: ${err}`),
-      );
+              }),
+            },
+          ],
+        })
+        .catch((err) =>
+          this.logger.error(
+            `[DLQ] Failed to send failure notification: ${err}`,
+          ),
+        );
     }
   }
 }

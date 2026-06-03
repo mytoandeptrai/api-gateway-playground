@@ -4,15 +4,30 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ConfigService } from '@nestjs/config';
 import { randomUUID } from 'crypto';
-import { SagaInstance, SagaStatus } from '@/modules/saga/entities/saga-instance.entity';
-import { SagaStep, SagaStepStatus } from '@/modules/saga/entities/saga-step.entity';
+import {
+  SagaInstance,
+  SagaStatus,
+} from '@/modules/saga/entities/saga-instance.entity';
+import {
+  SagaStep,
+  SagaStepStatus,
+} from '@/modules/saga/entities/saga-step.entity';
 import { KafkaProducer } from '@/shared/kafka/utils/kafka.producer';
 import { CircuitBreakerService } from '@/shared/circuit-breaker/circuit-breaker.service';
 
 // Steps that indicate stock is being held
-const STEP_NEEDS_STOCK_RELEASE = new Set(['AWAIT_PAYMENT', 'CONFIRM_INVENTORY', 'CREATE_SHIPPING', 'AWAIT_DELIVERY']);
+const STEP_NEEDS_STOCK_RELEASE = new Set([
+  'AWAIT_PAYMENT',
+  'CONFIRM_INVENTORY',
+  'CREATE_SHIPPING',
+  'AWAIT_DELIVERY',
+]);
 // Steps that indicate payment was already received
-const STEP_NEEDS_REFUND = new Set(['CONFIRM_INVENTORY', 'CREATE_SHIPPING', 'AWAIT_DELIVERY']);
+const STEP_NEEDS_REFUND = new Set([
+  'CONFIRM_INVENTORY',
+  'CREATE_SHIPPING',
+  'AWAIT_DELIVERY',
+]);
 
 @Injectable()
 export class SagaCompensationJob {
@@ -36,13 +51,17 @@ export class SagaCompensationJob {
 
     if (failed.length === 0) return;
 
-    this.logger.log(`[COMPENSATION] Found ${failed.length} FAILED sagas to compensate`);
+    this.logger.log(
+      `[COMPENSATION] Found ${failed.length} FAILED sagas to compensate`,
+    );
 
     for (const saga of failed) {
       try {
         await this.compensate(saga);
       } catch (err) {
-        this.logger.error(`[COMPENSATION] Failed to compensate saga ${saga.id}: ${err}`);
+        this.logger.error(
+          `[COMPENSATION] Failed to compensate saga ${saga.id}: ${err}`,
+        );
       }
     }
   }
@@ -53,12 +72,14 @@ export class SagaCompensationJob {
     });
     const completed = new Set(completedSteps.map((s) => s.stepName));
 
-    const needsStockRelease = [...STEP_NEEDS_STOCK_RELEASE].some((s) => completed.has(s));
+    const needsStockRelease = [...STEP_NEEDS_STOCK_RELEASE].some((s) =>
+      completed.has(s),
+    );
     const needsRefund = [...STEP_NEEDS_REFUND].some((s) => completed.has(s));
 
     this.logger.log(
       `[COMPENSATION] saga=${saga.id} orderId=${saga.orderId} ` +
-      `needsStockRelease=${needsStockRelease} needsRefund=${needsRefund}`,
+        `needsStockRelease=${needsStockRelease} needsRefund=${needsRefund}`,
     );
 
     // Mark as COMPENSATING so existing onStockReleased handler can finalize
@@ -89,11 +110,17 @@ export class SagaCompensationJob {
         status: SagaStatus.COMPENSATED,
         currentStep: 'CANCELLED',
       });
-      this.logger.log(`[COMPENSATION] saga=${saga.id} COMPENSATED (no stock held)`);
+      this.logger.log(
+        `[COMPENSATION] saga=${saga.id} COMPENSATED (no stock held)`,
+      );
     }
   }
 
-  private async emit(topic: string, saga: SagaInstance, payload: Record<string, unknown>) {
+  private async emit(
+    topic: string,
+    saga: SagaInstance,
+    payload: Record<string, unknown>,
+  ) {
     await this.kafkaProducer.send({
       topic,
       messages: [
@@ -115,14 +142,19 @@ export class SagaCompensationJob {
   }
 
   private async cancelOrder(orderId: string, reason: string) {
-    const url = this.configService.get<string>('ORDER_SERVICE_URL', 'http://localhost:3006');
+    const url = this.configService.get<string>(
+      'ORDER_SERVICE_URL',
+      'http://localhost:3006',
+    );
     try {
       await this.circuitBreaker.patch(
         `${url}/api/v1/orders/${orderId}/status`,
         { status: 'CANCELLED', reason },
       );
     } catch (err) {
-      this.logger.error(`[COMPENSATION] Failed to cancel order ${orderId}: ${err}`);
+      this.logger.error(
+        `[COMPENSATION] Failed to cancel order ${orderId}: ${err}`,
+      );
     }
   }
 

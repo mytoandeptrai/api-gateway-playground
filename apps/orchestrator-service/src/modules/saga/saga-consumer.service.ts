@@ -93,10 +93,8 @@ export class SagaConsumerService implements OnModuleInit, OnModuleDestroy {
         `[KAFKA] Received ${message.topic}: ${JSON.stringify(event).slice(0, 100)}`,
       );
 
-      await this.dlqService.withRetry(
-        message.topic,
-        event,
-        () => this.route(message.topic, event),
+      await this.dlqService.withRetry(message.topic, event, () =>
+        this.route(message.topic, event),
       );
     });
     this.logger.log('Saga consumers initialized');

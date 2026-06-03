@@ -12,7 +12,12 @@ import { OutboxWorker } from './outbox/outbox.worker';
 @Module({
   imports: [
     ScheduleModule.forRoot(),
-    TypeOrmModule.forFeature([InventoryItem, StockReservation, ProcessedEvent, OutboxEvent]),
+    TypeOrmModule.forFeature([
+      InventoryItem,
+      StockReservation,
+      ProcessedEvent,
+      OutboxEvent,
+    ]),
   ],
   providers: [InventoryService, InventoryConsumerService, OutboxWorker],
 })

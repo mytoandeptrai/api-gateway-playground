@@ -27,7 +27,12 @@ import { OutboxWorker } from './outbox/outbox.worker';
       inject: [ConfigService],
     }),
   ],
-  providers: [PaymentService, PaymentScheduleService, PaymentConsumerService, OutboxWorker],
+  providers: [
+    PaymentService,
+    PaymentScheduleService,
+    PaymentConsumerService,
+    OutboxWorker,
+  ],
   controllers: [PaymentController],
 })
 export class PaymentModule {}

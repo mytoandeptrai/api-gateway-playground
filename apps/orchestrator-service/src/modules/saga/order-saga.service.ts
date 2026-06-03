@@ -260,7 +260,11 @@ export class OrderSagaService {
     if (status !== 'IN_TRANSIT') return;
 
     const saga = await this.sagaRepo.findOne({
-      where: { orderId: event.orderId, sagaType: 'ORDER_SAGA', status: SagaStatus.RUNNING },
+      where: {
+        orderId: event.orderId,
+        sagaType: 'ORDER_SAGA',
+        status: SagaStatus.RUNNING,
+      },
     });
     if (!saga) return;
 
@@ -298,7 +302,11 @@ export class OrderSagaService {
     const saga = await this.findRunningSaga(event.orderId);
     if (!saga) return;
 
-    await this.failStep(saga.id, STEP.AWAIT_PAYMENT, 'Payment failed or cancelled');
+    await this.failStep(
+      saga.id,
+      STEP.AWAIT_PAYMENT,
+      'Payment failed or cancelled',
+    );
     await this.sagaRepo.update(saga.id, {
       status: SagaStatus.COMPENSATING,
       cancelReason: 'Thanh toán bị hủy',
@@ -320,7 +328,7 @@ export class OrderSagaService {
   async onRefundRequested(event: KafkaEnvelope) {
     const { orderId, userId, payload } = event;
     const refundId = payload.refundId as string;
-    const userEmail = payload.userEmail as string ?? '';
+    const userEmail = (payload.userEmail as string) ?? '';
 
     const existing = await this.sagaRepo.findOne({
       where: { orderId, sagaType: 'REFUND_SAGA', status: SagaStatus.RUNNING },
@@ -348,7 +356,11 @@ export class OrderSagaService {
 
   async onRefundValidated(event: KafkaEnvelope) {
     const saga = await this.sagaRepo.findOne({
-      where: { orderId: event.orderId, sagaType: 'REFUND_SAGA', status: SagaStatus.RUNNING },
+      where: {
+        orderId: event.orderId,
+        sagaType: 'REFUND_SAGA',
+        status: SagaStatus.RUNNING,
+      },
     });
     if (!saga) {
       this.logger.warn(`No running refund saga for order ${event.orderId}`);
@@ -357,17 +369,25 @@ export class OrderSagaService {
 
     const approved = event.payload.approved as boolean;
     const reviewNote = event.payload.reviewNote as string | undefined;
-    const refundId = (saga.orderPayload?.refundId ?? event.payload.refundId) as string;
+    const refundId = (saga.orderPayload?.refundId ??
+      event.payload.refundId) as string;
 
     await this.completeStep(saga.id, 'VALIDATE_REFUND', event.payload);
 
     if (approved) {
-      await this.createStep(saga.id, 'PROCESS_REFUND', 'payment.refund_requested', event.payload);
+      await this.createStep(
+        saga.id,
+        'PROCESS_REFUND',
+        'payment.refund_requested',
+        event.payload,
+      );
       await this.sagaRepo.update(saga.id, { currentStep: 'PROCESS_REFUND' });
 
       await this.sendNotification(saga, 'refund-approved', { refundId });
 
-      const orderSaga = await this.sagaRepo.findOne({ where: { orderId: event.orderId, sagaType: 'ORDER_SAGA' } });
+      const orderSaga = await this.sagaRepo.findOne({
+        where: { orderId: event.orderId, sagaType: 'ORDER_SAGA' },
+      });
       await this.publishCommand(
         'payment.refund_requested',
         saga.id,
@@ -379,7 +399,9 @@ export class OrderSagaService {
           reason: 'Refund approved',
         },
       );
-      this.logger.log(`Refund saga ${saga.id}: validated approved, requesting refund`);
+      this.logger.log(
+        `Refund saga ${saga.id}: validated approved, requesting refund`,
+      );
     } else {
       await this.createStep(saga.id, 'REJECT_REFUND', null, null);
       await this.sagaRepo.update(saga.id, {
@@ -398,14 +420,21 @@ export class OrderSagaService {
         saga.userId,
         { refundId, status: 'REFUND_REJECTED', reviewNote },
       );
-      await this.sendNotification(saga, 'refund-rejected', { refundId, reviewNote });
+      await this.sendNotification(saga, 'refund-rejected', {
+        refundId,
+        reviewNote,
+      });
       this.logger.log(`Refund saga ${saga.id}: rejected`);
     }
   }
 
   async onPaymentRefunded(event: KafkaEnvelope) {
     const saga = await this.sagaRepo.findOne({
-      where: { orderId: event.orderId, sagaType: 'REFUND_SAGA', status: SagaStatus.RUNNING },
+      where: {
+        orderId: event.orderId,
+        sagaType: 'REFUND_SAGA',
+        status: SagaStatus.RUNNING,
+      },
     });
     if (!saga) {
       this.logger.warn(`No running refund saga for order ${event.orderId}`);
@@ -434,7 +463,9 @@ export class OrderSagaService {
       { refundId, status: 'REFUNDED' },
     );
     await this.sendNotification(saga, 'refund-completed', { refundId });
-    this.logger.log(`Refund saga ${saga.id}: COMPLETED — order ${saga.orderId} refunded`);
+    this.logger.log(
+      `Refund saga ${saga.id}: COMPLETED — order ${saga.orderId} refunded`,
+    );
   }
 
   // ─── Compensation: stock released ─────────────────────────────────────────
@@ -539,11 +570,14 @@ export class OrderSagaService {
     const apiPrefix = 'api/v1';
 
     try {
-      await this.circuitBreaker.post(`${paymentUrl}/${apiPrefix}/payment/create-qr`, {
-        orderId: saga.orderId,
-        amount: orderPayload.totalAmount,
-        sagaId: saga.id,
-      });
+      await this.circuitBreaker.post(
+        `${paymentUrl}/${apiPrefix}/payment/create-qr`,
+        {
+          orderId: saga.orderId,
+          amount: orderPayload.totalAmount,
+          sagaId: saga.id,
+        },
+      );
     } catch (error) {
       this.logger.error(
         `Failed to create payment QR for order ${saga.orderId}: ${error}`,

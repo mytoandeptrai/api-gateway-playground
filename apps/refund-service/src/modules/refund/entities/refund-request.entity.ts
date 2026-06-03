@@ -32,7 +32,11 @@ export class RefundRequest {
   @Column({ type: 'text', array: true, default: [] })
   fileUrls: string[];
 
-  @Column({ type: 'enum', enum: RefundStatus, default: RefundStatus.REFUND_PENDING })
+  @Column({
+    type: 'enum',
+    enum: RefundStatus,
+    default: RefundStatus.REFUND_PENDING,
+  })
   status: RefundStatus;
 
   @Column({ nullable: true, type: 'text' })

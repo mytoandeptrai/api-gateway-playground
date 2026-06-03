@@ -39,16 +39,28 @@ export class RefundService {
     private readonly dataSource: DataSource,
     private readonly configService: ConfigService,
   ) {
-    this.bucket = this.configService.get<string>('minio.bucket', 'refund-files');
+    this.bucket = this.configService.get<string>(
+      'minio.bucket',
+      'refund-files',
+    );
     this.maxFileSizeMb = this.configService.get<number>('MAX_FILE_SIZE_MB', 5);
-    this.refundWindowDays = this.configService.get<number>('REFUND_WINDOW_DAYS', 7);
+    this.refundWindowDays = this.configService.get<number>(
+      'REFUND_WINDOW_DAYS',
+      7,
+    );
 
     this.minioClient = new Minio.Client({
       endPoint: this.configService.get<string>('minio.endPoint', 'localhost'),
       port: this.configService.get<number>('minio.port', 1117),
       useSSL: this.configService.get<boolean>('minio.useSSL', false),
-      accessKey: this.configService.get<string>('minio.accessKey', 'minioadmin'),
-      secretKey: this.configService.get<string>('minio.secretKey', 'minioadmin'),
+      accessKey: this.configService.get<string>(
+        'minio.accessKey',
+        'minioadmin',
+      ),
+      secretKey: this.configService.get<string>(
+        'minio.secretKey',
+        'minioadmin',
+      ),
     });
 
     this.ensureBucket().catch((err) =>
@@ -76,7 +88,9 @@ export class RefundService {
 
     const existing = await this.refundRepo.findOne({ where: { orderId } });
     if (existing) {
-      throw new BadRequestException('Refund request already exists for this order');
+      throw new BadRequestException(
+        'Refund request already exists for this order',
+      );
     }
 
     const deliveredDate = new Date(deliveredAt);
@@ -132,7 +146,9 @@ export class RefundService {
       return request;
     });
 
-    this.logger.log(`Refund request created: ${refund.id} for order ${orderId}`);
+    this.logger.log(
+      `Refund request created: ${refund.id} for order ${orderId}`,
+    );
     return { refundId: refund.id, status: refund.status };
   }
 
@@ -145,17 +161,28 @@ export class RefundService {
     if (!refund) throw new NotFoundException(`Refund ${refundId} not found`);
 
     const { approved, reviewNote } = this.validateRefund(refund);
-    const newStatus = approved ? RefundStatus.REFUND_APPROVED : RefundStatus.REFUND_REJECTED;
+    const newStatus = approved
+      ? RefundStatus.REFUND_APPROVED
+      : RefundStatus.REFUND_REJECTED;
 
-    const envelope = this.buildEnvelope('refund.validated', refund.orderId, refund.userId, {
-      refundId: refund.id,
-      orderId: refund.orderId,
-      approved,
-      reviewNote,
-    });
+    const envelope = this.buildEnvelope(
+      'refund.validated',
+      refund.orderId,
+      refund.userId,
+      {
+        refundId: refund.id,
+        orderId: refund.orderId,
+        approved,
+        reviewNote,
+      },
+    );
 
     await this.dataSource.transaction(async (manager) => {
-      await manager.update(RefundRequest, { id: refundId }, { status: newStatus, reviewNote: reviewNote ?? null });
+      await manager.update(
+        RefundRequest,
+        { id: refundId },
+        { status: newStatus, reviewNote: reviewNote ?? null },
+      );
 
       await manager.save(
         OutboxEvent,
@@ -194,15 +221,24 @@ export class RefundService {
     reviewNote?: string;
   } {
     if (refund.reason.length < 20) {
-      return { approved: false, reviewNote: 'Lý do hoàn tiền quá ngắn (tối thiểu 20 ký tự)' };
+      return {
+        approved: false,
+        reviewNote: 'Lý do hoàn tiền quá ngắn (tối thiểu 20 ký tự)',
+      };
     }
     if (!refund.fileUrls || refund.fileUrls.length === 0) {
-      return { approved: false, reviewNote: 'Cần ít nhất 1 file đính kèm hợp lệ' };
+      return {
+        approved: false,
+        reviewNote: 'Cần ít nhất 1 file đính kèm hợp lệ',
+      };
     }
     return { approved: true };
   }
 
-  private async uploadFiles(orderId: string, files: Express.Multer.File[]): Promise<string[]> {
+  private async uploadFiles(
+    orderId: string,
+    files: Express.Multer.File[],
+  ): Promise<string[]> {
     const urls: string[] = [];
     for (const file of files) {
       const objectName = `${orderId}/${randomUUID()}-${file.originalname}`;

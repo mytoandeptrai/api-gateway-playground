@@ -50,7 +50,9 @@ export default function PaymentCallbackPage() {
   if (status === "loading") {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <p className="text-muted-foreground">Đang xử lý kết quả thanh toán...</p>
+        <p className="text-muted-foreground">
+          Đang xử lý kết quả thanh toán...
+        </p>
       </div>
     );
   }
@@ -60,13 +62,13 @@ export default function PaymentCallbackPage() {
       <Card className="w-full max-w-sm text-center">
         <CardHeader>
           <CardTitle>
-            {status === "success" ? "Thanh toán thành công" : "Thanh toán thất bại"}
+            {status === "success"
+              ? "Thanh toán thành công"
+              : "Thanh toán thất bại"}
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <p className="text-6xl">
-            {status === "success" ? "✅" : "❌"}
-          </p>
+          <p className="text-6xl">{status === "success" ? "✅" : "❌"}</p>
           <p className="text-sm text-muted-foreground">
             {status === "success"
               ? "Đơn hàng của bạn đang được xử lý."

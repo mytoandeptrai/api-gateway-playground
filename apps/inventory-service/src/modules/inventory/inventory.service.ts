@@ -175,7 +175,10 @@ export class InventoryService {
         manager.create(OutboxEvent, {
           aggregateId: orderId,
           eventType: 'inventory.stock_confirmed',
-          payload: this.buildEnvelope('inventory.stock_confirmed', event, { sagaId, orderId }),
+          payload: this.buildEnvelope('inventory.stock_confirmed', event, {
+            sagaId,
+            orderId,
+          }),
           published: false,
         }),
       );
@@ -229,7 +232,10 @@ export class InventoryService {
         manager.create(OutboxEvent, {
           aggregateId: orderId,
           eventType: 'inventory.stock_released',
-          payload: this.buildEnvelope('inventory.stock_released', event, { sagaId, orderId }),
+          payload: this.buildEnvelope('inventory.stock_released', event, {
+            sagaId,
+            orderId,
+          }),
           published: false,
         }),
       );
@@ -285,6 +291,8 @@ export class InventoryService {
       published: false,
     });
     await this.outboxRepo.save(outbox);
-    this.logger.log(`[OUTBOX] Queued ${topic} for order ${sourceEvent.orderId}`);
+    this.logger.log(
+      `[OUTBOX] Queued ${topic} for order ${sourceEvent.orderId}`,
+    );
   }
 }

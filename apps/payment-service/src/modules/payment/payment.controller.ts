@@ -40,7 +40,9 @@ export class PaymentController {
   }
 
   @Get('verify-return')
-  @ApiOperation({ summary: 'Verify VNPay return URL params and process payment' })
+  @ApiOperation({
+    summary: 'Verify VNPay return URL params and process payment',
+  })
   verifyReturn(@Query() query: Record<string, string>) {
     return this.paymentService.handleIPN(query);
   }

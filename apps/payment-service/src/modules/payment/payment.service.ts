@@ -38,7 +38,10 @@ export class PaymentService {
     }
 
     const returnUrl = this.configService.getOrThrow<string>('vnpay.returnUrl');
-    const timeoutMinutes = this.configService.get<number>('vnpay.timeoutMinutes', 15);
+    const timeoutMinutes = this.configService.get<number>(
+      'vnpay.timeoutMinutes',
+      15,
+    );
 
     const now = new Date();
     const expiresAt = new Date(now.getTime() + timeoutMinutes * 60 * 1000);
@@ -73,7 +76,8 @@ export class PaymentService {
   async handleIPN(
     query: Record<string, string>,
   ): Promise<{ RspCode: string; Message: string }> {
-    const hashSecret = this.configService.getOrThrow<string>('vnpay.hashSecret');
+    const hashSecret =
+      this.configService.getOrThrow<string>('vnpay.hashSecret');
     const secureHash = query['vnp_SecureHash'];
     const txnRef = query['vnp_TxnRef'];
     const responseCode = query['vnp_ResponseCode'];
@@ -142,7 +146,9 @@ export class PaymentService {
         );
       });
 
-      this.logger.log(`Payment failed for order ${txnRef}, code=${responseCode}`);
+      this.logger.log(
+        `Payment failed for order ${txnRef}, code=${responseCode}`,
+      );
       return { RspCode: '00', Message: 'Acknowledged' };
     }
 
@@ -193,7 +199,7 @@ export class PaymentService {
     const now = new Date();
     const orderId = `TEST${formatVnpDate(now).slice(-6)}`;
     const amount = 100000;
-    
+
     const paymentUrl = this.vnpayService.buildPaymentUrl({
       vnp_Amount: amount,
       vnp_IpAddr: '127.0.0.1',

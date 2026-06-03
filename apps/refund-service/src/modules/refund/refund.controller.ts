@@ -42,7 +42,9 @@ export class RefundController {
 
     for (const file of files) {
       if (!ALLOWED_MIME.includes(file.mimetype)) {
-        throw new BadRequestException(`File ${file.originalname}: chỉ chấp nhận jpg, jpeg, png`);
+        throw new BadRequestException(
+          `File ${file.originalname}: chỉ chấp nhận jpg, jpeg, png`,
+        );
       }
       if (file.size > MAX_SIZE_BYTES) {
         throw new BadRequestException(`File ${file.originalname}: tối đa 5MB`);

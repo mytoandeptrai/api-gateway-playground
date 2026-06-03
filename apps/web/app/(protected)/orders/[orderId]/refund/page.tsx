@@ -34,7 +34,8 @@ export default function RefundPage() {
   const router = useRouter();
   const token = useSessionStore((s) => s.token);
 
-  const { data: orderData, isLoading: orderLoading } = useGetOrderQuery(orderId);
+  const { data: orderData, isLoading: orderLoading } =
+    useGetOrderQuery(orderId);
   const order = orderData?.data;
 
   const [reason, setReason] = useState("");
@@ -57,9 +58,11 @@ export default function RefundPage() {
       return;
     }
     // Check existing refund request
-    getRefundByOrderIdApi(orderId).then((res) => {
-      if (res.data) router.replace(`/orders/${orderId}`);
-    }).catch(() => {});
+    getRefundByOrderIdApi(orderId)
+      .then((res) => {
+        if (res.data) router.replace(`/orders/${orderId}`);
+      })
+      .catch(() => {});
   }, [order, orderId, router]);
 
   const handleSubmit = async () => {
@@ -84,7 +87,10 @@ export default function RefundPage() {
       formData.append("userId", userId);
       formData.append("userEmail", userEmail);
       formData.append("reason", reason.trim());
-      formData.append("deliveredAt", order.deliveredAt ?? new Date().toISOString());
+      formData.append(
+        "deliveredAt",
+        order.deliveredAt ?? new Date().toISOString(),
+      );
       files.forEach((f) => formData.append("files", f));
 
       await createRefundApi(formData);
@@ -184,7 +190,9 @@ export default function RefundPage() {
         <Button
           className="w-full"
           onClick={handleSubmit}
-          disabled={submitting || reason.trim().length < 20 || files.length === 0}
+          disabled={
+            submitting || reason.trim().length < 20 || files.length === 0
+          }
         >
           <Send className="w-4 h-4 mr-2" />
           {submitting ? "Đang gửi..." : "Gửi yêu cầu hoàn tiền"}

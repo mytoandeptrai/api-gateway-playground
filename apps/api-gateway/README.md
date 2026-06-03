@@ -6,7 +6,6 @@ NextMart là một e-commerce platform học distributed systems patterns thực
 
 ## Services
 
-
 | Service                | Port | Giao tiếp                | Mô tả                                          |
 | ---------------------- | ---- | ------------------------ | ---------------------------------------------- |
 | `web`                  | 3000 | Browser                  | Next.js 15 App Router frontend                 |
@@ -20,7 +19,6 @@ NextMart là một e-commerce platform học distributed systems patterns thực
 | `notification-service` | 3010 | Kafka only               | Email (MailPit) + WebSocket push               |
 | `refund-service`       | 3011 | HTTP qua gateway + Kafka | Refund request, MinIO upload, auto-validate    |
 | `orchestrator-service` | 3012 | Kafka + HTTP             | Saga orchestration, DLQ, circuit breaker       |
-
 
 ## Tổng quan kiến trúc
 
@@ -95,7 +93,6 @@ tory  ping    cation        (update status, create QR)
 
 ## Infrastructure (Docker)
 
-
 | Port | Service        | Dùng bởi                                                  |
 | ---- | -------------- | --------------------------------------------------------- |
 | 1111 | PostgreSQL 16  | Tất cả services (mỗi service 1 schema)                    |
@@ -106,7 +103,6 @@ tory  ping    cation        (update status, create QR)
 | 1116 | Kafka UI       | Monitor topics, messages, consumer groups                 |
 | 1117 | MinIO S3 API   | refund-service upload ảnh minh chứng                      |
 | 1118 | MinIO Console  | Xem files đã upload                                       |
-
 
 ```bash
 # Start toàn bộ infra
@@ -133,7 +129,6 @@ Request đi qua 6 bước theo thứ tự:
 
 4 thuật toán được implement thực tế, chọn per-route:
 
-
 | Algorithm          | Cơ chế                                  | Dùng khi                     |
 | ------------------ | --------------------------------------- | ---------------------------- |
 | **Token Bucket**   | Refill token theo rate, burst được phép | Global safety net            |
@@ -141,22 +136,19 @@ Request đi qua 6 bước theo thứ tự:
 | **Fixed Window**   | Reset counter theo frame cố định        | Login brute force protection |
 | **Leaky Bucket**   | Queue request, drain đều đặn            | Smooth traffic               |
 
-
 Scope có thể là: `GLOBAL`, `TENANT`, `USER`, `IP`, hoặc `ENDPOINT`.
 
 ### ② Route Matching
 
 Các routes được seed vào PostgreSQL (bảng `api_route`), gateway lookup theo `path pattern + HTTP method`. 5 routes đang active:
 
-
 | Pattern                     | Target                  |
 | --------------------------- | ----------------------- |
-| `/api/v1/gateway/auth`*     | `http://localhost:3003` |
+| `/api/v1/gateway/auth`\*    | `http://localhost:3003` |
 | `/api/v1/gateway/products*` | `http://localhost:3005` |
 | `/api/v1/gateway/orders*`   | `http://localhost:3006` |
 | `/api/v1/gateway/payment*`  | `http://localhost:3008` |
 | `/api/v1/gateway/refund*`   | `http://localhost:3011` |
-
 
 Path transform: `stripPrefix: /api/v1/gateway` → `addPrefix: /api/v1`
 Ví dụ: `/api/v1/gateway/orders/123` → `http://localhost:3006/api/v1/orders/123`
@@ -219,13 +211,11 @@ shipping.label_created (Kafka)
 
 ### Compensation
 
-
 | Trigger                        | Compensation                                                                         |
 | ------------------------------ | ------------------------------------------------------------------------------------ |
 | `inventory.stock_insufficient` | HTTP cancel order                                                                    |
 | `payment.timeout`              | emit `inventory.release_stock` → wait `inventory.stock_released` → HTTP cancel order |
 | `payment.failed` (user cancel) | emit `inventory.release_stock` → wait `inventory.stock_released` → HTTP cancel order |
-
 
 `cancelReason` được lưu vào `SagaInstance` lúc set `COMPENSATING` nên lý do hủy đúng ngữ nghĩa (timeout khác user cancel).
 
@@ -296,14 +286,12 @@ Business update + outbox write trong **cùng 1 DB transaction** → background w
 
 ## Idempotency
 
-
 | Service                | Cơ chế                                                             |
 | ---------------------- | ------------------------------------------------------------------ |
 | Inventory              | `ProcessedEvent` table — check `eventId` trước khi process         |
 | Payment                | `ProcessedWebhook` table — check `vnpTxnRef` trước khi process IPN |
 | Inventory reservations | `UNIQUE(sagaId, productId)` — double reserve không thể xảy ra      |
 | Notification           | `NotificationLog` table — check `eventId`, không gửi email 2 lần   |
-
 
 ---
 
@@ -335,7 +323,6 @@ api-gateway-db
 cd docker && docker compose up -d
 ```
 
-
 | Port | Service        | Dùng bởi                                            |
 | ---- | -------------- | --------------------------------------------------- |
 | 1111 | PostgreSQL 16  | Tất cả services                                     |
@@ -346,7 +333,6 @@ cd docker && docker compose up -d
 | 1116 | Kafka UI       | Monitor topics/messages                             |
 | 1117 | MinIO S3 API   | refund-service                                      |
 | 1118 | MinIO Console  | Xem files refund                                    |
-
 
 ---
 

@@ -79,7 +79,7 @@ export class OrderSagaOrchestrator {
       status: 'RUNNING',
       currentStep: 'RESERVE_INVENTORY'
     });
-    
+
     // STEP 1: Reserve Inventory
     try {
       await this.publishCommand('inventory.reserve_stock', {
@@ -94,7 +94,7 @@ export class OrderSagaOrchestrator {
       // Compensation
       await this.compensate(saga);
     }
-    
+
     // STEP 2: Payment
     try {
       await this.publishCommand('payment.create_qr', { ... });
@@ -105,7 +105,7 @@ export class OrderSagaOrchestrator {
       await this.publishCommand('inventory.release_stock', { ... });
       await this.compensate(saga);
     }
-    
+
     // ... STEP 3, 4, etc.
   }
 }
@@ -138,7 +138,7 @@ Inventory Service subscribe → reserve stock → publish InventoryReserved
 Payment Service subscribe → create QR → publish PaymentCompleted
   ↓
 Shipping Service subscribe → create label → publish ShippingArranged
-  
+
 [Tất cả tự flow, không có service nào "nhìn toàn cảnh"]
 ```
 
@@ -188,16 +188,16 @@ async onOrderCreated(event: OrderCreated) {
     serviceName: 'inventory',
     status: 'pending'
   });
-  
+
   try {
     await this.reserveStock(event.orderId);
-    
+
     // Update state store
     await sagaStateStore.update(participant.id, {
       status: 'success',
       compensationData: { qty, productId }
     });
-    
+
     // Publish event để payment service consume
     await this.publish('inventory.reserved', event);
   } catch (error) {
@@ -217,7 +217,7 @@ async onInventoryReserved(event) {
     serviceName: 'payment',
     status: 'pending'
   });
-  
+
   try {
     await this.createPaymentQR(event);
     await sagaStateStore.update(participant.id, { status: 'success' });
@@ -233,7 +233,7 @@ async detectTimeouts() {
     status: 'pending',
     createdAt: { $lt: now - 15min }
   });
-  
+
   for (const participant of hanging) {
     await this.publish('saga.timeout', {
       sagaId: participant.sagaId
@@ -309,31 +309,31 @@ Orchestrator Service
 ```typescript
 async startOrderSaga(event: OrderCreated) {
   const sagaId = randomId();
-  
+
   // Fan-out: Publish 3 commands parallel
   const results = await Promise.all([
     this.publishCommand('inventory.reserve_stock', { sagaId, ... }),
     this.publishCommand('payment.create_qr', { sagaId, ... }),
     this.publishCommand('email.send', { sagaId, ... })
   ]);
-  
+
   // Fan-in: Wait for all to complete
   const [inventoryResult, paymentResult, emailResult] = await Promise.all([
     this.waitForEvent('inventory.reserved', sagaId, timeout=15min),
     this.waitForEvent('payment.completed', sagaId, timeout=15min),
     this.waitForEvent('email.sent', sagaId, timeout=5min)  // email non-critical
   ]);
-  
+
   // Tổng hợp
-  const allSuccess = 
+  const allSuccess =
     inventoryResult.status === 'success' &&
     paymentResult.status === 'success' &&
     emailResult.status === 'success';
-  
-  const anyFailed = 
+
+  const anyFailed =
     inventoryResult.status === 'failed' ||
     paymentResult.status === 'failed';
-  
+
   // Quyết định
   if (allSuccess) {
     // Proceed to shipping
@@ -477,27 +477,27 @@ Payment Service: PaymentInitiated
 
 ### Orchestrator vs Choreography
 
-| Yếu tố | Orchestrator | Choreography |
-|--------|---|---|
-| **Flow hiểu** | ✅ Dễ (1 chỗ) | ❌ Khó (nhiều events) |
-| **Debug** | ✅ Dễ (saga_instance) | ❌ Khó (query 3 databases) |
-| **Add new step** | ⚠️ Sửa Orchestrator | ❌ Sửa nhiều services |
-| **Loose coupling** | ❌ Tight | ✅ Loose |
-| **Scaling** | ⚠️ Orchestrator bottleneck | ✅ Horizontal |
-| **Parallel support** | ✅ Via fan-out/fan-in | ✅ Native |
-| **State management** | ✅ Centralized | ❌ Distributed |
-| **Learning curve** | ✅ Thấp | ❌ Cao |
+| Yếu tố               | Orchestrator               | Choreography               |
+| -------------------- | -------------------------- | -------------------------- |
+| **Flow hiểu**        | ✅ Dễ (1 chỗ)              | ❌ Khó (nhiều events)      |
+| **Debug**            | ✅ Dễ (saga_instance)      | ❌ Khó (query 3 databases) |
+| **Add new step**     | ⚠️ Sửa Orchestrator        | ❌ Sửa nhiều services      |
+| **Loose coupling**   | ❌ Tight                   | ✅ Loose                   |
+| **Scaling**          | ⚠️ Orchestrator bottleneck | ✅ Horizontal              |
+| **Parallel support** | ✅ Via fan-out/fan-in      | ✅ Native                  |
+| **State management** | ✅ Centralized             | ❌ Distributed             |
+| **Learning curve**   | ✅ Thấp                    | ❌ Cao                     |
 
 ### Khi nào dùng cái nào?
 
-| Workflow | Recommend |
-|----------|-----------|
-| **Sequential required** (A→B→C) | ✅ Orchestrator |
-| **Sequential + Parallel** (A→{B,C,D}→E) | ✅ Orchestrator (fan-out/fan-in) |
-| **Many parallel, independent** | ✅ Choreography + SSS |
-| **Complex compensation** | ✅ Orchestrator |
-| **Microservices just starting** | ✅ Orchestrator |
-| **Mature, many services** | ⚠️ Hybrid (Orchestrator + Choreography) |
+| Workflow                                | Recommend                               |
+| --------------------------------------- | --------------------------------------- |
+| **Sequential required** (A→B→C)         | ✅ Orchestrator                         |
+| **Sequential + Parallel** (A→{B,C,D}→E) | ✅ Orchestrator (fan-out/fan-in)        |
+| **Many parallel, independent**          | ✅ Choreography + SSS                   |
+| **Complex compensation**                | ✅ Orchestrator                         |
+| **Microservices just starting**         | ✅ Orchestrator                         |
+| **Mature, many services**               | ⚠️ Hybrid (Orchestrator + Choreography) |
 
 ---
 
@@ -515,6 +515,7 @@ Dù Choreography hay Orchestrator, **luôn luôn cần một component tập tru
 ### Truth #2: Orchestrator không phải "bad"
 
 Nhiều người nói Choreography là "event-driven best practice", nhưng thực tế:
+
 - ✅ Orchestrator phù hợp với **sequential workflows**
 - ✅ Dễ debug, dễ test, dễ maintain
 - ✅ Được dùng ở **Amazon, Uber, Netflix** (phần critical paths)
@@ -522,6 +523,7 @@ Nhiều người nói Choreography là "event-driven best practice", nhưng th�
 ### Truth #3: Fan-out/Fan-in là hybrid
 
 Orchestrator + Fan-out/Fan-in = kết hợp tốt nhất:
+
 - ✅ Rõ ràng (Orchestrator)
 - ✅ Nhanh (parallel)
 - ✅ Dễ debug (centralized state)
@@ -538,9 +540,9 @@ Khi Orchestrator publish messages đến nhiều services:
 ```typescript
 // DANGEROUS: Nếu message 3 fail, toàn bộ fail
 await Promise.all([
-  publishToInventory(),    // ✓ success
-  publishToPayment(),      // ✓ success
-  publishToEmail(),        // ✗ FAIL
+  publishToInventory(), // ✓ success
+  publishToPayment(), // ✓ success
+  publishToEmail(), // ✗ FAIL
 ]);
 
 // Promise.all throw error!
@@ -570,7 +572,7 @@ await db.transaction(async (trx) => {
     status: 'RUNNING',
     currentStep: 'FAN_OUT'
   });
-  
+
   // 2. Insert messages vào Outbox (TRONG transaction)
   await trx.insertMany('saga_outbox', [
     {
@@ -601,7 +603,7 @@ await db.transaction(async (trx) => {
 // Step 2: Background job relay (chạy mỗi 30 giây)
 async relayOutboxMessages() {
   const unpublished = await db.find('saga_outbox', { published: false });
-  
+
   for (const msg of unpublished) {
     try {
       await kafkaProducer.send(msg.topic, {
@@ -609,13 +611,13 @@ async relayOutboxMessages() {
         idempotencyKey: `${msg.sagaId}:${msg.topic}`, // ← Idempotency
         commandId: randomId()
       });
-      
+
       // Mark as published
       await db.update('saga_outbox', msg.id, {
         published: true,
         publishedAt: now
       });
-      
+
       this.logger.log(`Published ${msg.topic} for saga ${msg.sagaId}`);
     } catch (error) {
       // Retry next round, không throw error
@@ -628,26 +630,26 @@ async relayOutboxMessages() {
 @KafkaListener('inventory.reserve')
 async onReserveStock(message) {
   const { payload, idempotencyKey } = message;
-  
+
   // Check: đã process command này chưa?
   const existing = await db.findOne('processed_commands', {
     idempotencyKey
   });
-  
+
   if (existing) {
     this.logger.warn(`Duplicate message ${idempotencyKey}, skipping`);
     return;
   }
-  
+
   // Process
   await this.reserveStock(payload.orderId, payload.quantity);
-  
+
   // Mark as processed
   await db.insert('processed_commands', {
     idempotencyKey,
     processedAt: now
   });
-  
+
   // Publish result
   await this.kafkaProducer.send('inventory.reserved', {
     sagaId: message.sagaId,
@@ -659,15 +661,15 @@ async onReserveStock(message) {
 
 ### Benefit của Outbox Pattern
 
-| Aspect | Benefit |
-|--------|---------|
-| **Atomicity** | ✅ Saga + messages = all-or-nothing ở local DB |
-| **Reliability** | ✅ Messages safe trong Outbox, async relay |
-| **Idempotency** | ✅ Duplicate messages handled safely |
-| **Simplicity** | ✅ Chỉ thêm 1 table + 1 background job |
-| **Retry** | ✅ Background job retry automatically |
-| **Orchestrator** | ✅ Logic không thay đổi (vẫn publish) |
-| **Production-proven** | ✅ Dùng ở Amazon, Netflix, Uber |
+| Aspect                | Benefit                                        |
+| --------------------- | ---------------------------------------------- |
+| **Atomicity**         | ✅ Saga + messages = all-or-nothing ở local DB |
+| **Reliability**       | ✅ Messages safe trong Outbox, async relay     |
+| **Idempotency**       | ✅ Duplicate messages handled safely           |
+| **Simplicity**        | ✅ Chỉ thêm 1 table + 1 background job         |
+| **Retry**             | ✅ Background job retry automatically          |
+| **Orchestrator**      | ✅ Logic không thay đổi (vẫn publish)          |
+| **Production-proven** | ✅ Dùng ở Amazon, Netflix, Uber                |
 
 ### Database Schema
 
@@ -691,7 +693,7 @@ CREATE TABLE saga_outbox (
   published BOOLEAN DEFAULT FALSE,
   publishedAt TIMESTAMP NULL,
   createdAt TIMESTAMP DEFAULT NOW(),
-  
+
   FOREIGN KEY (sagaId) REFERENCES saga_instance(sagaId)
 );
 
@@ -732,13 +734,13 @@ await db.transaction(async (trx) => {
 
 ## 8. Summary
 
-| Concept | Định nghĩa |
-|---------|-----------|
-| **Saga** | Distributed transaction pattern cho microservices |
-| **Orchestrator Saga** | Service trung tâm kiểm soát, dễ debug |
-| **Choreography Saga** | Services tự quyết định, loose coupling, cần SSS |
-| **Fan-out/Fan-in** | Parallel + orchestration, hybrid approach |
-| **Saga State Store** | Database tập trung track saga participants |
-| **Compensation** | Undo các bước thành công khi có error |
+| Concept               | Định nghĩa                                        |
+| --------------------- | ------------------------------------------------- |
+| **Saga**              | Distributed transaction pattern cho microservices |
+| **Orchestrator Saga** | Service trung tâm kiểm soát, dễ debug             |
+| **Choreography Saga** | Services tự quyết định, loose coupling, cần SSS   |
+| **Fan-out/Fan-in**    | Parallel + orchestration, hybrid approach         |
+| **Saga State Store**  | Database tập trung track saga participants        |
+| **Compensation**      | Undo các bước thành công khi có error             |
 
 **Best practice cho NextMart: Orchestrator Saga + Fan-out/Fan-in (khi cần parallel)** ✅
