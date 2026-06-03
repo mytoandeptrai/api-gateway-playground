@@ -23,33 +23,59 @@ NextMart là một e-commerce platform học distributed systems patterns thực
 ## Tổng quan kiến trúc
 
 ```
-┌─────────────────────────────────────────┐
-│         Browser  (Next.js :3000)        │
-│   /api/* → rewrite → gateway:3002       │
-└────────────────┬────────────────────────┘
-                 │ HTTP
-                 ▼
-┌─────────────────────────────────────────┐
-│          API Gateway (:3002)            │
-│  Rate Limit → Route → LB → Forward      │
-└──┬──────┬───────┬──────┬──────┬─────────┘
-   │      │       │      │      │
-   ▼      ▼       ▼      ▼      ▼
-auth  product  order  payment  refund
-:3003  :3005  :3006   :3008   :3011
-                │       │
-                │       │  Kafka (via Outbox worker)
-                └───┬───┘
-                    ▼
-        ┌───────────────────────┐
-        │  orchestrator (:3012) │
-        │  Saga + DLQ + CB      │
-        └──┬──────────┬─────────┘
-           │  Kafka   │  HTTP (Circuit Breaker)
-    ┌──────┼──────┐   └──────────────┐
-    ▼      ▼      ▼                  ▼
-inventory shipping notification  order + payment
-  :3007   :3009    :3010          (status update)
+┌──────────────────────────────────────────────────────────────────────────────┐
+│                          Browser  (Next.js :3000)                            │
+│              /api/* → rewrite → gateway:3002/api/v1/gateway/*               │
+└─────────────────────────────────┬────────────────────────────────────────────┘
+                                  │ HTTP
+                                  ▼
+┌──────────────────────────────────────────────────────────────────────────────┐
+│                         API Gateway (:3002)                                  │
+│           Rate Limit → Route Match → Circuit Breaker → LB → Forward         │
+│                         ↕ Redis (rate limit, cache)                          │
+└────┬──────────┬──────────┬──────────┬──────────┬────────────────────────────┘
+     │          │          │          │          │  HTTP
+     ▼          ▼          ▼          ▼          ▼
+  auth       product     order     payment    refund
+  :3003       :3005      :3006      :3008      :3011
+    │           │          │          │          │
+    │           │          │          │       MinIO
+    │           │          │   VNPay  │       :1117
+    │           │          │  sandbox │
+    │           └──────────┴──────────┴──┐
+    │                  PostgreSQL :1111  │  ← mỗi service dùng schema riêng
+    │                  (1 instance)      │
+    └───────────────────────────────────┘
+                         │
+              Kafka (via Outbox workers)
+              :1115 (KRaft, no ZooKeeper)
+                         │
+         ┌───────────────┴───────────────┐
+         │                               │
+         ▼                               ▼
+  order.created                   payment.completed
+  (+ các events khác)             payment.failed / timeout
+         │                               │
+         └───────────────┬───────────────┘
+                         ▼
+         ┌───────────────────────────────┐
+         │     orchestrator (:3012)      │
+         │  Saga + DLQ + Circuit Breaker │
+         │    ↕ PostgreSQL (schema:      │
+         │      orchestrator)            │
+         └──────┬──────────┬─────────────┘
+                │  Kafka   │  HTTP trực tiếp (opossum CB)
+    ┌───────────┼───────┐  └──────────────────────────────┐
+    │           │       │                                  │
+    ▼           ▼       ▼                                  ▼
+inventory   shipping  notification              order:3006  payment:3008
+  :3007       :3009    :3010                  (update status, create QR)
+    │           │         │
+    │     MailPit:1113    │ WebSocket
+    │     (email test)    └──────────────→  Browser
+    │
+  Redlock
+  (Redis:1112)
 ```
 
 **Điểm quan trọng:**
@@ -57,6 +83,28 @@ inventory shipping notification  order + payment
 - `inventory`, `shipping`, `notification` chỉ giao tiếp qua **Kafka**, không exposed ra gateway
 - Orchestrator gọi `order-service` và `payment-service` qua **HTTP trực tiếp** (bọc Circuit Breaker opossum) để update status và tạo QR — không qua gateway
 - `notification-service` chỉ subscribe **một topic duy nhất** (`notification.send`) — orchestrator dispatch tất cả notification qua topic này
+- PostgreSQL là **1 instance duy nhất** nhưng mỗi service dùng schema riêng biệt, không share table
+
+## Infrastructure (Docker)
+
+| Port | Service | Dùng bởi |
+|------|---------|---------|
+| 1111 | PostgreSQL 16 | Tất cả services (mỗi service 1 schema) |
+| 1112 | Redis 7 | Gateway (rate limit, response cache), Inventory (Redlock) |
+| 1113 | MailPit SMTP | notification-service gửi email |
+| 1114 | MailPit Web UI | Xem email trong lúc dev/test |
+| 1115 | Kafka (KRaft) | Tất cả services publish/consume events |
+| 1116 | Kafka UI | Monitor topics, messages, consumer groups |
+| 1117 | MinIO S3 API | refund-service upload ảnh minh chứng |
+| 1118 | MinIO Console | Xem files đã upload |
+
+```bash
+# Start toàn bộ infra
+cd docker && docker compose up -d
+
+# Reset sạch (xóa cả data)
+cd docker && docker compose down -v
+```
 
 ---
 
