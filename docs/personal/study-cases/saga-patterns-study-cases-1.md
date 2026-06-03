@@ -529,36 +529,208 @@ Orchestrator + Fan-out/Fan-in = kết hợp tốt nhất:
 
 ---
 
-## 8. Nextmart Implementation
+## 7.5. Partial Publish Failure & Outbox Pattern
 
-### Hiện tại (Phase 2)
+### Vấn đề: Partial Failure trong Fan-out
 
-✅ **Orchestrator Saga (Sequential)**
+Khi Orchestrator publish messages đến nhiều services:
 
+```typescript
+// DANGEROUS: Nếu message 3 fail, toàn bộ fail
+await Promise.all([
+  publishToInventory(),    // ✓ success
+  publishToPayment(),      // ✓ success
+  publishToEmail(),        // ✗ FAIL
+]);
+
+// Promise.all throw error!
+// Nhưng:
+// - Inventory đã published + đang xử lý
+// - Payment đã published + đang xử lý
+// - Email chưa publish
+// - Orchestrator: "Toàn bộ fail!"
+// - Trigger compensation? Nhưng Email chưa làm gì!
+
+// → STATE KHÔNG NHẤT QUÁN!
 ```
-Order → Inventory → Payment → Shipping → Delivery
-(pure sequential, orchestrator kiểm soát từng step)
+
+**Thực tế:** Không có "all-or-nothing" ở Kafka publish level!
+
+### Giải pháp: Outbox Pattern (BEST PRACTICE)
+
+**Ý tưởng:** Lưu messages vào local Outbox table trước, sau đó relay async.
+
+```typescript
+// Step 1: Atomic local transaction
+await db.transaction(async (trx) => {
+  // 1. Create saga_instance
+  const saga = await trx.insert('saga_instance', {
+    sagaId,
+    orderId,
+    status: 'RUNNING',
+    currentStep: 'FAN_OUT'
+  });
+  
+  // 2. Insert messages vào Outbox (TRONG transaction)
+  await trx.insertMany('saga_outbox', [
+    {
+      sagaId,
+      topic: 'inventory.reserve',
+      payload: { orderId, quantity, ... },
+      published: false
+    },
+    {
+      sagaId,
+      topic: 'payment.create_qr',
+      payload: { orderId, amount, ... },
+      published: false
+    },
+    {
+      sagaId,
+      topic: 'email.send',
+      payload: { orderId, email, ... },
+      published: false
+    }
+  ]);
+});
+
+// ↑ Nếu fail ở message thứ 3, tất cả rollback!
+//   Nếu success, 3 messages đều safe trong DB
+//   ALL-OR-NOTHING ở local level!
+
+// Step 2: Background job relay (chạy mỗi 30 giây)
+async relayOutboxMessages() {
+  const unpublished = await db.find('saga_outbox', { published: false });
+  
+  for (const msg of unpublished) {
+    try {
+      await kafkaProducer.send(msg.topic, {
+        ...msg.payload,
+        idempotencyKey: `${msg.sagaId}:${msg.topic}`, // ← Idempotency
+        commandId: randomId()
+      });
+      
+      // Mark as published
+      await db.update('saga_outbox', msg.id, {
+        published: true,
+        publishedAt: now
+      });
+      
+      this.logger.log(`Published ${msg.topic} for saga ${msg.sagaId}`);
+    } catch (error) {
+      // Retry next round, không throw error
+      this.logger.error(`Failed to publish ${msg.topic}: ${error.message}`);
+    }
+  }
+}
+
+// Step 3: Services handle idempotency
+@KafkaListener('inventory.reserve')
+async onReserveStock(message) {
+  const { payload, idempotencyKey } = message;
+  
+  // Check: đã process command này chưa?
+  const existing = await db.findOne('processed_commands', {
+    idempotencyKey
+  });
+  
+  if (existing) {
+    this.logger.warn(`Duplicate message ${idempotencyKey}, skipping`);
+    return;
+  }
+  
+  // Process
+  await this.reserveStock(payload.orderId, payload.quantity);
+  
+  // Mark as processed
+  await db.insert('processed_commands', {
+    idempotencyKey,
+    processedAt: now
+  });
+  
+  // Publish result
+  await this.kafkaProducer.send('inventory.reserved', {
+    sagaId: message.sagaId,
+    orderId: payload.orderId,
+    status: 'success'
+  });
+}
 ```
 
-### Phase 3 (Optional)
+### Benefit của Outbox Pattern
 
-Nếu cần parallel:
+| Aspect | Benefit |
+|--------|---------|
+| **Atomicity** | ✅ Saga + messages = all-or-nothing ở local DB |
+| **Reliability** | ✅ Messages safe trong Outbox, async relay |
+| **Idempotency** | ✅ Duplicate messages handled safely |
+| **Simplicity** | ✅ Chỉ thêm 1 table + 1 background job |
+| **Retry** | ✅ Background job retry automatically |
+| **Orchestrator** | ✅ Logic không thay đổi (vẫn publish) |
+| **Production-proven** | ✅ Dùng ở Amazon, Netflix, Uber |
 
+### Database Schema
+
+```sql
+-- Orchestrator DB
+CREATE TABLE saga_instance (
+  id UUID PRIMARY KEY,
+  sagaId STRING NOT NULL UNIQUE,
+  orderId STRING NOT NULL,
+  status STRING, -- RUNNING, COMPLETED, FAILED
+  currentStep STRING,
+  createdAt TIMESTAMP DEFAULT NOW()
+);
+
+-- Outbox: Safe messages pending publish
+CREATE TABLE saga_outbox (
+  id UUID PRIMARY KEY,
+  sagaId STRING NOT NULL,
+  topic STRING NOT NULL, -- inventory.reserve, payment.create_qr
+  payload JSONB NOT NULL,
+  published BOOLEAN DEFAULT FALSE,
+  publishedAt TIMESTAMP NULL,
+  createdAt TIMESTAMP DEFAULT NOW(),
+  
+  FOREIGN KEY (sagaId) REFERENCES saga_instance(sagaId)
+);
+
+-- Service DB: Track processed idempotency keys
+CREATE TABLE processed_commands (
+  id UUID PRIMARY KEY,
+  idempotencyKey STRING NOT NULL UNIQUE, -- {sagaId}:{topic}
+  processedAt TIMESTAMP DEFAULT NOW()
+);
 ```
-Order → {Inventory + Payment + Email} → Shipping
-(fan-out: 3 parallel, fan-in: orchestrator chờ tất cả)
-```
 
-Hoặc nếu cần loose coupling:
+### Comparison: Direct Publish vs Outbox
 
-```
-Order → {Inventory, Payment, Email} (choreography)
-+ Saga State Store tracking (background jobs)
+```typescript
+// ❌ WRONG: Direct publish (partial failure risk)
+await Promise.all([
+  kafkaProducer.send('inventory.reserve', {...}),    // ✓
+  kafkaProducer.send('payment.create_qr', {...}),    // ✓
+  kafkaProducer.send('email.send', {...})            // ✗
+]);
+// → Exception, state inconsistent
+
+// ✅ RIGHT: Outbox pattern (atomic + async)
+await db.transaction(async (trx) => {
+  await trx.insert('saga_instance', {...});
+  await trx.insertMany('saga_outbox', [
+    { topic: 'inventory.reserve', payload: {...} },
+    { topic: 'payment.create_qr', payload: {...} },
+    { topic: 'email.send', payload: {...} }
+  ]);
+});
+// → All-or-nothing locally
+// → Background job relay async
+// → Services handle idempotency
 ```
 
 ---
 
-## Summary
+## 8. Summary
 
 | Concept | Định nghĩa |
 |---------|-----------|
