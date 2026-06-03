@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { setTimeout as sleep } from 'timers/promises';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { randomUUID } from 'crypto';
 import { KafkaProducer } from '@/shared/kafka/utils/kafka.producer';
 import { SagaInstance, SagaStatus } from '@/modules/saga/entities/saga-instance.entity';
 
@@ -100,5 +101,38 @@ export class DlqService {
     this.logger.error(
       `[DLQ] SagaInstance ${saga.id} marked FAILED — reason: ${reason}`,
     );
+
+    // Notify user so they're not left in the dark
+    if (saga.userEmail) {
+      await this.kafkaProducer.send({
+        topic: 'notification.send',
+        messages: [
+          {
+            key: saga.orderId,
+            value: JSON.stringify({
+              eventId: randomUUID(),
+              eventType: 'notification.send',
+              sagaId: saga.id,
+              orderId: saga.orderId,
+              userId: saga.userId,
+              correlationId: randomUUID(),
+              timestamp: new Date().toISOString(),
+              payload: {
+                userId: saga.userId,
+                email: saga.userEmail,
+                template: 'order-cancelled',
+                data: {
+                  orderId: saga.orderId,
+                  reason: 'Đơn hàng gặp sự cố kỹ thuật và đang được xử lý. Chúng tôi sẽ liên hệ lại sớm.',
+                },
+                channels: ['email', 'socket'],
+              },
+            }),
+          },
+        ],
+      }).catch((err) =>
+        this.logger.error(`[DLQ] Failed to send failure notification: ${err}`),
+      );
+    }
   }
 }
