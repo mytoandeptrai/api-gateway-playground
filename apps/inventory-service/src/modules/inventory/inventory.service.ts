@@ -11,7 +11,7 @@ import {
   ReservationStatus,
 } from './entities/stock-reservation.entity';
 import { ProcessedEvent } from './entities/processed-event.entity';
-import { KafkaProducer } from '@/shared/kafka/utils/kafka.producer';
+import { OutboxEvent } from './entities/outbox-event.entity';
 
 interface KafkaEnvelope {
   eventId: string;
@@ -36,8 +36,9 @@ export class InventoryService {
     private readonly reservationRepo: Repository<StockReservation>,
     @InjectRepository(ProcessedEvent)
     private readonly processedEventRepo: Repository<ProcessedEvent>,
+    @InjectRepository(OutboxEvent)
+    private readonly outboxRepo: Repository<OutboxEvent>,
     private readonly dataSource: DataSource,
-    private readonly kafkaProducer: KafkaProducer,
     private readonly redisService: RedisService,
   ) {
     const redisClient: Redis = this.redisService.getOrThrow();
@@ -104,14 +105,23 @@ export class InventoryService {
           ProcessedEvent,
           manager.create(ProcessedEvent, { eventId: event.eventId }),
         );
+
+        await manager.save(
+          OutboxEvent,
+          manager.create(OutboxEvent, {
+            aggregateId: orderId,
+            eventType: 'inventory.stock_reserved',
+            payload: this.buildEnvelope('inventory.stock_reserved', event, {
+              productId,
+              quantity,
+              sagaId,
+              orderId,
+            }),
+            published: false,
+          }),
+        );
       });
 
-      await this.publish('inventory.stock_reserved', event, {
-        productId,
-        quantity,
-        sagaId,
-        orderId,
-      });
       this.logger.log(
         `Stock reserved: ${quantity}x ${productId} for order ${orderId}`,
       );
@@ -159,9 +169,18 @@ export class InventoryService {
         ProcessedEvent,
         manager.create(ProcessedEvent, { eventId: event.eventId }),
       );
+
+      await manager.save(
+        OutboxEvent,
+        manager.create(OutboxEvent, {
+          aggregateId: orderId,
+          eventType: 'inventory.stock_confirmed',
+          payload: this.buildEnvelope('inventory.stock_confirmed', event, { sagaId, orderId }),
+          published: false,
+        }),
+      );
     });
 
-    await this.publish('inventory.stock_confirmed', event, { sagaId, orderId });
     this.logger.log(`Stock confirmed for saga ${sagaId}`);
   }
 
@@ -204,9 +223,18 @@ export class InventoryService {
         ProcessedEvent,
         manager.create(ProcessedEvent, { eventId: event.eventId }),
       );
+
+      await manager.save(
+        OutboxEvent,
+        manager.create(OutboxEvent, {
+          aggregateId: orderId,
+          eventType: 'inventory.stock_released',
+          payload: this.buildEnvelope('inventory.stock_released', event, { sagaId, orderId }),
+          published: false,
+        }),
+      );
     });
 
-    await this.publish('inventory.stock_released', event, { sagaId, orderId });
     this.logger.log(`Stock released for saga ${sagaId}`);
   }
 
@@ -227,12 +255,12 @@ export class InventoryService {
     );
   }
 
-  private async publish(
+  private buildEnvelope(
     topic: string,
     sourceEvent: KafkaEnvelope,
     payload: object,
-  ) {
-    const envelope: KafkaEnvelope = {
+  ): KafkaEnvelope {
+    return {
       eventId: randomUUID(),
       eventType: topic,
       sagaId: sourceEvent.sagaId,
@@ -242,12 +270,21 @@ export class InventoryService {
       timestamp: new Date().toISOString(),
       payload: payload as Record<string, unknown>,
     };
+  }
 
-    this.logger.log(`[KAFKA] Publishing ${topic}: ${sourceEvent.orderId}`);
-    await this.kafkaProducer.send({
-      topic,
-      messages: [{ key: sourceEvent.orderId, value: JSON.stringify(envelope) }],
+  private async publish(
+    topic: string,
+    sourceEvent: KafkaEnvelope,
+    payload: object,
+  ) {
+    const envelope = this.buildEnvelope(topic, sourceEvent, payload);
+    const outbox = this.outboxRepo.create({
+      aggregateId: sourceEvent.orderId,
+      eventType: topic,
+      payload: envelope,
+      published: false,
     });
-    this.logger.log(`[KAFKA] ✓ Published ${topic}`);
+    await this.outboxRepo.save(outbox);
+    this.logger.log(`[OUTBOX] Queued ${topic} for order ${sourceEvent.orderId}`);
   }
 }

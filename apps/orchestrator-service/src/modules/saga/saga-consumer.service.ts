@@ -16,10 +16,15 @@ const TOPICS = [
   'inventory.stock_insufficient',
   'inventory.stock_released',
   'payment.completed',
+  'payment.failed',
   'payment.timeout',
+  'payment.refunded',
   'inventory.stock_confirmed',
   'shipping.label_created',
+  'shipping.status_updated',
   'shipping.delivered',
+  'refund.requested',
+  'refund.validated',
 ] as const;
 
 @Injectable()
@@ -104,12 +109,22 @@ export class SagaConsumerService implements OnModuleInit, OnModuleDestroy {
         return this.orderSagaService.onStockReleased(event);
       case 'payment.completed':
         return this.orderSagaService.onPaymentCompleted(event);
+      case 'payment.failed':
+        return this.orderSagaService.onPaymentFailed(event);
       case 'payment.timeout':
         return this.orderSagaService.onPaymentTimeout(event);
+      case 'payment.refunded':
+        return this.orderSagaService.onPaymentRefunded(event);
+      case 'refund.requested':
+        return this.orderSagaService.onRefundRequested(event);
+      case 'refund.validated':
+        return this.orderSagaService.onRefundValidated(event);
       case 'inventory.stock_confirmed':
         return this.orderSagaService.onInventoryConfirmed(event);
       case 'shipping.label_created':
         return this.orderSagaService.onShippingLabelCreated(event);
+      case 'shipping.status_updated':
+        return this.orderSagaService.onShippingStatusUpdated(event);
       case 'shipping.delivered':
         return this.orderSagaService.onShippingDelivered(event);
     }

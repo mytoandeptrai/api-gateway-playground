@@ -110,10 +110,39 @@ export class PaymentService {
     }
 
     if (responseCode !== '00') {
-      await this.intentRepo.update(intent.id, { status: PaymentStatus.FAILED });
-      await this.webhookRepo.save(
-        this.webhookRepo.create({ vnpTxnRef: txnRef }),
-      );
+      await this.dataSource.transaction(async (manager) => {
+        await manager.update(
+          PaymentIntent,
+          { id: intent.id },
+          { status: PaymentStatus.FAILED },
+        );
+
+        const outbox = manager.create(OutboxEvent, {
+          aggregateId: intent.id,
+          eventType: 'payment.failed',
+          payload: {
+            eventId: randomUUID(),
+            eventType: 'payment.failed',
+            sagaId: intent.sagaId,
+            orderId: intent.orderId,
+            userId: intent.userId,
+            correlationId: randomUUID(),
+            timestamp: new Date().toISOString(),
+            payload: {
+              orderId: intent.orderId,
+              reason: `VNPay response code: ${responseCode}`,
+            },
+          },
+          published: false,
+        });
+        await manager.save(outbox);
+        await manager.save(
+          ProcessedWebhook,
+          manager.create(ProcessedWebhook, { vnpTxnRef: txnRef }),
+        );
+      });
+
+      this.logger.log(`Payment failed for order ${txnRef}, code=${responseCode}`);
       return { RspCode: '00', Message: 'Acknowledged' };
     }
 

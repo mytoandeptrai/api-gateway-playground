@@ -149,6 +149,29 @@ const routes: Partial<ApiRoute>[] = [
     isGlobal: true,
     priority: 10,
   },
+  {
+    name: 'Refund Service',
+    description: 'Routes all refund requests to refund-service:3011',
+    path: '/api/v1/gateway/refund*',
+    method: '*',
+    targetType: RouteTargetType.SERVICE,
+    targets: [{ url: 'http://localhost:3011' }],
+    loadBalancingStrategy: LoadBalancingStrategy.ROUND_ROBIN,
+    requestTransform: {
+      stripPrefix: '/api/v1/gateway',
+      addPrefix: '/api/v1',
+    },
+    requiresAuth: false,
+    enableCircuitBreaker: true,
+    circuitBreakerThreshold: 5,
+    circuitBreakerTimeout: 30,
+    requestTimeout: 30000,
+    retryAttempts: 1,
+    enableCaching: false,
+    enabled: true,
+    isGlobal: true,
+    priority: 10,
+  },
 ];
 
 // ─── Runner ──────────────────────────────────────────────────────────────────
