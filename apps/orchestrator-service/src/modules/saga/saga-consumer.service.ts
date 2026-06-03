@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { KafkaConsumer } from '@/shared/kafka/utils/kafka.consumer';
 import { KafkaAdmin } from '@/shared/kafka/utils/kafka.admin';
+import { DlqService } from '@/shared/dlq/dlq.service';
 import { OrderSagaService } from './order-saga.service';
 
 const GROUP_ID = 'orchestrator-group';
@@ -63,6 +64,7 @@ export class SagaConsumerService implements OnModuleInit, OnModuleDestroy {
     private readonly kafkaConsumer: KafkaConsumer,
     private readonly kafkaAdmin: KafkaAdmin,
     private readonly orderSagaService: OrderSagaService,
+    private readonly dlqService: DlqService,
   ) {}
 
   async onModuleInit() {
@@ -79,16 +81,23 @@ export class SagaConsumerService implements OnModuleInit, OnModuleDestroy {
 
     await this.kafkaConsumer.run(key, async (message) => {
       if (!message.value) return;
+      let event: Record<string, unknown>;
       try {
-        const event = JSON.parse(message.value);
-        this.logger.log(
-          `[KAFKA] Received ${message.topic}: ${JSON.stringify(event).slice(0, 100)}`,
-        );
-        await this.route(message.topic, event);
-        this.logger.log(`[KAFKA] ✓ Processed ${message.topic}`);
-      } catch (err) {
-        this.logger.error(`Error processing ${message.topic}: ${err}`);
+        event = JSON.parse(message.value);
+      } catch {
+        this.logger.error(`[KAFKA] Invalid JSON on ${message.topic}`);
+        return;
       }
+
+      this.logger.log(
+        `[KAFKA] Received ${message.topic}: ${JSON.stringify(event).slice(0, 100)}`,
+      );
+
+      await this.dlqService.withRetry(
+        message.topic,
+        event,
+        () => this.route(message.topic, event),
+      );
     });
     this.logger.log('Saga consumers initialized');
   }

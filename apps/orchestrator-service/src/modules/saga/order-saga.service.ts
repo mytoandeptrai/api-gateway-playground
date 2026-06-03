@@ -1,13 +1,12 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { HttpService } from '@nestjs/axios';
 import { ConfigService } from '@nestjs/config';
-import { firstValueFrom } from 'rxjs';
 import { randomUUID } from 'crypto';
 import { SagaInstance, SagaStatus } from './entities/saga-instance.entity';
 import { SagaStep, SagaStepStatus } from './entities/saga-step.entity';
 import { KafkaProducer } from '@/shared/kafka/utils/kafka.producer';
+import { CircuitBreakerService } from '@/shared/circuit-breaker/circuit-breaker.service';
 
 const STEP = {
   RESERVE_INVENTORY: 'RESERVE_INVENTORY',
@@ -39,7 +38,7 @@ export class OrderSagaService {
     @InjectRepository(SagaStep)
     private readonly stepRepo: Repository<SagaStep>,
     private readonly kafkaProducer: KafkaProducer,
-    private readonly httpService: HttpService,
+    private readonly circuitBreaker: CircuitBreakerService,
     private readonly configService: ConfigService,
   ) {}
 
@@ -354,6 +353,8 @@ export class OrderSagaService {
       await this.createStep(saga.id, 'PROCESS_REFUND', 'payment.refund_requested', event.payload);
       await this.sagaRepo.update(saga.id, { currentStep: 'PROCESS_REFUND' });
 
+      await this.sendNotification(saga, 'refund-approved', { refundId });
+
       const orderSaga = await this.sagaRepo.findOne({ where: { orderId: event.orderId, sagaType: 'ORDER_SAGA' } });
       await this.publishCommand(
         'payment.refund_requested',
@@ -527,13 +528,11 @@ export class OrderSagaService {
     const apiPrefix = 'api/v1';
 
     try {
-      await firstValueFrom(
-        this.httpService.post(`${paymentUrl}/${apiPrefix}/payment/create-qr`, {
-          orderId: saga.orderId,
-          amount: orderPayload.totalAmount,
-          sagaId: saga.id,
-        }),
-      );
+      await this.circuitBreaker.post(`${paymentUrl}/${apiPrefix}/payment/create-qr`, {
+        orderId: saga.orderId,
+        amount: orderPayload.totalAmount,
+        sagaId: saga.id,
+      });
     } catch (error) {
       this.logger.error(
         `Failed to create payment QR for order ${saga.orderId}: ${error}`,
@@ -553,14 +552,9 @@ export class OrderSagaService {
     const apiPrefix = 'api/v1';
 
     try {
-      await firstValueFrom(
-        this.httpService.patch(
-          `${orderUrl}/${apiPrefix}/orders/${orderId}/status`,
-          {
-            status,
-            ...extra,
-          },
-        ),
+      await this.circuitBreaker.patch(
+        `${orderUrl}/${apiPrefix}/orders/${orderId}/status`,
+        { status, ...extra },
       );
     } catch (error) {
       this.logger.error(

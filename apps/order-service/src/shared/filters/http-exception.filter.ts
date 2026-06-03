@@ -7,12 +7,8 @@ import {
   Logger,
 } from '@nestjs/common';
 import { Request, Response } from 'express';
+import { randomUUID } from 'crypto';
 
-/**
- * HTTP Exception Filter
- * Catches all HTTP exceptions and formats them consistently
- * Also logs errors for debugging and monitoring
- */
 @Catch()
 export class HttpExceptionFilter implements ExceptionFilter {
   private readonly logger = new Logger(HttpExceptionFilter.name);
@@ -24,39 +20,43 @@ export class HttpExceptionFilter implements ExceptionFilter {
 
     let status = HttpStatus.INTERNAL_SERVER_ERROR;
     let message: string | string[] = 'Internal server error';
-    let error = 'InternalServerError';
+    let errorCode = 'INTERNAL_SERVER_ERROR';
 
     if (exception instanceof HttpException) {
       status = exception.getStatus();
       const exceptionResponse = exception.getResponse();
 
       if (typeof exceptionResponse === 'object') {
-        const responseObj = exceptionResponse as any;
-        message = responseObj.message || message;
-        error = responseObj.error || exception.name;
+        const res = exceptionResponse as Record<string, unknown>;
+        message = (res.message as string | string[]) ?? message;
+        errorCode = (res.errorCode as string) ?? (res.error as string) ?? exception.name;
       } else {
-        message = exceptionResponse;
-        error = exception.name;
+        message = exceptionResponse as string;
+        errorCode = exception.name;
       }
     } else if (exception instanceof Error) {
       message = exception.message;
-      error = exception.name;
+      errorCode = exception.name;
     }
 
-    // Log error
+    const correlationId =
+      (request.headers['x-correlation-id'] as string) ?? randomUUID();
+    const sagaId = request.headers['x-saga-id'] as string | undefined;
+
     this.logger.error(
-      `${request.method} ${request.url} - ${status} - ${error}: ${JSON.stringify(message)}`,
+      `[${correlationId}] ${request.method} ${request.url} → ${status} ${errorCode}: ${JSON.stringify(message)}`,
       exception instanceof Error ? exception.stack : undefined,
     );
 
-    // Send error response
-    response.status(status).json({
-      success: false,
+    const body: Record<string, unknown> = {
       statusCode: status,
-      error,
-      message,
-      path: request.url,
+      message: Array.isArray(message) ? message.join(', ') : message,
+      errorCode,
+      correlationId,
       timestamp: new Date().toISOString(),
-    });
+    };
+    if (sagaId) body.sagaId = sagaId;
+
+    response.status(status).json(body);
   }
 }
