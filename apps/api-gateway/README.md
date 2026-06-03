@@ -6,19 +6,21 @@ NextMart là một e-commerce platform học distributed systems patterns thực
 
 ## Services
 
-| Service | Port | Giao tiếp | Mô tả |
-|---------|------|-----------|-------|
-| `web` | 3000 | Browser | Next.js 15 App Router frontend |
-| `api-gateway` | 3002 | HTTP (entry point) | Rate limiting, routing, circuit breaker, cache |
-| `auth-service` | 3003 | HTTP qua gateway | JWT login, refresh token rotation |
-| `product-service` | 3005 | HTTP qua gateway | Product catalog, seed data |
-| `order-service` | 3006 | HTTP qua gateway + Kafka | Order CRUD, emit `order.created` |
-| `inventory-service` | 3007 | Kafka only | Stock reservation với Redlock |
-| `payment-service` | 3008 | HTTP qua gateway + Kafka | VNPay QR, webhook IPN, emit `payment.*` |
-| `shipping-service` | 3009 | Kafka only | Mock shipping label + tracking timer |
-| `notification-service` | 3010 | Kafka only | Email (MailPit) + WebSocket push |
-| `refund-service` | 3011 | HTTP qua gateway + Kafka | Refund request, MinIO upload, auto-validate |
-| `orchestrator-service` | 3012 | Kafka + HTTP | Saga orchestration, DLQ, circuit breaker |
+
+| Service                | Port | Giao tiếp                | Mô tả                                          |
+| ---------------------- | ---- | ------------------------ | ---------------------------------------------- |
+| `web`                  | 3000 | Browser                  | Next.js 15 App Router frontend                 |
+| `api-gateway`          | 3002 | HTTP (entry point)       | Rate limiting, routing, circuit breaker, cache |
+| `auth-service`         | 3003 | HTTP qua gateway         | JWT login, refresh token rotation              |
+| `product-service`      | 3005 | HTTP qua gateway         | Product catalog, seed data                     |
+| `order-service`        | 3006 | HTTP qua gateway + Kafka | Order CRUD, emit `order.created`               |
+| `inventory-service`    | 3007 | Kafka only               | Stock reservation với Redlock                  |
+| `payment-service`      | 3008 | HTTP qua gateway + Kafka | VNPay QR, webhook IPN, emit `payment.*`        |
+| `shipping-service`     | 3009 | Kafka only               | Mock shipping label + tracking timer           |
+| `notification-service` | 3010 | Kafka only               | Email (MailPit) + WebSocket push               |
+| `refund-service`       | 3011 | HTTP qua gateway + Kafka | Refund request, MinIO upload, auto-validate    |
+| `orchestrator-service` | 3012 | Kafka + HTTP             | Saga orchestration, DLQ, circuit breaker       |
+
 
 ## Tổng quan kiến trúc
 
@@ -31,15 +33,15 @@ NextMart là một e-commerce platform học distributed systems patterns thực
 └─────────────────────────┬───────────────────────────┘
                           │ HTTP
                           ▼
-┌─────────────────────────────────────────────────────┐
-│  TIER 2 — API GATEWAY  (:3002)                      │
-│                                                     │
-│  ① Rate Limiting   — 4 algorithms, Redis-backed     │
+┌───────────────────────────────────────────────────────┐
+│  TIER 2 — API GATEWAY  (:3002)                        │
+│                                                       │
+│  ① Rate Limiting   — 4 algorithms, Redis-backed      │
 │  ② Route Matching  — path pattern lookup (PostgreSQL)│
-│  ③ Circuit Breaker — per-route, in-memory state     │
-│  ④ Load Balancing  — Round Robin / Weighted / ...   │
-│  ⑤ Response Cache  — Redis, TTL per route           │
-└──┬─────┬──────┬──────┬──────┬──────────────────────-┘
+│  ③ Circuit Breaker — per-route, in-memory state      │
+│  ④ Load Balancing  — Round Robin / Weighted / ...    │
+│  ⑤ Response Cache  — Redis, TTL per route            │
+└──┬─────┬──────┬──────┬──────┬─────────────────────────┘
    │     │      │      │      │  HTTP forward
    ▼     ▼      ▼      ▼      ▼
  auth product order payment refund
@@ -53,10 +55,10 @@ NextMart là một e-commerce platform học distributed systems patterns thực
 ┌─────────────────────────────────────────────────────┐
 │  TIER 3 — ORCHESTRATOR  (:3012)                     │
 │                                                     │
-│  Saga (Order + Refund) · DLQ · Retry 1s/3s/9s      │
+│  Saga (Order + Refund) · DLQ · Retry 1s/3s/9s       │
 │  Circuit Breaker (opossum) cho HTTP calls           │
 └──────┬──────────────────────────┬───────────────────┘
-       │ Kafka commands            │ HTTP trực tiếp
+       │ Kafka commands           │ HTTP trực tiếp
        │                          │ (opossum Circuit Breaker)
    ┌───┼──────────┐               │
    ▼   ▼          ▼               ▼
@@ -84,6 +86,7 @@ tory  ping    cation        (update status, create QR)
 ```
 
 **Điểm quan trọng:**
+
 - Gateway là **entry point duy nhất** — browser không gọi thẳng vào bất kỳ service nào
 - `inventory`, `shipping`, `notification` chỉ nhận lệnh qua **Kafka**, không có route trên gateway
 - Orchestrator gọi `order-service` và `payment-service` bằng **HTTP trực tiếp** (có opossum circuit breaker), không qua gateway
@@ -92,16 +95,18 @@ tory  ping    cation        (update status, create QR)
 
 ## Infrastructure (Docker)
 
-| Port | Service | Dùng bởi |
-|------|---------|---------|
-| 1111 | PostgreSQL 16 | Tất cả services (mỗi service 1 schema) |
-| 1112 | Redis 7 | Gateway (rate limit, response cache), Inventory (Redlock) |
-| 1113 | MailPit SMTP | notification-service gửi email |
-| 1114 | MailPit Web UI | Xem email trong lúc dev/test |
-| 1115 | Kafka (KRaft) | Tất cả services publish/consume events |
-| 1116 | Kafka UI | Monitor topics, messages, consumer groups |
-| 1117 | MinIO S3 API | refund-service upload ảnh minh chứng |
-| 1118 | MinIO Console | Xem files đã upload |
+
+| Port | Service        | Dùng bởi                                                  |
+| ---- | -------------- | --------------------------------------------------------- |
+| 1111 | PostgreSQL 16  | Tất cả services (mỗi service 1 schema)                    |
+| 1112 | Redis 7        | Gateway (rate limit, response cache), Inventory (Redlock) |
+| 1113 | MailPit SMTP   | notification-service gửi email                            |
+| 1114 | MailPit Web UI | Xem email trong lúc dev/test                              |
+| 1115 | Kafka (KRaft)  | Tất cả services publish/consume events                    |
+| 1116 | Kafka UI       | Monitor topics, messages, consumer groups                 |
+| 1117 | MinIO S3 API   | refund-service upload ảnh minh chứng                      |
+| 1118 | MinIO Console  | Xem files đã upload                                       |
+
 
 ```bash
 # Start toàn bộ infra
@@ -128,12 +133,14 @@ Request đi qua 6 bước theo thứ tự:
 
 4 thuật toán được implement thực tế, chọn per-route:
 
-| Algorithm | Cơ chế | Dùng khi |
-|-----------|--------|---------|
-| **Token Bucket** | Refill token theo rate, burst được phép | Global safety net |
-| **Sliding Window** | Counter trượt theo thời gian thực | Proxy requests |
-| **Fixed Window** | Reset counter theo frame cố định | Login brute force protection |
-| **Leaky Bucket** | Queue request, drain đều đặn | Smooth traffic |
+
+| Algorithm          | Cơ chế                                  | Dùng khi                     |
+| ------------------ | --------------------------------------- | ---------------------------- |
+| **Token Bucket**   | Refill token theo rate, burst được phép | Global safety net            |
+| **Sliding Window** | Counter trượt theo thời gian thực       | Proxy requests               |
+| **Fixed Window**   | Reset counter theo frame cố định        | Login brute force protection |
+| **Leaky Bucket**   | Queue request, drain đều đặn            | Smooth traffic               |
+
 
 Scope có thể là: `GLOBAL`, `TENANT`, `USER`, `IP`, hoặc `ENDPOINT`.
 
@@ -141,13 +148,15 @@ Scope có thể là: `GLOBAL`, `TENANT`, `USER`, `IP`, hoặc `ENDPOINT`.
 
 Các routes được seed vào PostgreSQL (bảng `api_route`), gateway lookup theo `path pattern + HTTP method`. 5 routes đang active:
 
-| Pattern | Target |
-|---------|--------|
-| `/api/v1/gateway/auth*` | `http://localhost:3003` |
+
+| Pattern                     | Target                  |
+| --------------------------- | ----------------------- |
+| `/api/v1/gateway/auth`*     | `http://localhost:3003` |
 | `/api/v1/gateway/products*` | `http://localhost:3005` |
-| `/api/v1/gateway/orders*` | `http://localhost:3006` |
-| `/api/v1/gateway/payment*` | `http://localhost:3008` |
-| `/api/v1/gateway/refund*` | `http://localhost:3011` |
+| `/api/v1/gateway/orders*`   | `http://localhost:3006` |
+| `/api/v1/gateway/payment*`  | `http://localhost:3008` |
+| `/api/v1/gateway/refund*`   | `http://localhost:3011` |
+
 
 Path transform: `stripPrefix: /api/v1/gateway` → `addPrefix: /api/v1`
 Ví dụ: `/api/v1/gateway/orders/123` → `http://localhost:3006/api/v1/orders/123`
@@ -165,6 +174,7 @@ Khác với circuit breaker của orchestrator (dùng opossum library) — gatew
 ### ④ Load Balancing
 
 Mỗi route có thể có nhiều `targets`. 4 strategy:
+
 - **Round Robin** — lần lượt theo thứ tự
 - **Least Connections** — target ít request nhất
 - **Random** — ngẫu nhiên
@@ -209,11 +219,13 @@ shipping.label_created (Kafka)
 
 ### Compensation
 
-| Trigger | Compensation |
-|---------|-------------|
-| `inventory.stock_insufficient` | HTTP cancel order |
-| `payment.timeout` | emit `inventory.release_stock` → wait `inventory.stock_released` → HTTP cancel order |
+
+| Trigger                        | Compensation                                                                         |
+| ------------------------------ | ------------------------------------------------------------------------------------ |
+| `inventory.stock_insufficient` | HTTP cancel order                                                                    |
+| `payment.timeout`              | emit `inventory.release_stock` → wait `inventory.stock_released` → HTTP cancel order |
 | `payment.failed` (user cancel) | emit `inventory.release_stock` → wait `inventory.stock_released` → HTTP cancel order |
+
 
 `cancelReason` được lưu vào `SagaInstance` lúc set `COMPENSATING` nên lý do hủy đúng ngữ nghĩa (timeout khác user cancel).
 
@@ -237,6 +249,7 @@ refund.requested (Kafka) — emitted by refund-service
 ### Circuit Breaker (opossum) — cho HTTP calls
 
 Orchestrator dùng `CircuitBreakerService` bọc tất cả HTTP calls đến `payment-service` và `order-service`:
+
 - Error threshold: 50% (min 3 calls)
 - Reset: 30 giây
 - Timeout per call: 10 giây
@@ -245,6 +258,7 @@ Orchestrator dùng `CircuitBreakerService` bọc tất cả HTTP calls đến `p
 ### DLQ & Retry
 
 Mọi Kafka message xử lý qua `DlqService.withRetry()`:
+
 ```
 handler() fail → sleep 1s → retry → sleep 3s → retry → sleep 9s → retry
                                                                       │
@@ -268,6 +282,7 @@ src/shared/kafka/
 ```
 
 **Consumer pattern:**
+
 ```typescript
 const key = await kafkaConsumer.subscribe({ topics: [...], groupId: '...' });
 await kafkaConsumer.run(key, async (message) => { ... });
@@ -281,12 +296,14 @@ Business update + outbox write trong **cùng 1 DB transaction** → background w
 
 ## Idempotency
 
-| Service | Cơ chế |
-|---------|--------|
-| Inventory | `ProcessedEvent` table — check `eventId` trước khi process |
-| Payment | `ProcessedWebhook` table — check `vnpTxnRef` trước khi process IPN |
-| Inventory reservations | `UNIQUE(sagaId, productId)` — double reserve không thể xảy ra |
-| Notification | `NotificationLog` table — check `eventId`, không gửi email 2 lần |
+
+| Service                | Cơ chế                                                             |
+| ---------------------- | ------------------------------------------------------------------ |
+| Inventory              | `ProcessedEvent` table — check `eventId` trước khi process         |
+| Payment                | `ProcessedWebhook` table — check `vnpTxnRef` trước khi process IPN |
+| Inventory reservations | `UNIQUE(sagaId, productId)` — double reserve không thể xảy ra      |
+| Notification           | `NotificationLog` table — check `eventId`, không gửi email 2 lần   |
+
 
 ---
 
@@ -318,16 +335,18 @@ api-gateway-db
 cd docker && docker compose up -d
 ```
 
-| Port | Service | Dùng bởi |
-|------|---------|---------|
-| 1111 | PostgreSQL 16 | Tất cả services |
-| 1112 | Redis 7 | Gateway (rate limit, cache), orchestrator (Redlock) |
-| 1113 | MailPit SMTP | notification-service |
-| 1114 | MailPit Web UI | Xem email test |
-| 1115 | Kafka (KRaft) | Tất cả services |
-| 1116 | Kafka UI | Monitor topics/messages |
-| 1117 | MinIO S3 API | refund-service |
-| 1118 | MinIO Console | Xem files refund |
+
+| Port | Service        | Dùng bởi                                            |
+| ---- | -------------- | --------------------------------------------------- |
+| 1111 | PostgreSQL 16  | Tất cả services                                     |
+| 1112 | Redis 7        | Gateway (rate limit, cache), orchestrator (Redlock) |
+| 1113 | MailPit SMTP   | notification-service                                |
+| 1114 | MailPit Web UI | Xem email test                                      |
+| 1115 | Kafka (KRaft)  | Tất cả services                                     |
+| 1116 | Kafka UI       | Monitor topics/messages                             |
+| 1117 | MinIO S3 API   | refund-service                                      |
+| 1118 | MinIO Console  | Xem files refund                                    |
+
 
 ---
 
