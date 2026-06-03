@@ -23,67 +23,72 @@ NextMart là một e-commerce platform học distributed systems patterns thực
 ## Tổng quan kiến trúc
 
 ```
-┌──────────────────────────────────────────────────────────────────────────────┐
-│                          Browser  (Next.js :3000)                            │
-│              /api/* → rewrite → gateway:3002/api/v1/gateway/*               │
-└─────────────────────────────────┬────────────────────────────────────────────┘
-                                  │ HTTP
-                                  ▼
-┌──────────────────────────────────────────────────────────────────────────────┐
-│                         API Gateway (:3002)                                  │
-│           Rate Limit → Route Match → Circuit Breaker → LB → Forward         │
-│                         ↕ Redis (rate limit, cache)                          │
-└────┬──────────┬──────────┬──────────┬──────────┬────────────────────────────┘
-     │          │          │          │          │  HTTP
-     ▼          ▼          ▼          ▼          ▼
-  auth       product     order     payment    refund
-  :3003       :3005      :3006      :3008      :3011
-    │           │          │          │          │
-    │           │          │          │       MinIO
-    │           │          │   VNPay  │       :1117
-    │           │          │  sandbox │
-    │           └──────────┴──────────┴──┐
-    │                  PostgreSQL :1111  │  ← mỗi service dùng schema riêng
-    │                  (1 instance)      │
-    └───────────────────────────────────┘
-                         │
-              Kafka (via Outbox workers)
-              :1115 (KRaft, no ZooKeeper)
-                         │
-         ┌───────────────┴───────────────┐
-         │                               │
-         ▼                               ▼
-  order.created                   payment.completed
-  (+ các events khác)             payment.failed / timeout
-         │                               │
-         └───────────────┬───────────────┘
-                         ▼
-         ┌───────────────────────────────┐
-         │     orchestrator (:3012)      │
-         │  Saga + DLQ + Circuit Breaker │
-         │    ↕ PostgreSQL (schema:      │
-         │      orchestrator)            │
-         └──────┬──────────┬─────────────┘
-                │  Kafka   │  HTTP trực tiếp (opossum CB)
-    ┌───────────┼───────┐  └──────────────────────────────┐
-    │           │       │                                  │
-    ▼           ▼       ▼                                  ▼
-inventory   shipping  notification              order:3006  payment:3008
-  :3007       :3009    :3010                  (update status, create QR)
-    │           │         │
-    │     MailPit:1113    │ WebSocket
-    │     (email test)    └──────────────→  Browser
-    │
-  Redlock
-  (Redis:1112)
+┌─────────────────────────────────────────────────────┐
+│  TIER 1 — FRONTEND                                  │
+│                                                     │
+│  Browser → web (Next.js :3000)                      │
+│            /api/* ──rewrite──► gateway:3002         │
+└─────────────────────────┬───────────────────────────┘
+                          │ HTTP
+                          ▼
+┌─────────────────────────────────────────────────────┐
+│  TIER 2 — API GATEWAY  (:3002)                      │
+│                                                     │
+│  ① Rate Limiting   — 4 algorithms, Redis-backed     │
+│  ② Route Matching  — path pattern lookup (PostgreSQL)│
+│  ③ Circuit Breaker — per-route, in-memory state     │
+│  ④ Load Balancing  — Round Robin / Weighted / ...   │
+│  ⑤ Response Cache  — Redis, TTL per route           │
+└──┬─────┬──────┬──────┬──────┬──────────────────────-┘
+   │     │      │      │      │  HTTP forward
+   ▼     ▼      ▼      ▼      ▼
+ auth product order payment refund
+:3003 :3005  :3006  :3008  :3011
+                │      │      │
+                │      │    MinIO :1117
+                │      │    (file upload)
+                └──┬───┘
+                   │ Kafka events (qua Outbox worker)
+                   ▼
+┌─────────────────────────────────────────────────────┐
+│  TIER 3 — ORCHESTRATOR  (:3012)                     │
+│                                                     │
+│  Saga (Order + Refund) · DLQ · Retry 1s/3s/9s      │
+│  Circuit Breaker (opossum) cho HTTP calls           │
+└──────┬──────────────────────────┬───────────────────┘
+       │ Kafka commands            │ HTTP trực tiếp
+       │                          │ (opossum Circuit Breaker)
+   ┌───┼──────────┐               │
+   ▼   ▼          ▼               ▼
+inven- ship-  notif-        order:3006 + payment:3008
+tory  ping    cation        (update status, create QR)
+:3007 :3009   :3010
+               │
+             email → MailPit :1113
+             socket → Browser (WebSocket)
+```
+
+```
+┌─────────────────────────────────────────────────────┐
+│  INFRASTRUCTURE  (Docker Compose)                   │
+│                                                     │
+│  PostgreSQL :1111  — 1 instance, 10 schemas riêng   │
+│  Redis      :1112  — rate limit + cache + Redlock   │
+│  Kafka      :1115  — KRaft (no ZooKeeper)           │
+│  MinIO      :1117  — S3-compatible file storage     │
+│  MailPit    :1113  — local SMTP (email testing)     │
+│                                                     │
+│  UI tools: Kafka UI :1116 · MinIO Console :1118     │
+│            MailPit Web :1114                        │
+└─────────────────────────────────────────────────────┘
 ```
 
 **Điểm quan trọng:**
-- Gateway là **entry point duy nhất** — frontend không gọi thẳng vào bất kỳ service nào
-- `inventory`, `shipping`, `notification` chỉ giao tiếp qua **Kafka**, không exposed ra gateway
-- Orchestrator gọi `order-service` và `payment-service` qua **HTTP trực tiếp** (bọc Circuit Breaker opossum) để update status và tạo QR — không qua gateway
-- `notification-service` chỉ subscribe **một topic duy nhất** (`notification.send`) — orchestrator dispatch tất cả notification qua topic này
-- PostgreSQL là **1 instance duy nhất** nhưng mỗi service dùng schema riêng biệt, không share table
+- Gateway là **entry point duy nhất** — browser không gọi thẳng vào bất kỳ service nào
+- `inventory`, `shipping`, `notification` chỉ nhận lệnh qua **Kafka**, không có route trên gateway
+- Orchestrator gọi `order-service` và `payment-service` bằng **HTTP trực tiếp** (có opossum circuit breaker), không qua gateway
+- `notification-service` chỉ subscribe **1 topic** (`notification.send`) — orchestrator là nơi duy nhất dispatch notification
+- PostgreSQL là **1 instance** nhưng mỗi service dùng **schema riêng biệt**, không share bảng
 
 ## Infrastructure (Docker)
 
