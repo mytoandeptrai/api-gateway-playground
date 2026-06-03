@@ -1,353 +1,277 @@
-# NextMart — System Architecture Overview
+# NextMart — System Architecture
 
-NextMart là một e-commerce platform được xây dựng theo kiến trúc microservices, sử dụng Kafka làm message bus và Orchestration-based Saga để quản lý distributed transactions. Toàn bộ traffic từ frontend đi qua API Gateway trước khi tới các services.
-
----
-
-## System Architecture
-
-```
-┌─────────────────────────────────────────────────────────────────────┐
-│                           Browser (Next.js :3000)                   │
-└───────────────────────────────────┬─────────────────────────────────┘
-                                    │ HTTP
-                                    ▼
-┌─────────────────────────────────────────────────────────────────────┐
-│                        API Gateway (:3002)                          │
-│                                                                     │
-│  ① Rate Limiting (Redis)   ② Route Matching (PostgreSQL)           │
-│  ③ Circuit Breaker         ④ Load Balancing                        │
-│  ⑤ Request Forwarding      ⑥ Response Caching (Redis)             │
-└──────┬──────┬──────┬──────┬──────┬──────────────────────────────────┘
-       │      │      │      │      │  HTTP forward
-       ▼      ▼      ▼      ▼      ▼
-  auth  product  order  payment  refund  (và các services khác)
-  :3003  :3005  :3006   :3008   :3011
-```
+NextMart là một e-commerce platform học distributed systems patterns thực tế: Saga, Outbox, DLQ, Circuit Breaker, Idempotency, Distributed Lock.
 
 ---
 
-## Services & Ports
+## Tổng quan
 
-| Service | Port | Mô tả |
-|---------|------|-------|
-| `web` | 3000 | Next.js 15 App Router — frontend |
-| `api-gateway` | 3002 | Entry point — routing, rate limiting, circuit breaking |
-| `auth-service` | 3003 | JWT authentication, refresh token rotation |
-| `product-service` | 3005 | Product catalog, seed data |
-| `order-service` | 3006 | Order creation và management |
-| `inventory-service` | 3007 | Stock reservation với Redlock |
-| `payment-service` | 3008 | VNPay QR integration, webhook IPN |
-| `shipping-service` | 3009 | Mock shipping label + tracking |
-| `notification-service` | 3010 | Email (MailPit) + WebSocket (Socket.io) |
-| `refund-service` | 3011 | Refund request, MinIO file upload |
-| `orchestrator-service` | 3012 | Saga orchestration, DLQ, circuit breaker |
+```
+Browser (Next.js :3000)
+        │
+        │  /api/* → rewrite → localhost:3002/api/v1/gateway/*
+        ▼
+API Gateway (:3002)          ← entry point duy nhất cho frontend
+        │
+        │  HTTP forward (strip /gateway, add /api/v1)
+        ├──────────────┬──────────────┬──────────────┬──────────────┐
+        ▼              ▼              ▼              ▼              ▼
+   auth:3003     product:3005    order:3006    payment:3008   refund:3011
+                                     │              │
+                                     └──────┬───────┘
+                                            │  Kafka events (via Outbox)
+                                            ▼
+                              orchestrator:3012
+                                            │  Kafka commands
+                              ┌─────────────┼──────────────┐
+                              ▼             ▼              ▼
+                        inventory:3007  shipping:3009  notification:3010
+```
+
+**Lưu ý thực tế:**
+- Orchestrator gọi `payment-service` và `order-service` bằng **HTTP trực tiếp** (không qua Kafka) để tạo QR và cập nhật order status — bọc trong Circuit Breaker (opossum)
+- Notification service chỉ subscribe topic `notification.send` — tất cả notification đều được orchestrator dispatch qua topic này
+- Frontend dùng Next.js rewrites làm proxy: `/api/*` → gateway, không expose service nào trực tiếp ra browser
 
 ---
 
-## API Gateway — Chi tiết
+## API Gateway — Request Pipeline
 
-API Gateway là service duy nhất nhận request từ frontend. Mọi request đi theo pipeline:
+Request đi qua 6 bước theo thứ tự:
 
 ```
-Request đến
-    │
-    ▼
-① Rate Limiting Guard
-    ├── Kiểm tra Redis: token bucket / sliding window / fixed window / leaky bucket
-    ├── Scope: global, tenant, user, IP, endpoint
-    └── Vượt quá → 429 Too Many Requests
-    │
-    ▼
-② Route Matching
-    ├── Tìm ApiRoute trong DB theo path pattern + HTTP method
-    └── Không khớp → 404
-    │
-    ▼
-③ Circuit Breaker (per target URL)
-    ├── CLOSED: forward bình thường
-    ├── OPEN: trả ngay 503 (không gọi service)
-    └── HALF-OPEN: thử 1 request sau 30s
-    │
-    ▼
-④ Load Balancing
-    ├── Round Robin
-    ├── Least Connections
-    ├── Random
-    └── Weighted
-    │
-    ▼
-⑤ Cache Check (Redis)
-    ├── GET request + route có enableCaching=true → trả cache nếu hit
-    └── Miss → forward
-    │
-    ▼
-⑥ Forward Request → Backend Service
-    │
-    ▼
-⑦ Cache Response (nếu applicable)
-    │
-    ▼
-Response về Client
+① Rate Limiting Guard  →  ② Route Matching  →  ③ Circuit Breaker
+        ↓                                               ↓
+⑥ Response Cache             ⑤ Forward Request  ←  ④ Load Balancing
+   (nếu hit)                    (Axios)
 ```
 
-### Rate Limiting Algorithms
+### ① Rate Limiting (Redis-backed)
 
-| Algorithm | Dùng khi |
-|-----------|----------|
-| **Fixed Window** | Giới hạn đơn giản theo khung thời gian cố định |
-| **Sliding Window** | Chính xác hơn Fixed, không có burst tại boundary |
-| **Token Bucket** | Cho phép burst ngắn, rate trung bình được kiểm soát |
-| **Leaky Bucket** | Smooth traffic, không cho phép burst |
+4 thuật toán được implement thực tế, chọn per-route:
+
+| Algorithm | Cơ chế | Dùng khi |
+|-----------|--------|---------|
+| **Token Bucket** | Refill token theo rate, burst được phép | Global safety net |
+| **Sliding Window** | Counter trượt theo thời gian thực | Proxy requests |
+| **Fixed Window** | Reset counter theo frame cố định | Login brute force protection |
+| **Leaky Bucket** | Queue request, drain đều đặn | Smooth traffic |
+
+Scope có thể là: `GLOBAL`, `TENANT`, `USER`, `IP`, hoặc `ENDPOINT`.
+
+### ② Route Matching
+
+Các routes được seed vào PostgreSQL (bảng `api_route`), gateway lookup theo `path pattern + HTTP method`. 5 routes đang active:
+
+| Pattern | Target |
+|---------|--------|
+| `/api/v1/gateway/auth*` | `http://localhost:3003` |
+| `/api/v1/gateway/products*` | `http://localhost:3005` |
+| `/api/v1/gateway/orders*` | `http://localhost:3006` |
+| `/api/v1/gateway/payment*` | `http://localhost:3008` |
+| `/api/v1/gateway/refund*` | `http://localhost:3011` |
+
+Path transform: `stripPrefix: /api/v1/gateway` → `addPrefix: /api/v1`
+Ví dụ: `/api/v1/gateway/orders/123` → `http://localhost:3006/api/v1/orders/123`
+
+### ③ Circuit Breaker (built-in, per route)
+
+Gateway tự quản lý circuit state bằng in-memory `Map<routeId, CircuitState>`:
+
+```
+CLOSED → (failure threshold) → OPEN → (resetTimeout 30s) → HALF_OPEN → CLOSED
+```
+
+Khác với circuit breaker của orchestrator (dùng opossum library) — gateway dùng implementation riêng.
+
+### ④ Load Balancing
+
+Mỗi route có thể có nhiều `targets`. 4 strategy:
+- **Round Robin** — lần lượt theo thứ tự
+- **Least Connections** — target ít request nhất
+- **Random** — ngẫu nhiên
+- **Weighted** — theo trọng số cấu hình
+
+### ⑤ Forward Request
+
+Dùng `@nestjs/axios` (Axios). Trước khi forward có thể transform: `addHeaders`, `removeHeaders`, `addQueryParams`.
+
+### ⑥ Response Caching (Redis)
+
+Chỉ cache GET request với route có `enableCaching = true`. Cache key = target URL. TTL cấu hình per-route.
 
 ---
 
-## Core User Flow
+## Orchestrator — Saga Pattern
+
+Orchestrator điều phối toàn bộ order flow. Sử dụng **Kafka** để giao tiếp với các services, **HTTP** để cập nhật order/payment trực tiếp.
+
+### Order Saga (happy path)
 
 ```
-Login
-  │
-  ▼
-Product List (/products)
-  │
-  ▼
-Checkout (/checkout?productId=xxx)
-  │  POST /orders
-  ▼
-Payment Page (/payment/:orderId)
-  │  QR VNPay — 15 phút countdown
-  ▼
-Order Detail (/orders/:orderId)
-  │  (sau khi DELIVERED và ≤ 7 ngày)
-  ▼
-Refund Request (/orders/:orderId/refund)
+order.created (Kafka)
+    │
+    ▼ emit inventory.reserve_stock
+inventory.stock_reserved (Kafka)
+    │
+    ▼ HTTP POST payment-service/create-qr  ← Circuit Breaker
+    │  wait payment.completed (Kafka)
+    │
+    ▼ emit inventory.confirm_stock
+inventory.stock_confirmed (Kafka)
+    │
+    ▼ emit shipping.create_label
+shipping.label_created (Kafka)
+    │
+    ▼ wait shipping.delivered (Kafka)
+    │
+    ▼ HTTP PATCH order-service/:id/status → DELIVERED  ← Circuit Breaker
+    └ emit notification.send
 ```
 
----
+### Compensation
 
-## Order Saga Flow (Orchestrator Pattern)
+| Trigger | Compensation |
+|---------|-------------|
+| `inventory.stock_insufficient` | HTTP cancel order |
+| `payment.timeout` | emit `inventory.release_stock` → wait `inventory.stock_released` → HTTP cancel order |
+| `payment.failed` (user cancel) | emit `inventory.release_stock` → wait `inventory.stock_released` → HTTP cancel order |
 
-Khi user tạo đơn hàng, `orchestrator-service` điều phối toàn bộ luồng qua Kafka:
+`cancelReason` được lưu vào `SagaInstance` lúc set `COMPENSATING` nên lý do hủy đúng ngữ nghĩa (timeout khác user cancel).
 
-```
-order.created
-    │
-    ▼
-[Step 1] RESERVE_INVENTORY
-    ├── Command → inventory.reserve_stock (Redlock per productId)
-    ├── OK     → AWAIT_PAYMENT
-    └── Fail   → cancel order, notify user
-    │
-    ▼
-[Step 2] AWAIT_PAYMENT
-    ├── Wait   ← payment.completed (VNPay webhook)
-    ├── Timeout (15 phút) → release stock, cancel order
-    └── Fail (user cancel) → release stock, cancel order
-    │
-    ▼
-[Step 3] CONFIRM_INVENTORY
-    ├── Command → inventory.confirm_stock
-    └── OK     → CREATE_SHIPPING
-    │
-    ▼
-[Step 4] CREATE_SHIPPING
-    ├── Command → shipping.create_label (mock)
-    └── OK     → AWAIT_DELIVERY
-    │
-    ▼
-[Step 5] AWAIT_DELIVERY
-    └── Wait ← shipping.delivered (mock timer)
-    │
-    ▼
-[COMPLETE] order = DELIVERED, email gửi user
-```
-
-### Compensation Matrix
-
-| Bước fail | Release Stock | Refund Payment | Cancel Order |
-|-----------|:---:|:---:|:---:|
-| RESERVE_INVENTORY | — | — | ✅ |
-| AWAIT_PAYMENT (timeout/cancel) | ✅ | — | ✅ |
-| CONFIRM_INVENTORY | ✅ | ✅* | ✅ |
-| CREATE_SHIPPING | ✅ | ✅ | ✅ |
-
-*Refund chỉ nếu payment đã nhận.
-
----
-
-## Refund Saga Flow
+### Refund Saga
 
 ```
-User submit refund request
+refund.requested (Kafka) — emitted by refund-service
     │
-    ▼
-refund.requested (Kafka)
+    ▼ Orchestrator tạo RefundSaga
     │
-    ├── Orchestrator: tạo RefundSaga
+    │ refund.validated (Kafka) — refund-service tự validate và emit
     │
-    ▼
-refund.validated (Refund Service tự validate)
+    ├── approved → emit payment.refund_requested (Kafka)
+    │              ← payment.refunded (Kafka)
+    │              → HTTP PATCH order → REFUNDED
+    │              → emit notification.send (refund-completed)
     │
-    ├── APPROVED → payment.refund_requested → payment.refunded
-    │              → order.status = REFUNDED, email user
-    │
-    └── REJECTED → email user với lý do
+    └── rejected → emit notification.send (refund-rejected)
+```
+
+### Circuit Breaker (opossum) — cho HTTP calls
+
+Orchestrator dùng `CircuitBreakerService` bọc tất cả HTTP calls đến `payment-service` và `order-service`:
+- Error threshold: 50% (min 3 calls)
+- Reset: 30 giây
+- Timeout per call: 10 giây
+- Per-host registry: `localhost:3008` và `localhost:3006` có circuit riêng
+
+### DLQ & Retry
+
+Mọi Kafka message xử lý qua `DlqService.withRetry()`:
+```
+handler() fail → sleep 1s → retry → sleep 3s → retry → sleep 9s → retry
+                                                                      │
+                                                              publish <topic>.dlq
+                                                              SagaInstance.status = FAILED
 ```
 
 ---
 
-## Resilience Patterns
+## Kafka — Cách dùng thực tế
 
-### DLQ (Dead Letter Queue)
-
-Khi Kafka consumer xử lý message thất bại:
+**Không dùng `@nestjs/microservices`** — dùng `kafkajs` trực tiếp qua shared module:
 
 ```
-Handler fail
-    │
-    ├── Retry attempt 1 (wait 1s)
-    ├── Retry attempt 2 (wait 3s)
-    ├── Retry attempt 3 (wait 9s)
-    │
-    └── Exhausted → publish <topic>.dlq + SagaInstance.status = FAILED
+src/shared/kafka/
+├── kafka.module.ts       — NestJS module export 3 utilities
+├── utils/kafka.config.ts — Single Kafka instance (singleton)
+├── utils/kafka.producer.ts — connect OnModuleInit, send()
+├── utils/kafka.consumer.ts — subscribe() → consumerKey, run(key, handler)
+└── utils/kafka.admin.ts  — ensureTopics() khi khởi động
 ```
 
-DLQ message chứa original event + error message để dev tự xử lý thủ công.
-
-### Circuit Breaker (Orchestrator → Services)
-
-```
-HTTP call đến service X
-    │
-    ├── CLOSED  → gọi bình thường, track error rate
-    ├── OPEN    → 503 ngay, không gọi (mở khi error ≥ 50% / min 3 calls)
-    └── HALF-OPEN → thử 1 request sau 30s
+**Consumer pattern:**
+```typescript
+const key = await kafkaConsumer.subscribe({ topics: [...], groupId: '...' });
+await kafkaConsumer.run(key, async (message) => { ... });
 ```
 
-Per-host breaker: `localhost:3008` và `localhost:3006` có circuit độc lập.
+**Outbox Pattern** (Order, Payment, Inventory, Refund services):
 
-### Outbox Pattern
-
-Đảm bảo Kafka message không bị mất khi service crash:
-
-```
-BEGIN TRANSACTION
-  ├── Update business table
-  └── INSERT outbox_event (published=false)
-COMMIT
-
-Background worker (mỗi 5 giây)
-  └── Fetch unpublished → publish Kafka → mark published=true
-```
-
-Services có Outbox: Order, Payment, Inventory, Refund.
+Business update + outbox write trong **cùng 1 DB transaction** → background worker (`@Cron('*/5 * * * * *')`) publish lên Kafka → mark `published = true`. Đảm bảo không mất event khi service crash.
 
 ---
 
-## Kafka Topics
+## Idempotency
 
-| Topic | Publisher | Consumer | Loại |
-|-------|-----------|----------|------|
-| `order.created` | Order | Orchestrator | Event |
-| `inventory.reserve_stock` | Orchestrator | Inventory | Command |
-| `inventory.stock_reserved` | Inventory | Orchestrator | Event |
-| `inventory.stock_insufficient` | Inventory | Orchestrator | Event |
-| `inventory.confirm_stock` | Orchestrator | Inventory | Command |
-| `inventory.release_stock` | Orchestrator | Inventory | Command |
-| `payment.completed` | Payment | Orchestrator | Event |
-| `payment.failed` | Payment | Orchestrator | Event |
-| `payment.timeout` | Payment | Orchestrator | Event |
-| `payment.refund_requested` | Orchestrator | Payment | Command |
-| `payment.refunded` | Payment | Orchestrator | Event |
-| `shipping.create_label` | Orchestrator | Shipping | Command |
-| `shipping.label_created` | Shipping | Orchestrator | Event |
-| `shipping.status_updated` | Shipping | Orchestrator | Event |
-| `shipping.delivered` | Shipping | Orchestrator | Event |
-| `notification.send` | Orchestrator | Notification | Command |
-| `refund.requested` | Refund | Orchestrator, Refund | Event |
-| `refund.validated` | Refund | Orchestrator | Event |
-| `refund.status_updated` | Orchestrator | Refund | Command |
-| `*.dlq` | auto | Manual intervention | DLQ |
+| Service | Cơ chế |
+|---------|--------|
+| Inventory | `ProcessedEvent` table — check `eventId` trước khi process |
+| Payment | `ProcessedWebhook` table — check `vnpTxnRef` trước khi process IPN |
+| Inventory reservations | `UNIQUE(sagaId, productId)` — double reserve không thể xảy ra |
+| Notification | `NotificationLog` table — check `eventId`, không gửi email 2 lần |
 
 ---
 
-## Infrastructure (Docker)
+## Database
 
-| Port | Service | Credentials |
-|------|---------|------------|
-| 1111 | PostgreSQL 16 | postgres:postgres |
-| 1112 | Redis 7 | (no auth) |
-| 1113 | MailPit SMTP | (no auth) |
-| 1114 | MailPit Web UI | browser |
-| 1115 | Kafka (KRaft) | (no auth) |
-| 1116 | Kafka UI | browser |
-| 1117 | MinIO S3 API | minioadmin:minioadmin |
-| 1118 | MinIO Console | browser |
-
-```bash
-# Start infrastructure
-cd docker && docker compose up -d
-
-# Reset everything
-cd docker && docker compose down -v
-```
-
-### Database Layout
-
-Single PostgreSQL instance, một schema per service:
+Single PostgreSQL instance, **1 schema per service** (không shared):
 
 ```
 api-gateway-db
-├── gateway      (api-gateway)
-├── auth         (auth-service)
-├── product      (product-service)
-├── orders       (order-service)
-├── inventory    (inventory-service)
-├── payment      (payment-service)
-├── shipping     (shipping-service)
-├── notification (notification-service)
-├── refund       (refund-service)
-└── orchestrator (orchestrator-service)
+├── gateway       — ApiRoute, RateLimitRule (gateway config)
+├── auth          — User, RefreshToken
+├── product       — Product
+├── orders        — Order, OutboxEvent
+├── inventory     — InventoryItem, StockReservation, ProcessedEvent, OutboxEvent
+├── payment       — PaymentIntent, ProcessedWebhook, OutboxEvent
+├── shipping      — ShipmentRecord
+├── notification  — NotificationLog
+├── refund        — RefundRequest, OutboxEvent
+└── orchestrator  — SagaInstance, SagaStep
 ```
+
+`DB_SYNC=true` trong tất cả `.env` dev → TypeORM auto-sync, không cần migration thủ công khi dev.
+
+---
+
+## Infrastructure
+
+```bash
+cd docker && docker compose up -d
+```
+
+| Port | Service | Dùng bởi |
+|------|---------|---------|
+| 1111 | PostgreSQL 16 | Tất cả services |
+| 1112 | Redis 7 | Gateway (rate limit, cache), orchestrator (Redlock) |
+| 1113 | MailPit SMTP | notification-service |
+| 1114 | MailPit Web UI | Xem email test |
+| 1115 | Kafka (KRaft) | Tất cả services |
+| 1116 | Kafka UI | Monitor topics/messages |
+| 1117 | MinIO S3 API | refund-service |
+| 1118 | MinIO Console | Xem files refund |
 
 ---
 
 ## Quick Start
 
 ```bash
-# 1. Install dependencies
+# 1. Install
 pnpm install
 
-# 2. Start infrastructure
+# 2. Start infra
 cd docker && docker compose up -d && cd ..
 
-# 3. Seed API Gateway routes
+# 3. Seed gateway routes & rate limit rules
 pnpm --filter api-gateway seed
 
-# 4. Start all backend services
+# 4. Start tất cả backend services
 pnpm dev:services
 
 # 5. Start frontend
 pnpm --filter web dev
 ```
 
-Tài khoản test: `test@nextmart.com` / `Test@123`
+Test account: `test@nextmart.com` / `Test@123`
 
-Swagger UI: `http://localhost:{port}/api/docs` (khi `SWAGGER_ENABLED=true`)
-
----
-
-## Tech Stack
-
-| Layer | Tech |
-|-------|------|
-| Frontend | Next.js 15 (App Router), TanStack Query, Zustand, Tailwind CSS, shadcn/ui |
-| Backend | NestJS 11, TypeORM 0.3, TypeScript 5 |
-| Message Bus | Kafka (KRaft, no ZooKeeper) via kafkajs |
-| Database | PostgreSQL 16 |
-| Cache / Lock | Redis 7, Redlock |
-| Payment | VNPay Sandbox (nestjs-vnpay) |
-| File Storage | MinIO (S3-compatible) |
-| Email | MailPit (local SMTP) |
-| Real-time | Socket.io v4 |
-| Build | Turborepo + pnpm workspaces |
+Swagger: `http://localhost:{port}/api/docs` (khi `SWAGGER_ENABLED=true`)
