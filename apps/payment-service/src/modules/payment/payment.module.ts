@@ -9,6 +9,7 @@ import { ProcessedWebhook } from './entities/processed-webhook.entity';
 import { PaymentService } from './payment.service';
 import { PaymentScheduleService } from './payment-schedule.service';
 import { PaymentController } from './payment.controller';
+import { PaymentConsumerService } from './payment-consumer.service';
 import { OutboxWorker } from './outbox/outbox.worker';
 
 @Module({
@@ -26,7 +27,7 @@ import { OutboxWorker } from './outbox/outbox.worker';
       inject: [ConfigService],
     }),
   ],
-  providers: [PaymentService, PaymentScheduleService, OutboxWorker],
+  providers: [PaymentService, PaymentScheduleService, PaymentConsumerService, OutboxWorker],
   controllers: [PaymentController],
 })
 export class PaymentModule {}

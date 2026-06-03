@@ -87,6 +87,12 @@ export class OrderSagaService {
       },
     );
 
+    await this.sendNotification(saga, 'order-created', {
+      productName: payload.productName,
+      totalAmount: payload.totalAmount,
+      paymentDeadline: payload.paymentDeadline,
+    });
+
     this.logger.log(`Saga ${saga.id} started for order ${orderId}`);
   }
 
@@ -175,7 +181,10 @@ export class OrderSagaService {
       STEP.AWAIT_PAYMENT,
       'Hết thời gian thanh toán',
     );
-    await this.sagaRepo.update(saga.id, { status: SagaStatus.COMPENSATING });
+    await this.sagaRepo.update(saga.id, {
+      status: SagaStatus.COMPENSATING,
+      cancelReason: 'Hết thời gian thanh toán',
+    });
 
     // Compensation: release stock
     await this.publishCommand(
@@ -290,7 +299,10 @@ export class OrderSagaService {
     if (!saga) return;
 
     await this.failStep(saga.id, STEP.AWAIT_PAYMENT, 'Payment failed or cancelled');
-    await this.sagaRepo.update(saga.id, { status: SagaStatus.COMPENSATING });
+    await this.sagaRepo.update(saga.id, {
+      status: SagaStatus.COMPENSATING,
+      cancelReason: 'Thanh toán bị hủy',
+    });
 
     await this.publishCommand(
       'inventory.release_stock',
@@ -433,14 +445,13 @@ export class OrderSagaService {
     });
     if (!saga) return;
 
+    const reason = saga.cancelReason ?? 'Đơn hàng đã bị hủy';
     await this.sagaRepo.update(saga.id, {
       status: SagaStatus.COMPENSATED,
       currentStep: 'CANCELLED',
     });
-    await this.cancelOrder(saga.orderId, 'Hết thời gian thanh toán');
-    await this.sendNotification(saga, 'order-cancelled', {
-      reason: 'Hết thời gian thanh toán',
-    });
+    await this.cancelOrder(saga.orderId, reason);
+    await this.sendNotification(saga, 'order-cancelled', { reason });
 
     this.logger.log(`Saga ${saga.id}: stock released, order cancelled`);
   }
