@@ -4,34 +4,59 @@ NextMart là một e-commerce platform học distributed systems patterns thực
 
 ---
 
-## Tổng quan
+## Services
+
+| Service | Port | Giao tiếp | Mô tả |
+|---------|------|-----------|-------|
+| `web` | 3000 | Browser | Next.js 15 App Router frontend |
+| `api-gateway` | 3002 | HTTP (entry point) | Rate limiting, routing, circuit breaker, cache |
+| `auth-service` | 3003 | HTTP qua gateway | JWT login, refresh token rotation |
+| `product-service` | 3005 | HTTP qua gateway | Product catalog, seed data |
+| `order-service` | 3006 | HTTP qua gateway + Kafka | Order CRUD, emit `order.created` |
+| `inventory-service` | 3007 | Kafka only | Stock reservation với Redlock |
+| `payment-service` | 3008 | HTTP qua gateway + Kafka | VNPay QR, webhook IPN, emit `payment.*` |
+| `shipping-service` | 3009 | Kafka only | Mock shipping label + tracking timer |
+| `notification-service` | 3010 | Kafka only | Email (MailPit) + WebSocket push |
+| `refund-service` | 3011 | HTTP qua gateway + Kafka | Refund request, MinIO upload, auto-validate |
+| `orchestrator-service` | 3012 | Kafka + HTTP | Saga orchestration, DLQ, circuit breaker |
+
+## Tổng quan kiến trúc
 
 ```
-Browser (Next.js :3000)
-        │
-        │  /api/* → rewrite → localhost:3002/api/v1/gateway/*
-        ▼
-API Gateway (:3002)          ← entry point duy nhất cho frontend
-        │
-        │  HTTP forward (strip /gateway, add /api/v1)
-        ├──────────────┬──────────────┬──────────────┬──────────────┐
-        ▼              ▼              ▼              ▼              ▼
-   auth:3003     product:3005    order:3006    payment:3008   refund:3011
-                                     │              │
-                                     └──────┬───────┘
-                                            │  Kafka events (via Outbox)
-                                            ▼
-                              orchestrator:3012
-                                            │  Kafka commands
-                              ┌─────────────┼──────────────┐
-                              ▼             ▼              ▼
-                        inventory:3007  shipping:3009  notification:3010
+┌─────────────────────────────────────────┐
+│         Browser  (Next.js :3000)        │
+│   /api/* → rewrite → gateway:3002       │
+└────────────────┬────────────────────────┘
+                 │ HTTP
+                 ▼
+┌─────────────────────────────────────────┐
+│          API Gateway (:3002)            │
+│  Rate Limit → Route → LB → Forward      │
+└──┬──────┬───────┬──────┬──────┬─────────┘
+   │      │       │      │      │
+   ▼      ▼       ▼      ▼      ▼
+auth  product  order  payment  refund
+:3003  :3005  :3006   :3008   :3011
+                │       │
+                │       │  Kafka (via Outbox worker)
+                └───┬───┘
+                    ▼
+        ┌───────────────────────┐
+        │  orchestrator (:3012) │
+        │  Saga + DLQ + CB      │
+        └──┬──────────┬─────────┘
+           │  Kafka   │  HTTP (Circuit Breaker)
+    ┌──────┼──────┐   └──────────────┐
+    ▼      ▼      ▼                  ▼
+inventory shipping notification  order + payment
+  :3007   :3009    :3010          (status update)
 ```
 
-**Lưu ý thực tế:**
-- Orchestrator gọi `payment-service` và `order-service` bằng **HTTP trực tiếp** (không qua Kafka) để tạo QR và cập nhật order status — bọc trong Circuit Breaker (opossum)
-- Notification service chỉ subscribe topic `notification.send` — tất cả notification đều được orchestrator dispatch qua topic này
-- Frontend dùng Next.js rewrites làm proxy: `/api/*` → gateway, không expose service nào trực tiếp ra browser
+**Điểm quan trọng:**
+- Gateway là **entry point duy nhất** — frontend không gọi thẳng vào bất kỳ service nào
+- `inventory`, `shipping`, `notification` chỉ giao tiếp qua **Kafka**, không exposed ra gateway
+- Orchestrator gọi `order-service` và `payment-service` qua **HTTP trực tiếp** (bọc Circuit Breaker opossum) để update status và tạo QR — không qua gateway
+- `notification-service` chỉ subscribe **một topic duy nhất** (`notification.send`) — orchestrator dispatch tất cả notification qua topic này
 
 ---
 
