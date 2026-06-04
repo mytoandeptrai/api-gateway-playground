@@ -19,6 +19,7 @@ export default function PaymentCallbackPage() {
   const searchParams = useSearchParams();
   const [status, setStatus] = useState<CallbackStatus>("loading");
   const [orderId, setOrderId] = useState<string | null>(null);
+  const vnpResponseCode = searchParams.get("vnp_ResponseCode");
   const processed = useRef(false);
 
   useEffect(() => {
@@ -28,23 +29,23 @@ export default function PaymentCallbackPage() {
     const txnRef = searchParams.get("vnp_TxnRef");
     setOrderId(txnRef);
 
-    // Forward all VNPay params to backend to verify + process payment
     const params = Object.fromEntries(searchParams.entries());
 
-    verifyPaymentReturnApi(params)
-      .then((res) => {
-        if (res.data?.RspCode === "00") {
-          setStatus("success");
-          toast.success("Thanh toán thành công!");
-        } else {
-          setStatus("failed");
-          toast.error("Thanh toán thất bại hoặc bị hủy.");
-        }
-      })
-      .catch(() => {
-        setStatus("failed");
-        toast.error("Có lỗi xảy ra khi xác nhận thanh toán.");
-      });
+    // Notify backend to process the result (signature verify, update DB, emit events)
+    verifyPaymentReturnApi(params).catch(() => {});
+
+    // UI status is determined by vnp_ResponseCode from VNPay, not backend RspCode
+    // (backend always returns RspCode "00" to acknowledge, regardless of payment outcome)
+    if (vnpResponseCode === "00") {
+      setStatus("success");
+      toast.success("Thanh toán thành công!");
+    } else {
+      setStatus("failed");
+      const msg = vnpResponseCode === "24"
+        ? "Bạn đã hủy giao dịch."
+        : "Thanh toán thất bại. Vui lòng thử lại.";
+      toast.error(msg);
+    }
   }, [searchParams]);
 
   if (status === "loading") {
@@ -72,7 +73,9 @@ export default function PaymentCallbackPage() {
           <p className="text-sm text-muted-foreground">
             {status === "success"
               ? "Đơn hàng của bạn đang được xử lý."
-              : "Giao dịch không thành công. Vui lòng thử lại."}
+              : vnpResponseCode === "24"
+                ? "Bạn đã hủy giao dịch. Đơn hàng sẽ bị hủy tự động."
+                : "Giao dịch không thành công. Vui lòng thử lại."}
           </p>
           <div className="flex flex-col gap-2">
             {status === "success" && orderId && (

@@ -25,12 +25,13 @@ const ORDER_INDEX: Record<OrderStatus, number> = {
 export function OrderTimeline({ status }: { status: OrderStatus }) {
   const currentIdx = ORDER_INDEX[status];
   const cancelled = status === "CANCELLED";
+  const isFinalStep = ["DELIVERED", "REFUNDED", "REFUND_REQUESTED"].includes(status);
 
   return (
     <div className="flex items-start gap-0 w-full overflow-x-auto pb-2">
       {STEPS.map((step, i) => {
-        const done = !cancelled && i < currentIdx;
-        const active = !cancelled && i === currentIdx;
+        const done = !cancelled && (i < currentIdx || (isFinalStep && i === currentIdx));
+        const active = !cancelled && !done && i === currentIdx;
 
         return (
           <div
