@@ -109,11 +109,16 @@ export class ApiGatewayController {
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
   ) {
+    const contentType = (req.headers['content-type'] || '').toLowerCase();
+    const isMultipart = contentType.includes('multipart/form-data');
+
     // Strip hop-by-hop and problematic headers that break proxying.
     // content-length from the original request won't match the re-serialized
     // body, causing the upstream to abort with "request aborted".
+    // Exception: multipart streams must preserve content-length so the upstream
+    // multer parser knows the exact body size.
     const HOP_BY_HOP_HEADERS = new Set([
-      'content-length',
+      ...(isMultipart ? [] : ['content-length']),
       'transfer-encoding',
       'connection',
       'keep-alive',
@@ -138,7 +143,10 @@ export class ApiGatewayController {
       method: req.method,
       headers: forwardHeaders,
       query: req.query as Record<string, string>,
-      body: req.body,
+      // For multipart/form-data, body-parser does not consume the stream, so
+      // req.body is empty. Pass the raw request stream so axios pipes the
+      // multipart bytes directly to the upstream service.
+      body: isMultipart ? req : req.body,
       tenantId: (req as any).user?.tenantId,
       userId: (req as any).user?.id,
     };

@@ -531,6 +531,8 @@ export class ApiGatewayService {
             headers: request.headers,
             data: request.body,
             timeout,
+            maxBodyLength: Infinity,
+            maxContentLength: Infinity,
           }),
         );
 
