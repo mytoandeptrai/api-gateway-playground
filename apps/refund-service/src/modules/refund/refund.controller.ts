@@ -7,6 +7,7 @@ import {
   UploadedFiles,
   UseInterceptors,
   BadRequestException,
+  ForbiddenException,
   Headers,
 } from '@nestjs/common';
 import { FilesInterceptor } from '@nestjs/platform-express';
@@ -58,5 +59,14 @@ export class RefundController {
   @ApiOperation({ summary: 'Get refund request by orderId' })
   getByOrderId(@Param('orderId') orderId: string) {
     return this.refundService.getByOrderId(orderId);
+  }
+
+  @Post(':orderId/simulate-reject')
+  @ApiOperation({ summary: 'Dev only: simulate refund rejection for an order' })
+  simulateReject(@Param('orderId') orderId: string) {
+    if (process.env.NODE_ENV !== 'development') {
+      throw new ForbiddenException('Only available in development');
+    }
+    return this.refundService.simulateReject(orderId);
   }
 }

@@ -1,4 +1,12 @@
-import { Controller, Post, Get, Body, Query, Param } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Get,
+  Body,
+  Query,
+  Param,
+  ForbiddenException,
+} from '@nestjs/common';
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import { PaymentService } from './payment.service';
 
@@ -51,5 +59,17 @@ export class PaymentController {
   @ApiOperation({ summary: 'Test: generate VNPay payment URL' })
   testPaymentUrl() {
     return this.paymentService.testPaymentUrl();
+  }
+
+  @Post(':orderId/simulate-failure')
+  @ApiOperation({ summary: 'Dev only: simulate payment failure for an order' })
+  simulateFailure(
+    @Param('orderId') orderId: string,
+    @Body() body: { responseCode?: string },
+  ) {
+    if (process.env.NODE_ENV !== 'development') {
+      throw new ForbiddenException('Only available in development');
+    }
+    return this.paymentService.simulateFailure(orderId, body.responseCode);
   }
 }

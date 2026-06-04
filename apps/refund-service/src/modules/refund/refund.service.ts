@@ -156,6 +156,62 @@ export class RefundService {
     return this.refundRepo.findOne({ where: { orderId } });
   }
 
+  async simulateReject(
+    orderId: string,
+  ): Promise<{ success: boolean; refundId: string; reason: string }> {
+    const existing = await this.refundRepo.findOne({ where: { orderId } });
+    if (existing) {
+      throw new BadRequestException(
+        'Refund request already exists for this order',
+      );
+    }
+
+    const refundId = randomUUID();
+    // reason < 20 chars → validateRefund auto-rejects
+    const reason = 'test-reject';
+    const envelope = this.buildEnvelope(
+      'refund.requested',
+      orderId,
+      'sim-user',
+      {
+        refundId,
+        orderId,
+        userId: 'sim-user',
+        userEmail: 'simulate@test.local',
+        reason,
+        fileUrls: [],
+      },
+    );
+
+    await this.dataSource.transaction(async (manager) => {
+      await manager.save(
+        RefundRequest,
+        manager.create(RefundRequest, {
+          id: refundId,
+          orderId,
+          userId: 'sim-user',
+          reason,
+          fileUrls: [],
+          status: RefundStatus.REFUND_PENDING,
+        }),
+      );
+      await manager.save(
+        OutboxEvent,
+        manager.create(OutboxEvent, {
+          aggregateId: refundId,
+          eventType: 'refund.requested',
+          payload: envelope,
+          published: false,
+        }),
+      );
+    });
+
+    this.logger.warn(
+      `[TEST] Simulated refund reject for order ${orderId}, refundId=${refundId}`,
+    );
+    return { success: true, refundId, reason };
+  }
+
   async validateAndEmit(refundId: string) {
     const refund = await this.refundRepo.findOne({ where: { id: refundId } });
     if (!refund) throw new NotFoundException(`Refund ${refundId} not found`);

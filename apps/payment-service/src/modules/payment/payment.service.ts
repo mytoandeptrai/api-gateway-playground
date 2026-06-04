@@ -267,6 +267,47 @@ export class PaymentService {
     return { success: true };
   }
 
+  async simulateFailure(
+    orderId: string,
+    responseCode: string = '99',
+  ): Promise<{ success: boolean; orderId: string; responseCode: string }> {
+    const intent = await this.intentRepo.findOne({ where: { orderId } });
+    if (!intent) throw new BadRequestException('Payment intent not found');
+
+    await this.dataSource.transaction(async (manager) => {
+      await manager.update(
+        PaymentIntent,
+        { id: intent.id },
+        { status: PaymentStatus.FAILED },
+      );
+
+      const outbox = manager.create(OutboxEvent, {
+        aggregateId: intent.id,
+        eventType: 'payment.failed',
+        payload: {
+          eventId: randomUUID(),
+          eventType: 'payment.failed',
+          sagaId: intent.sagaId,
+          orderId: intent.orderId,
+          userId: intent.userId,
+          correlationId: randomUUID(),
+          timestamp: new Date().toISOString(),
+          payload: {
+            orderId: intent.orderId,
+            reason: `Simulated failure (code ${responseCode})`,
+          },
+        },
+        published: false,
+      });
+      await manager.save(outbox);
+    });
+
+    this.logger.warn(
+      `[TEST] Simulated payment failure for order ${orderId}, code=${responseCode}`,
+    );
+    return { success: true, orderId, responseCode };
+  }
+
   async handleExpiredPayments(): Promise<number> {
     const expired = await this.intentRepo.find({
       where: {
