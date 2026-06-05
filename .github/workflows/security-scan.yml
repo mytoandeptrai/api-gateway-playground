@@ -1,0 +1,101 @@
+name: Security Scan
+
+on:
+  pull_request:
+    branches:
+      - next-mart
+
+permissions:
+  contents: read
+  pull-requests: write   # required to post/update PR comment
+
+jobs:
+  trivy:
+    name: Trivy Scan
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # Run full scan: dependency CVEs + leaked secrets + IaC/Dockerfile misconfig
+      # exit-code 0 = advisory only, never blocks the PR
+      - name: Run Trivy (JSON)
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: fs
+          scan-ref: .
+          scanners: vuln,secret,misconfig
+          severity: HIGH,CRITICAL
+          exit-code: '0'
+          ignore-unfixed: true
+          skip-dirs: '**/node_modules,**/dist,**/.next,**/coverage,**/.turbo'
+          skip-files: '**/.env.example,**/.env.*.example,**/.env'
+          format: json
+          output: trivy-results.json
+
+      # trivy-action installs the binary to PATH — reuse it for table conversion
+      - name: Convert JSON → table
+        run: trivy convert --format table trivy-results.json 2>&1 | tee trivy-table.txt || true
+
+      # Parse counts from JSON and build the markdown comment body
+      - name: Build comment
+        id: comment
+        run: |
+          VULN_COUNT=$(jq '[.Results[]? | .Vulnerabilities? // [] | .[]] | length' trivy-results.json)
+          SECRET_COUNT=$(jq '[.Results[]? | .Secrets? // [] | .[]] | length' trivy-results.json)
+          MISCONFIG_COUNT=$(jq '[.Results[]? | .Misconfigurations? // [] | .[]] | length' trivy-results.json)
+          TOTAL=$((VULN_COUNT + SECRET_COUNT + MISCONFIG_COUNT))
+
+          SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
+
+          if [ "$TOTAL" -eq 0 ]; then
+            HEADER="✅ No HIGH/CRITICAL issues found"
+          else
+            HEADER="⚠️ ${TOTAL} issue(s) detected"
+          fi
+
+          {
+            echo 'body<<SCAN_EOF'
+            echo "<!-- trivy-scan -->"
+            echo "## 🔒 Security Scan — ${HEADER}"
+            echo ""
+            echo "**Commit:** \`${SHORT_SHA}\` | **Scanners:** \`vuln\` \`secret\` \`misconfig\` | **Severity:** \`HIGH\` \`CRITICAL\`"
+            echo ""
+            echo "| Scanner | Findings |"
+            echo "|---|---|"
+            echo "| 🔍 Vulnerabilities | \`${VULN_COUNT}\` |"
+            echo "| 🔑 Secrets | \`${SECRET_COUNT}\` |"
+            echo "| ⚙️ Misconfigurations | \`${MISCONFIG_COUNT}\` |"
+            if [ "$TOTAL" -gt 0 ]; then
+              echo ""
+              echo "<details><summary>📋 Full report</summary>"
+              echo ""
+              echo '```'
+              cat trivy-table.txt
+              echo '```'
+              echo ""
+              echo "</details>"
+            fi
+            echo ""
+            echo "_Advisory only — findings do not block merge. Powered by [Trivy](https://github.com/aquasecurity/trivy)._"
+            echo 'SCAN_EOF'
+          } >> $GITHUB_OUTPUT
+
+      # Find previous scan comment (if any) so we update instead of spam new ones
+      - name: Find existing comment
+        uses: peter-evans/find-comment@v3
+        id: find-comment
+        with:
+          issue-number: ${{ github.event.pull_request.number }}
+          comment-author: github-actions[bot]
+          body-includes: '<!-- trivy-scan -->'
+
+      # Create on first push, update (replace) on subsequent pushes to the same PR
+      - name: Post or update PR comment
+        uses: peter-evans/create-or-update-comment@v4
+        with:
+          comment-id: ${{ steps.find-comment.outputs.comment-id }}
+          issue-number: ${{ github.event.pull_request.number }}
+          body: ${{ steps.comment.outputs.body }}
+          edit-mode: replace
