@@ -23,7 +23,7 @@ FROM node:20.19-alpine AS prod-deps
 RUN corepack enable && corepack prepare pnpm@10.11.0 --activate
 WORKDIR /app
 COPY --from=deps /app ./
-RUN pnpm --filter api-gateway deploy --prod /deploy
+RUN pnpm --filter api-gateway deploy --prod /deploy --legacy
 
 # ─── Stage 4: Runner ─────────────────────────────────────────────────────────
 FROM node:20.19-alpine AS runner

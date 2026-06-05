@@ -20,7 +20,7 @@ FROM node:20.19-alpine AS prod-deps
 RUN corepack enable && corepack prepare pnpm@10.11.0 --activate
 WORKDIR /app
 COPY --from=deps /app ./
-RUN pnpm --filter order-service deploy --prod /deploy
+RUN pnpm --filter order-service deploy --prod /deploy --legacy
 
 FROM node:20.19-alpine AS runner
 RUN addgroup --system --gid 1001 nodejs && \
