@@ -1,0 +1,35 @@
+# Source control
+.git
+.gitignore
+.gitattributes
+
+# Dependencies (rebuilt inside Docker)
+**/node_modules
+.pnpm-store
+
+# Build artifacts
+**/dist
+**/.next
+**/coverage
+**/.turbo
+
+# Environment files (injected via compose)
+**/.env
+**/.env.*
+!**/.env.example
+
+# Test files
+**/*.spec.ts
+**/*.test.ts
+**/test/
+
+# Docker itself
+**/Dockerfile*
+**/.dockerignore
+docker/volumes/
+
+# IDE & OS
+.vscode
+.idea
+**/*.log
+.DS_Store

@@ -1,14 +1,33 @@
-services:
-  # Local infra host ports: sequential 1111–1118 (see README)
-  #
-  # 1111 PostgreSQL | 1112 Redis | 1113 Mailpit SMTP | 1114 Mailpit UI
-  # 1115 Kafka      | 1116 Kafka UI | 1117 MinIO API | 1118 MinIO Console
+name: api-gateway-playground
 
-  # PostgreSQL Database
-  # Pin major + alpine — tránh :latest, image nhẹ hơn
+# Run all services: docker compose -f docker/docker-compose.yml up -d --build
+# Infra only (dev):  docker compose -f docker/docker-compose-infra.yml up -d
+
+networks:
+  app_net:
+    driver: bridge
+
+# ─── Shared logging config (anchor) ──────────────────────────────────────────
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+# ─── Shared NestJS resource limits (anchor) ──────────────────────────────────
+x-nestjs-resources: &nestjs-resources
+  limits:
+    cpus: "0.50"
+    memory: 512M
+
+services:
+  # ═══════════════════════════════════════════════════════════════════════════
+  # INFRASTRUCTURE
+  # ═══════════════════════════════════════════════════════════════════════════
+
   postgres:
     image: postgres:16-alpine
-    container_name: api-gateway-postgres
+    container_name: api-gw-postgres
     restart: unless-stopped
     environment:
       POSTGRES_USER: postgres
@@ -17,47 +36,62 @@ services:
     ports:
       - "1111:5432"
     volumes:
-      - ./volumes/postgres_data:/var/lib/postgresql/data
+      - ./volumes-production/postgres_data:/var/lib/postgresql/data
+    networks: [app_net]
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 10s
       timeout: 5s
       retries: 5
+    logging: *default-logging
+    deploy:
+      resources:
+        limits:
+          cpus: "1.00"
+          memory: 1G
 
-  # Redis Cache
-  # Pin major + alpine
   redis:
     image: redis:7-alpine
-    container_name: api-gateway-redis
+    container_name: api-gw-redis
     restart: unless-stopped
     ports:
       - "1112:6379"
     volumes:
-      - ./volumes/redis_data:/data
+      - ./volumes-production/redis_data:/data
+    networks: [app_net]
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5
+    logging: *default-logging
+    deploy:
+      resources:
+        limits:
+          cpus: "0.50"
+          memory: 256M
 
-  # Mailpit (Local email testing)
-  # Pin version — tag trên Docker Hub dạng semver (vd. 1.30.1), không có prefix "v"
   mailpit:
     image: axllent/mailpit:v1.30.1
-    container_name: api-gateway-mailpit
+    container_name: api-gw-mailpit
     restart: unless-stopped
     ports:
-      - "1113:1025"  # SMTP
-      - "1114:8025"  # Web UI
+      - "1113:1025"
+      - "1114:8025"
     environment:
       MP_SMTP_AUTH_ACCEPT_ANY: 1
       MP_SMTP_AUTH_ALLOW_INSECURE: 1
+    networks: [app_net]
+    logging: *default-logging
+    deploy:
+      resources:
+        limits:
+          cpus: "0.25"
+          memory: 128M
 
-  # Kafka (KRaft mode — không cần Zookeeper)
-  # Confluent không ship bản alpine; giữ tag cố định thay vì latest
   kafka:
     image: confluentinc/cp-kafka:7.6.0
-    container_name: api-gateway-kafka
+    container_name: api-gw-kafka
     restart: unless-stopped
     environment:
       KAFKA_NODE_ID: 1
@@ -77,19 +111,24 @@ services:
     ports:
       - "1115:9092"
     volumes:
-      - ./volumes/kafka_data:/var/lib/kafka/data
+      - ./volumes-production/kafka_data:/var/lib/kafka/data
+    networks: [app_net]
     healthcheck:
       test: ["CMD-SHELL", "kafka-broker-api-versions --bootstrap-server localhost:9092 || exit 1"]
       interval: 10s
       timeout: 10s
       retries: 5
       start_period: 30s
+    logging: *default-logging
+    deploy:
+      resources:
+        limits:
+          cpus: "1.00"
+          memory: 1G
 
-  # Kafka UI — web console xem topics, messages, consumer groups
-  # Pin version — image JRE-based, không có variant alpine chính thức
   kafka-ui:
     image: provectuslabs/kafka-ui:v0.7.2
-    container_name: api-gateway-kafka-ui
+    container_name: api-gw-kafka-ui
     restart: unless-stopped
     depends_on:
       kafka:
@@ -99,41 +138,352 @@ services:
     environment:
       KAFKA_CLUSTERS_0_NAME: local
       KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:29092
+    networks: [app_net]
+    logging: *default-logging
+    deploy:
+      resources:
+        limits:
+          cpus: "0.25"
+          memory: 256M
 
-  # MinIO — S3-compatible object storage (upload file, avatar, backup, ...)
-  # Pin RELEASE tag — minio/minio là single binary (scratch-based), không có tag alpine
-  #
-  # minio-bucket (init sidecar) — CÓ CẦN KHÔNG?
-  # → Không bắt buộc. MinIO chạy độc lập, không cần service phụ để hoạt động.
-  #
-  # minio-bucket là gì?
-  # → Container one-shot dùng image minio/mc (MinIO Client), chạy sau khi MinIO healthy
-  #   để tự tạo bucket (vd. uploads, assets) bằng lệnh: mc mb local/my-bucket
-  #
-  # Bucket là gì?
-  # → "Container" cấp cao nhất trong S3/MinIO — giống root folder chứa objects.
-  #   MinIO mới start không có bucket nào; app upload vào bucket phải tồn tại trước.
-  #
-  # Khi nào nên thêm minio-bucket?
-  # → Khi app expect bucket name cố định ngay lúc docker compose up (tránh 404 NoSuchBucket).
-  # → Dev solo: có thể tạo bucket tay qua Console (http://localhost:1118) — đủ dùng.
-  # → Team/CI: nên thêm init sidecar để môi trường reproducible, không phụ thuộc thao tác tay.
   minio:
     image: minio/minio:RELEASE.2025-04-22T22-12-26Z
-    container_name: api-gateway-minio
+    container_name: api-gw-minio
     restart: unless-stopped
     command: server /data --console-address ":9001"
     ports:
-      - "1117:9000"  # S3 API
-      - "1118:9001"  # Web Console
+      - "1117:9000"
+      - "1118:9001"
     environment:
       MINIO_ROOT_USER: minioadmin
       MINIO_ROOT_PASSWORD: minioadmin
     volumes:
-      - ./volumes/minio_data:/data
+      - ./volumes-production/minio_data:/data
+    networks: [app_net]
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9000/minio/health/live || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    logging: *default-logging
+    deploy:
+      resources:
+        limits:
+          cpus: "0.50"
+          memory: 512M
 
-volumes:
-  postgres_data:
-  redis_data:
-  kafka_data:
-  minio_data:
+  # ═══════════════════════════════════════════════════════════════════════════
+  # APPLICATION SERVICES
+  # Build context is the monorepo root (..)
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  api-gateway:
+    build:
+      context: ..
+      dockerfile: apps/api-gateway/Dockerfile
+    container_name: api-gw-gateway
+    restart: unless-stopped
+    ports:
+      - "3002:3002"
+    env_file: ../apps/api-gateway/.env
+    environment:
+      PORT: "3002"
+      DB_HOST: postgres
+      REDIS_HOST: redis
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks: [app_net]
+    logging: *default-logging
+    deploy:
+      resources: *nestjs-resources
+
+  api:
+    build:
+      context: ..
+      dockerfile: apps/api/Dockerfile
+    container_name: api-gw-api
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    env_file: ../apps/api/.env
+    environment:
+      PORT: "3001"
+      DB_HOST: postgres
+      REDIS_HOST: redis
+      KAFKA_BROKERS: kafka:29092
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    networks: [app_net]
+    logging: *default-logging
+    deploy:
+      resources: *nestjs-resources
+
+  auth-service:
+    build:
+      context: ..
+      dockerfile: apps/auth-service/Dockerfile
+    container_name: api-gw-auth
+    restart: unless-stopped
+    ports:
+      - "3003:3003"
+    env_file: ../apps/auth-service/.env
+    environment:
+      PORT: "3003"
+      DB_HOST: postgres
+      REDIS_HOST: redis
+      MAIL_HOST: mailpit
+      SMTP_HOST: mailpit
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks: [app_net]
+    logging: *default-logging
+    deploy:
+      resources: *nestjs-resources
+
+  product-service:
+    build:
+      context: ..
+      dockerfile: apps/product-service/Dockerfile
+    container_name: api-gw-product
+    restart: unless-stopped
+    ports:
+      - "3005:3005"
+    env_file: ../apps/product-service/.env
+    environment:
+      PORT: "3005"
+      DB_HOST: postgres
+      REDIS_HOST: redis
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks: [app_net]
+    logging: *default-logging
+    deploy:
+      resources: *nestjs-resources
+
+  order-service:
+    build:
+      context: ..
+      dockerfile: apps/order-service/Dockerfile
+    container_name: api-gw-order
+    restart: unless-stopped
+    ports:
+      - "3006:3006"
+    env_file: ../apps/order-service/.env
+    environment:
+      PORT: "3006"
+      DB_HOST: postgres
+      REDIS_HOST: redis
+      KAFKA_BROKERS: kafka:29092
+      PRODUCT_SERVICE_URL: http://product-service:3005
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    networks: [app_net]
+    logging: *default-logging
+    deploy:
+      resources: *nestjs-resources
+
+  inventory-service:
+    build:
+      context: ..
+      dockerfile: apps/inventory-service/Dockerfile
+    container_name: api-gw-inventory
+    restart: unless-stopped
+    ports:
+      - "3007:3007"
+    env_file: ../apps/inventory-service/.env
+    environment:
+      PORT: "3007"
+      DB_HOST: postgres
+      REDIS_HOST: redis
+      KAFKA_BROKERS: kafka:29092
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    networks: [app_net]
+    logging: *default-logging
+    deploy:
+      resources: *nestjs-resources
+
+  payment-service:
+    build:
+      context: ..
+      dockerfile: apps/payment-service/Dockerfile
+    container_name: api-gw-payment
+    restart: unless-stopped
+    ports:
+      - "3008:3008"
+    env_file: ../apps/payment-service/.env
+    environment:
+      PORT: "3008"
+      DB_HOST: postgres
+      REDIS_HOST: redis
+      KAFKA_BROKERS: kafka:29092
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    networks: [app_net]
+    logging: *default-logging
+    deploy:
+      resources: *nestjs-resources
+
+  shipping-service:
+    build:
+      context: ..
+      dockerfile: apps/shipping-service/Dockerfile
+    container_name: api-gw-shipping
+    restart: unless-stopped
+    ports:
+      - "3009:3009"
+    env_file: ../apps/shipping-service/.env
+    environment:
+      PORT: "3009"
+      DB_HOST: postgres
+      REDIS_HOST: redis
+      KAFKA_BROKERS: kafka:29092
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    networks: [app_net]
+    logging: *default-logging
+    deploy:
+      resources: *nestjs-resources
+
+  notification-service:
+    build:
+      context: ..
+      dockerfile: apps/notification-service/Dockerfile
+    container_name: api-gw-notification
+    restart: unless-stopped
+    ports:
+      - "3010:3010"
+    env_file: ../apps/notification-service/.env
+    environment:
+      PORT: "3010"
+      DB_HOST: postgres
+      REDIS_HOST: redis
+      KAFKA_BROKERS: kafka:29092
+      MAIL_HOST: mailpit
+      SMTP_HOST: mailpit
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    networks: [app_net]
+    logging: *default-logging
+    deploy:
+      resources: *nestjs-resources
+
+  refund-service:
+    build:
+      context: ..
+      dockerfile: apps/refund-service/Dockerfile
+    container_name: api-gw-refund
+    restart: unless-stopped
+    ports:
+      - "3011:3011"
+    env_file: ../apps/refund-service/.env
+    environment:
+      PORT: "3011"
+      DB_HOST: postgres
+      REDIS_HOST: redis
+      KAFKA_BROKERS: kafka:29092
+      MINIO_ENDPOINT: minio
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    networks: [app_net]
+    logging: *default-logging
+    deploy:
+      resources: *nestjs-resources
+
+  orchestrator-service:
+    build:
+      context: ..
+      dockerfile: apps/orchestrator-service/Dockerfile
+    container_name: api-gw-orchestrator
+    restart: unless-stopped
+    ports:
+      - "3012:3012"
+    env_file: ../apps/orchestrator-service/.env
+    environment:
+      PORT: "3012"
+      DB_HOST: postgres
+      REDIS_HOST: redis
+      KAFKA_BROKERS: kafka:29092
+      ORDER_SERVICE_URL: http://order-service:3006
+      PAYMENT_SERVICE_URL: http://payment-service:3008
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    networks: [app_net]
+    logging: *default-logging
+    deploy:
+      resources: *nestjs-resources
+
+  web:
+    build:
+      context: ..
+      dockerfile: apps/web/Dockerfile
+      args:
+        # Server-side rewrite: Next.js container → API Gateway container
+        API_GATEWAY_URL: http://api-gateway:3002
+        # Client-side WebSocket: browser → host machine (port published to host)
+        NEXT_PUBLIC_WS_URL: http://localhost:3010
+    container_name: api-gw-web
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    depends_on:
+      api-gateway:
+        condition: service_healthy
+    networks: [app_net]
+    logging: *default-logging
+    deploy:
+      resources:
+        limits:
+          cpus: "0.50"
+          memory: 512M

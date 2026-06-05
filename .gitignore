@@ -40,6 +40,7 @@ yarn-error.log*
 # Others
 volumes/*
 docker/volumes/*
+docker/volumes-production/*
 # Harness durable layer
 harness.db
 harness.db-wal

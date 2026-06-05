@@ -11,7 +11,10 @@
     "dev:services": "turbo run dev --concurrency=15 --filter=api-gateway --filter=orchestrator-service --filter=auth-service --filter=order-service --filter=inventory-service --filter=payment-service --filter=refund-service --filter=shipping-service --filter=notification-service --filter=product-service",
     "dev:web": "turbo run dev --filter=web",
     "dev:fresh": "bash scripts/dev-fresh.sh",
-    "only-infra": "cd docker && docker compose up -d"
+    "only-infra": "cd docker && docker compose -f docker-compose-infra.yml up -d",
+    "docker:up": "docker compose -f docker/docker-compose.yml up -d --build",
+    "docker:down": "docker compose -f docker/docker-compose.yml down",
+    "docker:down:v": "docker compose -f docker/docker-compose.yml down -v"
   },
   "devDependencies": {
     "prettier": "^3.6.2",
