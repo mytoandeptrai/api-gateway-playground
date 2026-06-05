@@ -6,6 +6,8 @@ import { SagaInstance } from './entities/saga-instance.entity';
 import { SagaStep } from './entities/saga-step.entity';
 import { OrderSagaService } from './order-saga.service';
 import { SagaConsumerService } from './saga-consumer.service';
+import { SagaTraceService } from './saga-trace.service';
+import { SagaTraceController } from './saga-trace.controller';
 import { CircuitBreakerService } from '@/shared/circuit-breaker/circuit-breaker.service';
 import { DlqService } from '@/shared/dlq/dlq.service';
 import { SagaCompensationJob } from '@/shared/dlq/saga-compensation.job';
@@ -16,9 +18,11 @@ import { SagaCompensationJob } from '@/shared/dlq/saga-compensation.job';
     HttpModule,
     ScheduleModule.forRoot(),
   ],
+  controllers: [SagaTraceController],
   providers: [
     OrderSagaService,
     SagaConsumerService,
+    SagaTraceService,
     CircuitBreakerService,
     DlqService,
     SagaCompensationJob,

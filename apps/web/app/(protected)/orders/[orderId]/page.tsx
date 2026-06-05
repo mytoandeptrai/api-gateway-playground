@@ -18,6 +18,7 @@ import {
   CreditCard,
   Truck,
   RotateCcw,
+  GitBranch,
 } from "lucide-react";
 import { OrderStatusBadge } from "@/components/order/order-status-badge";
 import { OrderTimeline } from "@/components/order/order-timeline";
@@ -233,7 +234,7 @@ export default function OrderDetailPage() {
         )}
 
         {/* Actions */}
-        <div className="flex gap-3">
+        <div className="flex gap-3 flex-wrap">
           {order.status === "PENDING_PAYMENT" && (
             <Button
               className="flex-1"
@@ -256,6 +257,15 @@ export default function OrderDetailPage() {
               Đã hết thời hạn yêu cầu hoàn tiền
             </p>
           )}
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-1.5 text-muted-foreground"
+            onClick={() => router.push(`/orders/${order.id}/trace`)}
+          >
+            <GitBranch className="w-3.5 h-3.5" />
+            Saga Trace
+          </Button>
         </div>
       </main>
     </div>
