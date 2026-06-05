@@ -1,0 +1,160 @@
+name: CI/CD
+
+on:
+  push:
+    branches:
+      - next-mart
+
+permissions:
+  contents: read
+
+jobs:
+  # ───────────────────────────────────────────────────────────────────────────
+  # JOB 1 — Detect which services changed
+  # Output: JSON array of service names, e.g. ["api-gateway","web"]
+  # ───────────────────────────────────────────────────────────────────────────
+  detect-changes:
+    name: Detect changed services
+    runs-on: ubuntu-latest
+    outputs:
+      services: ${{ steps.filter.outputs.changes }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Filter changed services
+        uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            api:
+              - 'apps/api/**'
+              - 'packages/typescript-config/**'
+              - 'packages/eslint-config/**'
+            api-gateway:
+              - 'apps/api-gateway/**'
+              - 'packages/typescript-config/**'
+              - 'packages/eslint-config/**'
+            auth-service:
+              - 'apps/auth-service/**'
+              - 'packages/typescript-config/**'
+              - 'packages/eslint-config/**'
+            product-service:
+              - 'apps/product-service/**'
+              - 'packages/typescript-config/**'
+              - 'packages/eslint-config/**'
+            order-service:
+              - 'apps/order-service/**'
+              - 'packages/typescript-config/**'
+              - 'packages/eslint-config/**'
+            inventory-service:
+              - 'apps/inventory-service/**'
+              - 'packages/typescript-config/**'
+              - 'packages/eslint-config/**'
+            payment-service:
+              - 'apps/payment-service/**'
+              - 'packages/typescript-config/**'
+              - 'packages/eslint-config/**'
+            shipping-service:
+              - 'apps/shipping-service/**'
+              - 'packages/typescript-config/**'
+              - 'packages/eslint-config/**'
+            notification-service:
+              - 'apps/notification-service/**'
+              - 'packages/typescript-config/**'
+              - 'packages/eslint-config/**'
+            refund-service:
+              - 'apps/refund-service/**'
+              - 'packages/typescript-config/**'
+              - 'packages/eslint-config/**'
+            orchestrator-service:
+              - 'apps/orchestrator-service/**'
+              - 'packages/typescript-config/**'
+              - 'packages/eslint-config/**'
+            web:
+              - 'apps/web/**'
+              - 'packages/ui/**'
+              - 'packages/typescript-config/**'
+              - 'packages/eslint-config/**'
+
+  # ───────────────────────────────────────────────────────────────────────────
+  # JOB 2 — Build & push only changed services (parallel matrix)
+  # Each service gets its own runner — they run concurrently
+  # ───────────────────────────────────────────────────────────────────────────
+  build:
+    name: Build · ${{ matrix.service }}
+    needs: detect-changes
+    # Skip entirely if nothing changed
+    if: needs.detect-changes.outputs.services != '[]' && needs.detect-changes.outputs.services != ''
+    runs-on: ubuntu-latest
+    environment: nextmart
+    strategy:
+      matrix:
+        service: ${{ fromJSON(needs.detect-changes.outputs.services) }}
+      fail-fast: false  # don't cancel other services if one fails
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Extract image metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ secrets.DOCKERHUB_USERNAME }}/nextmart-${{ matrix.service }}
+          tags: |
+            type=raw,value=latest
+            type=sha,format=short
+
+      # Build args only needed for `web` (baked into JS bundle at build time).
+      # Non-web services have no ARG declarations for these, so we skip them.
+      - name: Resolve web build args
+        id: web-args
+        if: matrix.service == 'web'
+        run: |
+          {
+            echo 'args<<EOF'
+            echo 'API_GATEWAY_URL=http://api-gateway:3002'
+            echo 'NEXT_PUBLIC_WS_URL=http://localhost:3010'
+            echo 'EOF'
+          } >> $GITHUB_OUTPUT
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/${{ matrix.service }}/Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          build-args: ${{ steps.web-args.outputs.args }}
+          # GitHub Actions layer cache — scoped per service to avoid cross-contamination
+          cache-from: type=gha,scope=build-${{ matrix.service }}
+          cache-to: type=gha,mode=max,scope=build-${{ matrix.service }}
+
+      - name: Write job summary
+        if: always()
+        run: |
+          STATUS="${{ job.status }}"
+          ICON=$([[ "$STATUS" == "success" ]] && echo "✅" || echo "❌")
+          SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
+          {
+            echo "### ${ICON} \`${{ matrix.service }}\`"
+            echo ""
+            echo "| | |"
+            echo "|---|---|"
+            echo "| Image | \`${{ secrets.DOCKERHUB_USERNAME }}/nextmart-${{ matrix.service }}\` |"
+            echo "| Tags | \`latest\`, \`sha-${SHORT_SHA}\` |"
+            echo "| Commit | \`${{ github.sha }}\` |"
+            echo "| Status | ${STATUS} |"
+            echo "| Built at | $(date -u '+%Y-%m-%d %H:%M UTC') |"
+          } >> $GITHUB_STEP_SUMMARY
