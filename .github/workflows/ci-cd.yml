@@ -91,7 +91,7 @@ jobs:
           if [[ "${{ inputs.force_all }}" == "true" ]]; then
             echo 'services=["api","api-gateway","auth-service","product-service","order-service","inventory-service","payment-service","shipping-service","notification-service","refund-service","orchestrator-service","web"]' >> $GITHUB_OUTPUT
           else
-            echo "services=${{ steps.filter.outputs.changes }}" >> $GITHUB_OUTPUT
+            echo 'services=${{ steps.filter.outputs.changes }}' >> $GITHUB_OUTPUT
           fi
 
   # ───────────────────────────────────────────────────────────────────────────
