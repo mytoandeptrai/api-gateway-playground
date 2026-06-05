@@ -1,15 +1,16 @@
 # API Gateway Playground
 
-An architecture built with NestJS, featuring an API Gateway with dynamic routing, rate limiting, circuit breaker, load balancing, and caching.
+A full-stack NestJS microservices playground implementing a complete e-commerce backend. Features an API Gateway with dynamic routing, rate limiting, circuit breaker, and load balancing — plus an Orchestrator Saga pattern for distributed transactions, VNPay payment integration, real-time WebSocket notifications, and file uploads via MinIO.
 
 ## Tech Stack
 
-- **Frontend:** Next.js 15 (App Router), Tailwind CSS, shadcn/ui
-- **Backend:** NestJS (multiple microservices)
-- **Database:** PostgreSQL + TypeORM
-- **Cache:** Redis
-- **Message Broker:** Kafka (KRaft)
+- **Frontend:** Next.js 15 (App Router), Tailwind CSS, shadcn/ui, Zustand, Socket.IO client
+- **Backend:** NestJS (12 microservices)
+- **Database:** PostgreSQL + TypeORM (one schema per service)
+- **Cache / Lock:** Redis + Redlock (distributed lock)
+- **Message Broker:** Kafka (KRaft, no ZooKeeper)
 - **Object Storage:** MinIO (S3-compatible)
+- **Payment:** VNPay (QR code, IPN webhook)
 - **Monorepo:** Turborepo + pnpm
 - **Email (Dev):** Mailpit
 
@@ -17,46 +18,124 @@ An architecture built with NestJS, featuring an API Gateway with dynamic routing
 
 ```mermaid
 graph TB
-    Client([Client]) --> Gateway[API Gateway :3002]
+    Client([Browser :3000]) --> Gateway[API Gateway :3002]
 
-    Gateway --> AuthService[Auth Service :3003]
-    Gateway --> OrderService[Order Service :3004]
-    Gateway --> ApiService[API Service :3001]
+    Gateway --> AuthSvc[Auth Service :3003]
+    Gateway --> ProductSvc[Product Service :3005]
+    Gateway --> OrderSvc[Order Service :3006]
+    Gateway --> RefundSvc[Refund Service :3011]
 
-    subgraph Infrastructure
+    subgraph "Saga Orchestrator :3012"
+        Orchestrator[Orchestrator Service]
+    end
+
+    subgraph "Domain Services"
+        InventorySvc[Inventory Service :3007]
+        PaymentSvc[Payment Service :3008]
+        ShippingSvc[Shipping Service :3009]
+        NotificationSvc[Notification Service :3010]
+    end
+
+    subgraph "Infrastructure"
         PG[(PostgreSQL :1111)]
         Redis[(Redis :1112)]
-        Mailpit[Mailpit :1114]
         Kafka[Kafka :1115]
-        KafkaUI[Kafka UI :1116]
-        MinIO[MinIO :1117 / :1118]
+        MinIO[MinIO :1117/1118]
+        Mailpit[Mailpit :1113/1114]
     end
+
+    OrderSvc -->|order.created| Kafka
+    Kafka --> Orchestrator
+    Orchestrator -->|commands| Kafka
+    Kafka --> InventorySvc
+    Kafka --> PaymentSvc
+    Kafka --> ShippingSvc
+    Kafka --> NotificationSvc
 
     Gateway --> Redis
     Gateway --> PG
-    AuthService --> PG
-    AuthService --> Redis
-    AuthService --> Mailpit
-    OrderService --> PG
-    ApiService --> PG
-    ApiService --> Redis
-
-    subgraph "API Gateway Features"
-        RateLimit[Rate Limiting]
-        CircuitBreaker[Circuit Breaker]
-        LoadBalancer[Load Balancing]
-        Cache[Response Caching]
-        DynamicRouting[Dynamic Routing]
-    end
-
-    Gateway --- RateLimit
-    Gateway --- CircuitBreaker
-    Gateway --- LoadBalancer
-    Gateway --- Cache
-    Gateway --- DynamicRouting
+    AuthSvc --> PG
+    AuthSvc --> Redis
+    OrderSvc --> PG
+    InventorySvc --> PG
+    InventorySvc --> Redis
+    PaymentSvc --> PG
+    ShippingSvc --> PG
+    NotificationSvc --> PG
+    NotificationSvc --> Mailpit
+    RefundSvc --> PG
+    RefundSvc --> MinIO
+    Orchestrator --> PG
+    Orchestrator --> Redis
 ```
 
-## Request Flow
+## Order Saga Flow
+
+```mermaid
+sequenceDiagram
+    participant C as Client
+    participant OS as Order Service
+    participant ORC as Orchestrator
+    participant INV as Inventory
+    participant PAY as Payment
+    participant SHP as Shipping
+    participant NTF as Notification
+
+    C->>OS: POST /orders
+    OS->>Kafka: order.created
+    Kafka->>ORC: order.created
+    ORC->>Kafka: inventory.reserve_stock
+    Kafka->>INV: reserve_stock
+    INV->>Kafka: inventory.stock_reserved (outbox)
+    Kafka->>ORC: stock_reserved
+    ORC->>PAY: HTTP createQR
+    ORC->>NTF: notification.send (order-created)
+
+    C->>PAY: VNPay callback (IPN)
+    PAY->>Kafka: payment.completed (outbox)
+    Kafka->>ORC: payment.completed
+    ORC->>Kafka: inventory.confirm_stock
+    INV->>Kafka: stock_confirmed
+    ORC->>Kafka: shipping.create_label
+    SHP->>Kafka: shipping.label_created
+    ORC->>OS: PATCH status=PREPARING
+    ORC->>NTF: notification.send (order-confirmed)
+
+    SHP->>Kafka: shipping.status_updated (IN_TRANSIT)
+    ORC->>OS: PATCH status=SHIPPED
+    SHP->>Kafka: shipping.delivered
+    ORC->>OS: PATCH status=DELIVERED
+    ORC->>NTF: notification.send (order-delivered)
+```
+
+## Saga Compensation Flow (Payment Timeout)
+
+```mermaid
+sequenceDiagram
+    participant ORC as Orchestrator
+    participant PAY as Payment Service
+    participant INV as Inventory Service
+    participant OS as Order Service
+    participant NTF as Notification
+
+    Note over PAY: Scheduler detects expired PaymentIntent
+    PAY->>Kafka: payment.timeout (outbox)
+    Kafka->>ORC: payment.timeout
+
+    ORC->>ORC: Mark saga COMPENSATING
+    ORC->>Kafka: inventory.release_stock
+
+    Kafka->>INV: release_stock
+    INV->>INV: HELD → RELEASED, restore available stock
+    INV->>Kafka: inventory.stock_released (outbox)
+
+    Kafka->>ORC: stock_released
+    ORC->>OS: PATCH status=CANCELLED
+    ORC->>NTF: notification.send (order-cancelled)
+    ORC->>ORC: Mark saga COMPENSATED
+```
+
+## API Gateway Request Flow
 
 ```mermaid
 sequenceDiagram
@@ -64,37 +143,30 @@ sequenceDiagram
     participant GW as API Gateway
     participant RL as Rate Limiter
     participant RD as Redis
-    participant RT as Router
     participant CB as Circuit Breaker
     participant LB as Load Balancer
     participant US as Upstream Service
 
     C->>GW: HTTP Request
     GW->>RL: Check Rate Limit
-    RL->>RD: Get counters
-    RD-->>RL: Counter values
-
+    RL->>RD: Get/increment counters
     alt Rate Limited
         RL-->>C: 429 Too Many Requests
     else Allowed
-        RL->>RD: Increment counters
-        GW->>RT: Match route (path + method)
-        RT-->>GW: Route config
-
+        GW->>GW: Match route (path + method)
         alt Route Not Found
             GW-->>C: 404 Not Found
         else Route Found
             GW->>CB: Check circuit state
-
             alt Circuit Open
                 GW-->>C: 503 Service Unavailable
             else Circuit Closed/Half-Open
-                GW->>LB: Select target
+                GW->>LB: Select target (RR/LeastConn/Weighted/Random)
                 LB-->>GW: Target URL
                 GW->>US: Forward request
                 US-->>GW: Response
                 GW->>CB: Record success/failure
-                GW-->>C: Proxy response
+                GW-->>C: Proxy response (envelope)
             end
         end
     end
@@ -104,13 +176,20 @@ sequenceDiagram
 
 ```
 apps/
-  ├── web/              # Next.js frontend (port 3000)
-  ├── api/              # NestJS API service (port 3001)
-  ├── api-gateway/      # API Gateway (port 3002)
-  ├── auth-service/     # Authentication service (port 3003)
-  └── order-service/    # Order service (port 3004)
+  ├── web/                   # Next.js 15 frontend (port 3000)
+  ├── api/                   # General NestJS API (port 3001)
+  ├── api-gateway/           # API Gateway (port 3002)
+  ├── auth-service/          # JWT authentication (port 3003)
+  ├── product-service/       # Product catalog (port 3005)
+  ├── order-service/         # Order management + outbox (port 3006)
+  ├── inventory-service/     # Stock reservation + Redlock (port 3007)
+  ├── payment-service/       # VNPay + IPN + timeout (port 3008)
+  ├── shipping-service/      # Shipping label + mock delivery (port 3009)
+  ├── notification-service/  # Email + WebSocket Socket.IO (port 3010)
+  ├── refund-service/        # Refund + MinIO uploads (port 3011)
+  └── orchestrator-service/  # Saga orchestrator + DLQ (port 3012)
 packages/
-  ├── ui/               # Shared React components (shadcn/ui)
+  ├── ui/                    # Shared React components (shadcn/ui)
   ├── eslint-config/
   └── typescript-config/
 docker/
@@ -265,28 +344,56 @@ SWAGGER_VERSION=1.0
 SWAGGER_PATH=api/docs
 ```
 
-Other services follow the same pattern with different `PORT`, `DB_SCHEMA`, and Swagger titles:
+All services follow the same pattern with different `PORT` and `DB_SCHEMA`:
 
-| App             | Port | Suggested `DB_SCHEMA` |
-| --------------- | ---- | --------------------- |
-| `api`           | 3001 | `api`                 |
-| `api-gateway`   | 3002 | `gateway`             |
-| `auth-service`  | 3003 | `auth`                |
-| `order-service` | 3004 | `orders`              |
+| App                    | Port | `DB_SCHEMA`    |
+| ---------------------- | ---- | -------------- |
+| `api`                  | 3001 | `public`       |
+| `api-gateway`          | 3002 | `gateway`      |
+| `auth-service`         | 3003 | `auth`         |
+| `product-service`      | 3005 | `product`      |
+| `order-service`        | 3006 | `orders`       |
+| `inventory-service`    | 3007 | `inventory`    |
+| `payment-service`      | 3008 | `payment`      |
+| `shipping-service`     | 3009 | `shipping`     |
+| `notification-service` | 3010 | `notification` |
+| `refund-service`       | 3011 | `refund`       |
+| `orchestrator-service` | 3012 | `orchestrator` |
 
 ### 5. Run Migrations
 
 ```bash
-# Run migrations for each service
+# Run for each service (example)
 pnpm --filter api-gateway migration:run
 pnpm --filter auth-service migration:run
+pnpm --filter order-service migration:run
+pnpm --filter inventory-service migration:run
+pnpm --filter payment-service migration:run
+pnpm --filter shipping-service migration:run
+pnpm --filter notification-service migration:run
+pnpm --filter refund-service migration:run
+pnpm --filter orchestrator-service migration:run
 ```
 
 ### 6. Seed Data (Optional)
 
+Run in order — `inventory-service` queries the `product` schema, so `product-service` must go first.
+
 ```bash
-# Seed rate limit rules for API Gateway
+# 1. Products (15 sample products)
+pnpm --filter product-service seed
+
+# 2. Inventory (reads product IDs from product schema)
+pnpm --filter inventory-service seed
+
+# 3. Auth (test user: test@nextmart.com / Test@123)
+pnpm --filter auth-service seed
+
+# 4. API Gateway (rate limit rules + proxy routes for all services)
 pnpm --filter api-gateway seed
+
+# 5. Orders (10 sample orders via faker — optional)
+pnpm --filter order-service seed
 ```
 
 ### 7. Run Development
@@ -299,13 +406,20 @@ pnpm turbo dev
 pnpm dev:services
 ```
 
-| App           | URL                   |
-| ------------- | --------------------- |
-| Web           | http://localhost:3000 |
-| API           | http://localhost:3001 |
-| API Gateway   | http://localhost:3002 |
-| Auth Service  | http://localhost:3003 |
-| Order Service | http://localhost:3004 |
+| App                    | URL                    |
+| ---------------------- | ---------------------- |
+| Web                    | http://localhost:3000  |
+| API                    | http://localhost:3001  |
+| API Gateway            | http://localhost:3002  |
+| Auth Service           | http://localhost:3003  |
+| Product Service        | http://localhost:3005  |
+| Order Service          | http://localhost:3006  |
+| Inventory Service      | http://localhost:3007  |
+| Payment Service        | http://localhost:3008  |
+| Shipping Service       | http://localhost:3009  |
+| Notification Service   | http://localhost:3010  |
+| Refund Service         | http://localhost:3011  |
+| Orchestrator Service   | http://localhost:3012  |
 
 ## Commands
 
