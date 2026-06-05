@@ -4,6 +4,12 @@ on:
   push:
     branches:
       - next-mart
+  workflow_dispatch:
+    inputs:
+      force_all:
+        description: 'Force rebuild all services (ignores change detection)'
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -12,12 +18,13 @@ jobs:
   # ───────────────────────────────────────────────────────────────────────────
   # JOB 1 — Detect which services changed
   # Output: JSON array of service names, e.g. ["api-gateway","web"]
+  # On workflow_dispatch with force_all=true → returns all 12 services
   # ───────────────────────────────────────────────────────────────────────────
   detect-changes:
     name: Detect changed services
     runs-on: ubuntu-latest
     outputs:
-      services: ${{ steps.filter.outputs.changes }}
+      services: ${{ steps.set-services.outputs.services }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -25,6 +32,7 @@ jobs:
       - name: Filter changed services
         uses: dorny/paths-filter@v3
         id: filter
+        if: inputs.force_all != true
         with:
           filters: |
             api:
@@ -76,6 +84,15 @@ jobs:
               - 'packages/ui/**'
               - 'packages/typescript-config/**'
               - 'packages/eslint-config/**'
+
+      - name: Set services to build
+        id: set-services
+        run: |
+          if [[ "${{ inputs.force_all }}" == "true" ]]; then
+            echo 'services=["api","api-gateway","auth-service","product-service","order-service","inventory-service","payment-service","shipping-service","notification-service","refund-service","orchestrator-service","web"]' >> $GITHUB_OUTPUT
+          else
+            echo "services=${{ steps.filter.outputs.changes }}" >> $GITHUB_OUTPUT
+          fi
 
   # ───────────────────────────────────────────────────────────────────────────
   # JOB 2 — Build & push only changed services (parallel matrix)

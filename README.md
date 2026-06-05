@@ -193,7 +193,9 @@ packages/
   ├── eslint-config/
   └── typescript-config/
 docker/
-  └── docker-compose.yml
+  ├── docker-compose.yml          # Full stack (infra + all 12 services)
+  ├── docker-compose-infra.yml    # Infrastructure only (dev)
+  └── volumes-production/         # Bind-mount data dir for production compose
 ```
 
 ## Quick Start
@@ -213,7 +215,8 @@ pnpm install
 ### 3. Start Infrastructure
 
 ```bash
-docker compose -f docker/docker-compose.yml up -d
+pnpm only-infra
+# equivalent: docker compose -f docker/docker-compose-infra.yml up -d
 ```
 
 This starts PostgreSQL, Redis, Mailpit, Kafka, Kafka UI, and MinIO. Data is persisted under `docker/volumes/`.
@@ -260,11 +263,11 @@ Use these from apps running on your host machine (`localhost`):
 #### Stop / reset
 
 ```bash
-# Stop containers
-docker compose -f docker/docker-compose.yml down
+# Stop infra containers
+docker compose -f docker/docker-compose-infra.yml down
 
 # Stop and remove persisted data (fresh start)
-docker compose -f docker/docker-compose.yml down -v
+docker compose -f docker/docker-compose-infra.yml down -v
 ```
 
 ### 4. Environment Setup
@@ -442,6 +445,111 @@ pnpm --filter <app> test:watch    # Watch mode
 pnpm --filter <app> test:e2e      # E2E tests
 pnpm --filter <app> test:cov      # Coverage report
 ```
+
+## Docker (Production)
+
+Each service has its own multi-stage `Dockerfile` under `apps/<service>/Dockerfile`. A single full-stack `docker/docker-compose.yml` wires all 12 services together with the infrastructure.
+
+### Dockerfile stages
+
+| Stage | Base | Purpose |
+|---|---|---|
+| `deps` | `node:20.19-alpine` | Install workspace deps with frozen lockfile |
+| `builder` | `node:20.19-alpine` | Compile TypeScript (`pnpm --filter <app> build`) |
+| `prod-deps` | `node:20.19-alpine` | Isolate prod deps (`pnpm --filter <app> deploy --prod /deploy`) |
+| `runner` | `node:20.19-alpine` | Minimal production image, non-root user |
+
+The `web` service uses Next.js `output: 'standalone'` — the runner copies `.next/standalone` without a separate `prod-deps` stage.
+
+### Run full stack locally
+
+```bash
+# Build images and start everything
+pnpm docker:up
+
+# Stop
+pnpm docker:down
+
+# Stop and wipe production volumes
+pnpm docker:down:v
+```
+
+Production bind-mount data lives in `docker/volumes-production/` (postgres, redis, kafka, minio).
+
+### Container networking
+
+Inside Docker Compose, services talk to each other by container name, not `localhost`. The compose file overrides the env vars that differ from local dev:
+
+| Env var | Dev (local) | Docker |
+|---|---|---|
+| `DB_HOST` | `localhost` | `postgres` |
+| `REDIS_HOST` | `localhost` | `redis` |
+| `KAFKA_BROKERS` | `localhost:1115` | `kafka:29092` |
+| `MAIL_HOST` / `SMTP_HOST` | `localhost` | `mailpit` |
+| `MINIO_ENDPOINT` | `localhost` | `minio` |
+| `API_GATEWAY_URL` (web) | `http://localhost:3002` | `http://api-gateway:3002` |
+
+`env_file` loads the local `.env` values; the `environment` block in compose overrides only the infra hostnames.
+
+---
+
+## CI/CD
+
+GitHub Actions workflow at [.github/workflows/ci-cd.yml](.github/workflows/ci-cd.yml).
+
+### Trigger
+
+- **Automatic:** every push to the `next-mart` branch — only changed services are built
+- **Manual:** `Actions → CI/CD → Run workflow` with the `Force rebuild all services` checkbox to rebuild everything regardless of changes
+
+### How it works
+
+```
+push to next-mart
+       │
+       ▼
+detect-changes (dorny/paths-filter)
+       │
+       │  outputs: JSON array of changed service names
+       │  e.g. ["order-service","web"]
+       ▼
+build (matrix — one runner per service, parallel)
+  ├── Checkout
+  ├── Docker Buildx setup
+  ├── Docker Hub login
+  ├── Extract image tags (latest + sha-short)
+  ├── Build & push (GHA layer cache per service)
+  └── Write job summary → Actions → Summary tab
+```
+
+Change detection triggers a service build when **any file inside `apps/<service>/`** (or the shared `packages/`) is modified.
+
+### Image naming
+
+Images are pushed to Docker Hub as:
+
+```
+<DOCKERHUB_USERNAME>/nextmart-<service>:<sha-xxxxx>
+<DOCKERHUB_USERNAME>/nextmart-<service>:latest
+```
+
+| Service | Image |
+|---|---|
+| `api-gateway` | `<user>/nextmart-api-gateway` |
+| `auth-service` | `<user>/nextmart-auth-service` |
+| `web` | `<user>/nextmart-web` |
+| … | … |
+
+### Required secrets
+
+Set these in **GitHub → Settings → Environments → `nextmart`**:
+
+| Secret | Value |
+|---|---|
+| `DOCKERHUB_USERNAME` | Your Docker Hub username |
+| `DOCKERHUB_TOKEN` | Docker Hub access token (read/write) |
+
+---
 
 ## Documentation
 
