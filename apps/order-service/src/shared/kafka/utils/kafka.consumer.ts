@@ -84,6 +84,7 @@ export class KafkaConsumer implements IKafkaConsumer, OnModuleDestroy {
     }
 
     await consumer.run({
+      autoCommit: false,
       eachMessage: async ({ topic, partition, message }) => {
         try {
           await handler({
@@ -92,9 +93,25 @@ export class KafkaConsumer implements IKafkaConsumer, OnModuleDestroy {
             topic,
             partition,
           });
+
+          // Commit only after handler resolves successfully.
+          // For saga consumers: handler = DlqService.withRetry(), which resolves
+          // whether business logic succeeded OR message was forwarded to DLQ.
+          // If DLQ send itself fails, withRetry re-throws → we skip commit →
+          // message is re-delivered → idempotency guards handle the duplicate.
+          await consumer.commitOffsets([
+            {
+              topic,
+              partition,
+              offset: (Number(message.offset) + 1).toString(),
+            },
+          ]);
         } catch (error) {
+          // Do NOT commit. Message will be re-delivered after consumer reconnects.
+          // Idempotency (ProcessedEvent table) prevents duplicate processing.
           this.logger.error(
-            `[KafkaConsumer] Handler error for ${consumerKey}`,
+            `[KafkaConsumer] Handler failed — skipping commit for ${consumerKey} ` +
+              `topic=${topic} partition=${partition} offset=${message.offset}`,
             error instanceof Error ? error.message : String(error),
           );
         }
