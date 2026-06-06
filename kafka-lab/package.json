@@ -1,0 +1,12 @@
+{
+  "name": "kafka-lab",
+  "version": "1.0.0",
+  "description": "Standalone Kafka lab for observing partition, consumer group, rebalancing behavior",
+  "scripts": {
+    "producer": "node producer.js",
+    "consumer": "node consumer.js"
+  },
+  "dependencies": {
+    "kafkajs": "^2.2.4"
+  }
+}

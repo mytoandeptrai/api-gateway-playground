@@ -41,6 +41,8 @@ yarn-error.log*
 volumes/*
 docker/volumes/*
 docker/volumes-production/*
+kafka-lab/node_modules
+
 # Harness durable layer
 harness.db
 harness.db-wal
