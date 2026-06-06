@@ -41,8 +41,8 @@ export class InventoryService {
     private readonly dataSource: DataSource,
     private readonly redisService: RedisService,
   ) {
-    const redisClient: Redis = this.redisService.getOrThrow();
-    this.redlock = new Redlock([redisClient], {
+    const redisClient = this.redisService.getOrThrow();
+    this.redlock = new Redlock([redisClient as never], {
       retryCount: 5,
       retryDelay: 200,
       retryJitter: 100,

@@ -108,6 +108,7 @@ Single PostgreSQL instance, **một schema per service**:
 
 | Schema         | Service              |
 | -------------- | -------------------- |
+| `public`       | api                  |
 | `gateway`      | api-gateway          |
 | `auth`         | auth-service         |
 | `product`      | product-service      |
@@ -126,6 +127,7 @@ Single PostgreSQL instance, **một schema per service**:
 | Service                     | Port | DB Schema      | Swagger          |
 | --------------------------- | ---- | -------------- | ---------------- |
 | `apps/web`                  | 3000 | —              | —                |
+| `apps/api`                  | 3001 | `public`       | `:3001/api/docs` |
 | `apps/api-gateway`          | 3002 | `gateway`      | `:3002/api/docs` |
 | `apps/auth-service`         | 3003 | `auth`         | `:3003/api/docs` |
 | `apps/product-service`      | 3005 | `product`      | `:3005/api/docs` |
@@ -838,6 +840,221 @@ AC-803-4: Idempotency với eventId
 
 ---
 
+### Epic 9: Database Backup & Restore
+
+---
+
+#### US-901: Backup tự động định kỳ
+
+> **As a** system administrator,  
+> **I want** the system to automatically backup database on a fixed schedule,  
+> **So that** data is always backed up without manual intervention.
+
+**Acceptance Criteria:**
+
+```
+AC-901-1: Cron backup chạy đúng lịch
+  Given hệ thống đang chạy
+  When đồng hồ chỉ 2:00 AM Chủ nhật hàng tuần
+  Then backup job tự động được enqueue vào BullMQ
+  And BackupLog được tạo với status = IN_PROGRESS, isAutomatic = true
+
+AC-901-2: Dữ liệu được mã hóa
+  Given backup job đang chạy
+  When dump xong tất cả entities thành JSON
+  Then file được mã hóa với AES-256-CBC trước khi upload
+  And key đọc từ BACKUP_ENCRYPTION_KEY trong env
+
+AC-901-3: Upload lên Google Drive
+  Given file đã mã hóa
+  When upload hoàn thành
+  Then file xuất hiện trong thư mục GOOGLE_DRIVE_FOLDER_ID
+  And BackupLog.fileId và BackupLog.location được cập nhật
+  And BackupLog.status = SUCCESS, BackupLog.endTime được ghi
+
+AC-901-4: Retention cleanup
+  Given số backup trên Drive vượt MAX_BACKUPS (mặc định: 4)
+  When backup mới hoàn thành thành công
+  Then backup cũ nhất bị xóa khỏi Drive
+  And chỉ giữ MAX_BACKUPS bản gần nhất
+
+AC-901-5: Email thông báo kết quả
+  Given backup hoàn thành (SUCCESS hoặc FAILED)
+  Then email được gửi đến BACKUP_NOTIFICATION_EMAILS
+  And nội dung có: thời điểm, trạng thái, kích thước file (nếu SUCCESS), lỗi (nếu FAILED)
+
+AC-901-6: Backup thất bại
+  Given xảy ra lỗi trong quá trình backup (Drive quota, network, v.v.)
+  Then BackupLog.status = FAILED với error message cụ thể
+  And email thông báo FAILED vẫn được gửi
+```
+
+---
+
+#### US-902: Backup thủ công
+
+> **As an** admin (verified by email in env),  
+> **I want** to trigger a backup immediately via API,  
+> **So that** I have a snapshot before making major changes.
+
+**Acceptance Criteria:**
+
+```
+AC-902-1: Trigger backup thủ công
+  Given admin gọi POST /backup/trigger với { email } trong body
+  When email khớp ADMIN_EMAIL env
+  Then job được enqueue vào BullMQ ngay lập tức
+  And API trả về { jobId, backupId, status: "IN_PROGRESS" } mà không đợi hoàn thành
+  And BackupLog được tạo với status = IN_PROGRESS, isAutomatic = false
+
+AC-902-2: Admin guard
+  Given request với email không khớp ADMIN_EMAIL env
+  When POST /backup/trigger
+  Then API trả về 403 Forbidden
+  And không enqueue job
+
+AC-902-3: Theo dõi tiến trình qua polling
+  Given admin có backupId từ response
+  When GET /backup/:backupId?email=...
+  Then API trả về BackupLog hiện tại với status, metadata, error (nếu có)
+  And admin tự poll định kỳ cho đến khi status != IN_PROGRESS
+```
+
+---
+
+#### US-903: Khôi phục toàn bộ (Full Restore)
+
+> **As an** admin,  
+> **I want** to restore the entire database from a selected backup,  
+> **So that** I can recover the system after an incident.
+
+**Acceptance Criteria:**
+
+```
+AC-903-1: Chọn backup để restore
+  Given admin gọi GET /backup?email=...&status=SUCCESS
+  Then trả về danh sách backup có thể restore, sort theo createdAt DESC
+
+AC-903-2: Trigger full restore
+  Given admin gọi POST /backup/:backupId/restore với { email, mode: "REPLACE" }
+  Then restore job được enqueue vào BullMQ
+  And RestoreLog được tạo với status = IN_PROGRESS
+  And API trả về { jobId, restoreId, status: "IN_PROGRESS" }
+
+AC-903-3: Thực hiện restore REPLACE mode
+  Given worker nhận restore job
+  When xử lý từng collection trong backup
+  Then xóa toàn bộ data hiện tại của collection → insert data từ backup
+  And ghi thống kê: insertedCount, deletedCount per collection vào RestoreLog.collectionStats
+
+AC-903-4: Loại trừ log tables
+  Given backup chứa data của backup_logs và restore_logs
+  When restore chạy
+  Then backup_logs và restore_logs KHÔNG bị ghi đè
+  And RestoreLog.status = SUCCESS sau khi hoàn thành
+
+AC-903-5: Concurrent lock
+  Given đang có operation backup/restore khác đang chạy (Redis Redlock active)
+  When admin trigger thêm 1 restore
+  Then API trả về 409 Conflict "Đang có operation đang chạy, vui lòng thử lại sau"
+  And không enqueue job mới
+```
+
+---
+
+#### US-904: Khôi phục có chọn lọc (Selective Restore)
+
+> **As an** admin,  
+> **I want** to restore only specific collections with REPLACE or MERGE mode,  
+> **So that** I can fix specific data without affecting the whole system.
+
+**Acceptance Criteria:**
+
+```
+AC-904-1: Xem collections có trong backup
+  Given admin gọi GET /backup/:backupId/collections?email=...
+  Then trả về { collections: string[] } — danh sách collection có trong bản backup đó
+
+AC-904-2: Selective restore — REPLACE
+  Given admin gọi POST /backup/:backupId/restore/selective
+  With { email, collections: ["users"], mode: "REPLACE" }
+  Then chỉ restore collection "users": xóa toàn bộ → insert từ backup
+  And các collection khác không bị ảnh hưởng
+
+AC-904-3: Selective restore — MERGE
+  Given admin gọi POST /backup/:backupId/restore/selective
+  With { email, collections: ["users"], mode: "MERGE" }
+  Then upsert từng record theo primary key
+  And record trong backup chưa có trong DB → insert
+  And record trong backup đã có trong DB → update
+  And ghi thống kê: insertedCount, updatedCount per collection
+
+AC-904-4: PARTIAL status
+  Given một số collection restore thành công, một số thất bại
+  When restore job hoàn thành
+  Then RestoreLog.status = PARTIAL
+  And RestoreLog.collectionStats ghi rõ collection nào SUCCESS / FAILED kèm lý do
+```
+
+---
+
+#### US-905: Tra cứu lịch sử & theo dõi tiến trình
+
+> **As an** admin,  
+> **I want** to query backup/restore history and poll for operation progress,  
+> **So that** I can audit operations and monitor job completion.
+
+**Acceptance Criteria:**
+
+```
+AC-905-1: Danh sách backup
+  Given admin gọi GET /backup?email=...&status=SUCCESS&page=1&limit=10
+  Then trả về { data: BackupLog[], total, page, limit }
+  And hỗ trợ filter: status, startDate, endDate; sort theo createdAt DESC
+
+AC-905-2: Lịch sử restore
+  Given admin gọi GET /restore/history?email=...
+  Then trả về { data: RestoreLog[], total, page, limit }
+  And hỗ trợ filter: status, mode, search (tìm theo backupId/restoreId), startDate, endDate
+
+AC-905-3: Polling tiến trình
+  Given admin có backupId hoặc restoreId
+  When GET /backup/:backupId?email=... hoặc GET /restore/:restoreId?email=...
+  Then trả về record hiện tại với status, collectionStats, error
+  And admin poll định kỳ để biết khi nào operation hoàn thành
+```
+
+---
+
+#### US-906: Concurrency Control
+
+> **As a** system,  
+> **I need** to ensure only one backup or restore runs at any given time,  
+> **So that** data integrity is maintained and race conditions are avoided.
+
+**Acceptance Criteria:**
+
+```
+AC-906-1: Distributed lock với Redlock
+  Given không có operation nào đang chạy
+  When backup/restore job bắt đầu
+  Then acquire Redlock key "backup:operation:lock" với TTL 1 giờ
+  And request mới bị reject với 409 Conflict trong thời gian lock active
+
+AC-906-2: Lock release
+  Given backup/restore job hoàn thành hoặc fail
+  Then Redlock được release ngay lập tức
+  And operation mới có thể được enqueue
+
+AC-906-3: TTL failsafe
+  Given job bị crash mà không release lock
+  When TTL 1 giờ hết hạn
+  Then lock tự động expire trên Redis
+  And operation mới có thể chạy bình thường
+```
+
+---
+
 ## 6. API Contracts
 
 ### 6.1 Auth Service (`/api/auth`)
@@ -909,6 +1126,37 @@ GET    /:orderId                 Header: Bearer
 ### 6.6 Swagger
 
 Mỗi service expose Swagger UI tại `/api/docs`. Enabled khi `SWAGGER_ENABLED=true`.
+
+### 6.7 API Service — Backup (`/backup`, `/restore`)
+
+> **Admin auth rule**: `GET` → truyền `email` qua query param. `POST` → truyền `email` trong request body.
+
+```
+GET    /backup                        Query: {email, status?, startDate?, endDate?, page?, limit?}
+                                      Res:   {data: BackupLog[], total, page, limit}
+
+POST   /backup/trigger                Body: {email}
+                                      Res:  {jobId, backupId, status: "IN_PROGRESS"}
+
+GET    /backup/:backupId              Query: {email}
+                                      Res:  BackupLog (full detail)
+
+GET    /backup/:backupId/collections  Query: {email}
+                                      Res:  {collections: string[]}
+
+POST   /backup/:backupId/restore      Body: {email, mode: "REPLACE"}
+                                      Res:  {jobId, restoreId, status: "IN_PROGRESS"}
+
+POST   /backup/:backupId/restore/selective
+                                      Body: {email, collections: string[], mode: "REPLACE"|"MERGE"}
+                                      Res:  {jobId, restoreId, status: "IN_PROGRESS"}
+
+GET    /restore/history               Query: {email, status?, mode?, search?, startDate?, endDate?, page?, limit?}
+                                      Res:  {data: RestoreLog[], total, page, limit}
+
+GET    /restore/:restoreId            Query: {email}
+                                      Res:  RestoreLog (with collectionStats)
+```
 
 ---
 
@@ -1528,6 +1776,116 @@ export class SagaStep {
 }
 ```
 
+### 7.10 API Service — Backup Module (`schema: public`)
+
+```typescript
+// enums/backup-status.enum.ts
+export enum BackupStatus {
+  IN_PROGRESS = "IN_PROGRESS",
+  SUCCESS = "SUCCESS",
+  FAILED = "FAILED",
+}
+
+// enums/restore-status.enum.ts
+export enum RestoreStatus {
+  IN_PROGRESS = "IN_PROGRESS",
+  SUCCESS = "SUCCESS",
+  FAILED = "FAILED",
+  PARTIAL = "PARTIAL",
+}
+
+// enums/restore-mode.enum.ts
+export enum RestoreMode {
+  REPLACE = "REPLACE",
+  MERGE = "MERGE",
+}
+
+// backup-log.entity.ts
+@Entity({ schema: "public" })
+export class BackupLog {
+  @PrimaryGeneratedColumn("uuid")
+  backupId: string;
+
+  @Column({ type: "enum", enum: BackupStatus, default: BackupStatus.IN_PROGRESS })
+  status: BackupStatus;
+
+  @Column({ type: "timestamptz" })
+  startTime: Date;
+
+  @Column({ nullable: true, type: "timestamptz" })
+  endTime: Date | null;
+
+  @Column({ nullable: true, type: "bigint" })
+  size: number | null; // bytes, kích thước file đã mã hóa
+
+  @Column({ nullable: true })
+  location: string | null; // Google Drive URL
+
+  @Column({ nullable: true })
+  fileId: string | null; // Drive file ID
+
+  @Column({ nullable: true, type: "text" })
+  error: string | null;
+
+  @Column({ type: "jsonb" })
+  metadata: {
+    version: string;
+    collections: string[];
+    createdAt: string;
+  };
+
+  @Column({ default: false })
+  isAutomatic: boolean;
+
+  @CreateDateColumn()
+  createdAt: Date;
+}
+
+// restore-log.entity.ts
+@Entity({ schema: "public" })
+export class RestoreLog {
+  @PrimaryGeneratedColumn("uuid")
+  restoreId: string;
+
+  @Column()
+  backupId: string;
+
+  @Column()
+  userEmail: string;
+
+  @Column({ type: "text", array: true })
+  collections: string[];
+
+  @Column({ type: "enum", enum: RestoreMode })
+  mode: RestoreMode;
+
+  @Column({ type: "jsonb", nullable: true })
+  collectionStats: Array<{
+    collection: string;
+    status: "SUCCESS" | "FAILED";
+    insertedCount?: number;
+    updatedCount?: number;
+    deletedCount?: number;
+    error?: string;
+  }> | null;
+
+  @Column({ type: "enum", enum: RestoreStatus, default: RestoreStatus.IN_PROGRESS })
+  status: RestoreStatus;
+
+  @Column({ nullable: true, type: "text" })
+  error: string | null;
+
+  @Column({ type: "timestamptz" })
+  startTime: Date;
+
+  @Column({ nullable: true, type: "timestamptz" })
+  endTime: Date | null;
+
+  @CreateDateColumn()
+  createdAt: Date;
+}
+```
+
 ---
 
 ## 8. Kafka Topics & Event Payloads
@@ -1573,7 +1931,7 @@ interface KafkaEvent<T = unknown> {
 | `shipping.label_created`       | Shipping             | Orchestrator               | Event   |
 | `shipping.status_updated`      | Shipping             | Order, Notification        | Event   |
 | `shipping.delivered`           | Shipping             | Orchestrator               | Event   |
-| `notification.send`            | Orchestrator, Refund | Notification               | Command |
+| `notification.send`            | Orchestrator, Refund, api | Notification          | Command |
 | `refund.requested`             | Refund               | Orchestrator               | Event   |
 | `refund.validated`             | Refund               | Orchestrator               | Event   |
 | `refund.status_updated`        | Orchestrator         | Refund, Notification       | Command |
@@ -1949,34 +2307,79 @@ Services **bắt buộc** có đầy đủ resilience patterns: Orchestrator, Or
 
 ---
 
-### Phase 3 — Resilience & Refund (Week 4)
+### Phase 3 — Resilience & Refund (Week 4) ✅ DONE (2026-06-06)
 
 **Goal**: Compensation flows, refund, DLQ, full error handling, WebSocket real-time.
 
 **Backend:**
 
-- `orchestrator-service`: Compensation flows cho tất cả failure cases (section 9.2)
-- `refund-service`: Upload MinIO, auto-validation logic, Outbox, Refund Saga, Swagger
-- `notification-service`: Remaining email triggers (delivered, refund_approved, refund_rejected, refunded, cancelled), WebSocket push events
-- DLQ consumer (logging + alert) cho tất cả services
-- Circuit Breaker với opossum
-- Structured logging với pino + correlationId middleware
-- Global Exception Filter chuẩn hóa cho tất cả 5 services bắt buộc
-- Outbox worker: Inventory, Refund service
+- [x] `orchestrator-service`: Compensation flows cho tất cả failure cases (section 9.2)
+- [x] `refund-service`: Upload MinIO, auto-validation logic, Outbox, Refund Saga, Swagger
+- [x] `notification-service`: Remaining email triggers (delivered, refund_approved, refund_rejected, refunded, cancelled), WebSocket push events
+- [x] DLQ consumer (logging + alert) cho tất cả services
+- [x] Circuit Breaker với opossum
+- [x] Structured logging với pino + correlationId middleware
+- [x] Global Exception Filter chuẩn hóa cho tất cả 5 services bắt buộc
+- [x] Outbox worker: Inventory, Refund service
 
 **Frontend:**
 
-- `/orders/:orderId` cập nhật: hiển thị refund button logic, refund status
-- `/orders/:orderId/refund` page: FileUploadZone, drag & drop, preview
-- Real-time: WebSocket nhận order status update → invalidate query → timeline tự cập nhật
+- [x] `/orders/:orderId` cập nhật: hiển thị refund button logic, refund status
+- [x] `/orders/:orderId/refund` page: FileUploadZone, drag & drop, preview
+- [x] Real-time: WebSocket nhận order status update → invalidate query → timeline tự cập nhật
 
 **Verify:**
 
-- Inventory insufficient → order cancel → email → UI cập nhật
-- Refund approved flow: upload → validate → refund → email → UI update
-- Refund rejected: sai file type (kiểm tra FE) và reason < 20 ký tự
-- Saga retry 3 lần → DLQ → log FAILED
-- Compensation idempotent: gửi release_stock 2 lần → chỉ release 1 lần
+- [x] Inventory insufficient → order cancel → email → UI cập nhật
+- [x] Refund approved flow: upload → validate → refund → email → UI update
+- [x] Refund rejected: sai file type (kiểm tra FE) và reason < 20 ký tự
+- [x] Saga retry 3 lần → DLQ → log FAILED
+- [x] Compensation idempotent: gửi release_stock 2 lần → chỉ release 1 lần
+
+---
+
+### Phase 4 — Database Backup (`apps/api`) ✅ DONE (2026-06-06)
+
+**Goal**: Xây dựng module backup & restore hoàn chỉnh cho `apps/api`: dump PostgreSQL entities ra JSON, mã hóa AES-256-CBC, lưu Google Drive Shared Drive, restore theo chế độ REPLACE/MERGE với topological sort FK-aware. Admin trigger qua REST API, tiến trình theo dõi qua polling endpoint.
+
+**Backend (`apps/api`):**
+
+- [x] Install: `bullmq`, `@nestjs/bullmq`, `googleapis`, `redlock`
+- [x] Migration: tạo `backup_logs`, `restore_logs` tables trong schema `public`
+- [x] `GoogleDriveService`: upload, download, list, delete — **Shared Drive** với `supportsAllDrives: true`, scope `drive`
+- [x] `EncryptionService`: AES-256-CBC encrypt/decrypt, key từ `BACKUP_ENCRYPTION_KEY` env
+- [x] `AdminGuard`: check email từ body (POST) hoặc query (GET) vs `ADMIN_EMAIL` env → 403 nếu sai
+- [x] `BackupService`: single entry point — dump entity → JSON → encrypt → upload Drive → retention → notification; inject RestoreService + cả 2 queues
+- [x] `RestoreService`: download Drive → decrypt → topological sort FK → transaction → raw SQL INSERT (giữ PK gốc)
+- [x] `RetentionService`: sau backup thành công, xóa backup cũ trên Drive khi vượt `MAX_BACKUPS`
+- [x] BullMQ queue setup: `backup` và `restore` (constants tách ra `backup.constants.ts`)
+- [x] `BackupProcessor` / `RestoreProcessor`: WorkerHost, Redlock distributed lock
+- [x] `RedlockService`: key `backup:operation:lock`, TTL 1 giờ, `retryCount: 0`
+- [x] `BackupController`: thin controller, chỉ inject BackupService, full Swagger docs
+- [x] `BackupScheduler`: Cron `0 2 * * 0` (2:00 AM Chủ nhật, Asia/Ho_Chi_Minh)
+- [x] Notification: Kafka `notification.send` với format đúng `{ eventId, sagaId, orderId, userId, payload }` — cả backup và restore success/failed
+- [x] `Post` entity (FK → User) để test FK-aware restore
+- [x] Config namespaces: `backup.config.ts`, `google.config.ts`
+- [x] Seed file: users + posts
+
+**Key technical decisions:**
+
+- **Restore INSERT**: raw parameterized SQL thay vì TypeORM `save()`/query builder — giữ nguyên PK values gốc
+- **Restore DELETE**: `DELETE FROM` thay vì `TRUNCATE` — PostgreSQL block TRUNCATE trên FK-referenced tables
+- **Restore order**: topological sort theo `meta.foreignKeys` — [users → posts], delete reverse, insert forward
+- **Controller architecture**: BackupController chỉ inject BackupService; RestoreService không inject BackupService (tránh circular dep)
+- **Circular import fix**: tách queue constants ra `backup.constants.ts`
+
+**Verify:**
+
+- [x] Manual backup: `POST /backup/trigger` → polling `GET /backup/:id` → status SUCCESS
+- [x] File mã hóa xuất hiện trên Google Drive Shared Drive
+- [x] Full restore REPLACE: data bị ghi đè đúng với FK relations; `backup_logs`/`restore_logs` không bị xóa
+- [x] Email notification gửi sau backup/restore (cả success lẫn failed)
+- [ ] Retention: 5 backup liên tiếp → chỉ còn `MAX_BACKUPS=4` file
+- [ ] Selective restore MERGE
+- [ ] PARTIAL status
+- [ ] Concurrent lock test
 
 ---
 
@@ -2042,6 +2445,20 @@ REFUND_WINDOW_DAYS=7
 MAX_FILE_SIZE_MB=5
 ```
 
+### API Service (`apps/api`)
+
+```env
+DB_SCHEMA=public
+PORT=3001
+ADMIN_EMAIL=mytoandn@gmail.com
+BACKUP_NOTIFICATION_EMAILS=pqatechteam@gmail.com
+BACKUP_ENCRYPTION_KEY=<32-char-hex-key>
+MAX_BACKUPS=4
+GOOGLE_CLIENT_EMAIL=nextmart-drive-uploader@next-mart-498605.iam.gserviceaccount.com
+GOOGLE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n"
+GOOGLE_DRIVE_FOLDER_ID=1AcR1cLIRckBmarOhxqDtBDLcyBAqtv3x
+```
+
 ### Frontend (`.env.local`)
 
 ```env
@@ -2062,3 +2479,7 @@ Các quyết định đã được chốt:
 | 3   | **Shipping mock interval**  | Config qua env `MOCK_SHIPPING_INTERVAL_MS`                                                                                                                   |
 | 4   | **AI Refund Validation V1** | Approve nếu: ít nhất 1 file hợp lệ + `reason.length >= 20`. Reject kèm lý do cụ thể                                                                          |
 | 5   | **Seed user**               | `test@nextmart.com` / `Test@123`                                                                                                                             |
+| 6   | **Backup auth**             | Không dùng JWT. Admin xác thực bằng email trong env: POST → body, GET → query param. Đơn giản, đủ bảo mật cho internal admin tool |
+| 7   | **Backup progress**         | Không dùng WebSocket. Admin poll `GET /backup/:id` hoặc `GET /restore/:id` để theo dõi tiến trình. Giảm complexity, đủ dùng cho use case admin |
+| 8   | **Backup worker**           | BullMQ chạy trong cùng process với HTTP server (`@nestjs/bullmq`). Không cần app entry riêng ở phase này |
+| 9   | **Backup email notification** | Dùng Kafka `notification.send` thay vì direct SMTP. Đảm bảo consistent pattern khi mở rộng backup sang các service khác. notification-service cần thêm template `backup-result` |
