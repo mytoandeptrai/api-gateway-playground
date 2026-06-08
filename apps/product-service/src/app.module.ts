@@ -5,8 +5,10 @@ import { AppController } from '@/app.controller';
 import { AppService } from '@/app.service';
 import databaseConfig from '@/config/database.config';
 import redisConfig from '@/config/redis.config';
+import kafkaConfig from '@/config/kafka.config';
 import { SharedRedisModule } from '@/shared/redis/shared-redis.module';
 import { CachingModule } from '@/shared/caching/caching.module';
+import { KafkaModule } from '@/shared/kafka/kafka.module';
 import { LoggingMiddleware } from '@/shared/middleware/logging.middleware';
 import { ProductModule } from '@/modules/product/product.module';
 
@@ -14,7 +16,7 @@ import { ProductModule } from '@/modules/product/product.module';
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      load: [databaseConfig, redisConfig],
+      load: [databaseConfig, redisConfig, kafkaConfig],
       envFilePath: ['.env.local', '.env'],
     }),
 
@@ -66,6 +68,7 @@ import { ProductModule } from '@/modules/product/product.module';
 
     SharedRedisModule,
     CachingModule,
+    KafkaModule,
     ProductModule,
   ],
   controllers: [AppController],

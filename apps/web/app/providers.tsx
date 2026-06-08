@@ -10,7 +10,7 @@ import { AuthProvider } from "@/components/auth/auth-provider";
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      refetchOnWindowFocus: false,
+      refetchOnWindowFocus: true,
       retry: 0,
       staleTime: 1000,
     },

@@ -13,7 +13,7 @@ const formatPrice = (price: number) =>
 
 export function ProductCard({ product }: { product: Product }) {
   const router = useRouter();
-  const outOfStock = product.stock === 0;
+  const outOfStock = product.available === 0;
 
   return (
     <Card className="flex flex-col overflow-hidden transition-shadow hover:shadow-md">
@@ -47,7 +47,7 @@ export function ProductCard({ product }: { product: Product }) {
           {formatPrice(product.price)}
         </p>
         <p className="text-xs text-muted-foreground">
-          Còn {product.stock} sản phẩm
+          Còn {product.available} sản phẩm
         </p>
       </CardContent>
 

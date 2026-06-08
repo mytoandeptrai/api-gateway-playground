@@ -120,6 +120,19 @@ export class InventoryService {
             published: false,
           }),
         );
+
+        await manager.save(
+          OutboxEvent,
+          manager.create(OutboxEvent, {
+            aggregateId: orderId,
+            eventType: 'inventory.stock_updated',
+            payload: this.buildEnvelope('inventory.stock_updated', event, {
+              productId,
+              available: item.available - quantity,
+            }),
+            published: false,
+          }),
+        );
       });
 
       this.logger.log(
@@ -205,6 +218,10 @@ export class InventoryService {
         return;
       }
 
+      const item = await manager.findOne(InventoryItem, {
+        where: { productId: reservation.productId },
+      });
+
       await manager.update(
         StockReservation,
         { id: reservation.id },
@@ -235,6 +252,19 @@ export class InventoryService {
           payload: this.buildEnvelope('inventory.stock_released', event, {
             sagaId,
             orderId,
+          }),
+          published: false,
+        }),
+      );
+
+      await manager.save(
+        OutboxEvent,
+        manager.create(OutboxEvent, {
+          aggregateId: orderId,
+          eventType: 'inventory.stock_updated',
+          payload: this.buildEnvelope('inventory.stock_updated', event, {
+            productId: reservation.productId,
+            available: (item?.available ?? 0) + reservation.quantity,
           }),
           published: false,
         }),
