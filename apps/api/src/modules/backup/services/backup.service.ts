@@ -168,7 +168,12 @@ export class BackupService {
       );
       log.status = BackupStatus.FAILED;
       log.endTime = new Date();
-      log.error = err instanceof Error ? err.message : String(err);
+      log.error =
+        err instanceof Error
+          ? err.message
+          : typeof err === 'string'
+            ? err
+            : 'Unknown error';
       await this.backupLogRepo.save(log);
       await this.sendNotification(log);
       throw err;
@@ -235,7 +240,11 @@ export class BackupService {
     } catch (err) {
       this.logger.error(
         'Failed to send backup notification',
-        err instanceof Error ? err.message : String(err),
+        err instanceof Error
+          ? err.message
+          : typeof err === 'string'
+            ? err
+            : 'Unknown error',
       );
     }
   }

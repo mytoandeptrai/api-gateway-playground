@@ -244,7 +244,12 @@ export class OrderSagaService {
 
     const trackingId = event.payload.trackingId as string;
     await this.completeStep(saga.id, STEP.CREATE_SHIPPING, event.payload);
-    const isNewDeliveryStep = await this.createStep(saga.id, STEP.AWAIT_DELIVERY, null, null);
+    const isNewDeliveryStep = await this.createStep(
+      saga.id,
+      STEP.AWAIT_DELIVERY,
+      null,
+      null,
+    );
     await this.sagaRepo.update(saga.id, { currentStep: STEP.AWAIT_DELIVERY });
 
     await this.updateOrderStatus(saga.orderId, 'PREPARING', { trackingId });
@@ -511,7 +516,9 @@ export class OrderSagaService {
     commandTopic: string | null,
     payload: object | null,
   ): Promise<boolean> {
-    const existing = await this.stepRepo.findOne({ where: { sagaId, stepName } });
+    const existing = await this.stepRepo.findOne({
+      where: { sagaId, stepName },
+    });
     if (existing) return false;
 
     await this.stepRepo.save(

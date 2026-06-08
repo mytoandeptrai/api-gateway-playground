@@ -1806,7 +1806,11 @@ export class BackupLog {
   @PrimaryGeneratedColumn("uuid")
   backupId: string;
 
-  @Column({ type: "enum", enum: BackupStatus, default: BackupStatus.IN_PROGRESS })
+  @Column({
+    type: "enum",
+    enum: BackupStatus,
+    default: BackupStatus.IN_PROGRESS,
+  })
   status: BackupStatus;
 
   @Column({ type: "timestamptz" })
@@ -1869,7 +1873,11 @@ export class RestoreLog {
     error?: string;
   }> | null;
 
-  @Column({ type: "enum", enum: RestoreStatus, default: RestoreStatus.IN_PROGRESS })
+  @Column({
+    type: "enum",
+    enum: RestoreStatus,
+    default: RestoreStatus.IN_PROGRESS,
+  })
   status: RestoreStatus;
 
   @Column({ nullable: true, type: "text" })
@@ -1909,33 +1917,33 @@ interface KafkaEvent<T = unknown> {
 
 ### 8.2 Topic Registry
 
-| Topic                          | Publisher            | Consumers                  | Loại    |
-| ------------------------------ | -------------------- | -------------------------- | ------- |
-| `order.created`                | Order                | Orchestrator               | Event   |
-| `order.cancel`                 | Orchestrator         | Order                      | Command |
-| `order.cancelled`              | Order                | Notification               | Event   |
-| `order.status_updated`         | Order                | Notification               | Event   |
-| `inventory.reserve_stock`      | Orchestrator         | Inventory                  | Command |
-| `inventory.stock_reserved`     | Inventory            | Orchestrator               | Event   |
-| `inventory.stock_insufficient` | Inventory            | Orchestrator               | Event   |
-| `inventory.confirm_stock`      | Orchestrator         | Inventory                  | Command |
-| `inventory.stock_confirmed`    | Inventory            | Orchestrator               | Event   |
-| `inventory.release_stock`      | Orchestrator         | Inventory                  | Command |
-| `inventory.stock_released`     | Inventory            | Orchestrator               | Event   |
-| `payment.completed`            | Payment              | Orchestrator               | Event   |
-| `payment.failed`               | Payment              | Orchestrator               | Event   |
-| `payment.timeout`              | Payment              | Orchestrator               | Event   |
-| `payment.refund_requested`     | Orchestrator         | Payment                    | Command |
-| `payment.refunded`             | Payment              | Orchestrator, Notification | Event   |
-| `shipping.create_label`        | Orchestrator         | Shipping                   | Command |
-| `shipping.label_created`       | Shipping             | Orchestrator               | Event   |
-| `shipping.status_updated`      | Shipping             | Order, Notification        | Event   |
-| `shipping.delivered`           | Shipping             | Orchestrator               | Event   |
-| `notification.send`            | Orchestrator, Refund, api | Notification          | Command |
-| `refund.requested`             | Refund               | Orchestrator               | Event   |
-| `refund.validated`             | Refund               | Orchestrator               | Event   |
-| `refund.status_updated`        | Orchestrator         | Refund, Notification       | Command |
-| `*.dlq`                        | Kafka (auto)         | Manual intervention        | DLQ     |
+| Topic                          | Publisher                 | Consumers                  | Loại    |
+| ------------------------------ | ------------------------- | -------------------------- | ------- |
+| `order.created`                | Order                     | Orchestrator               | Event   |
+| `order.cancel`                 | Orchestrator              | Order                      | Command |
+| `order.cancelled`              | Order                     | Notification               | Event   |
+| `order.status_updated`         | Order                     | Notification               | Event   |
+| `inventory.reserve_stock`      | Orchestrator              | Inventory                  | Command |
+| `inventory.stock_reserved`     | Inventory                 | Orchestrator               | Event   |
+| `inventory.stock_insufficient` | Inventory                 | Orchestrator               | Event   |
+| `inventory.confirm_stock`      | Orchestrator              | Inventory                  | Command |
+| `inventory.stock_confirmed`    | Inventory                 | Orchestrator               | Event   |
+| `inventory.release_stock`      | Orchestrator              | Inventory                  | Command |
+| `inventory.stock_released`     | Inventory                 | Orchestrator               | Event   |
+| `payment.completed`            | Payment                   | Orchestrator               | Event   |
+| `payment.failed`               | Payment                   | Orchestrator               | Event   |
+| `payment.timeout`              | Payment                   | Orchestrator               | Event   |
+| `payment.refund_requested`     | Orchestrator              | Payment                    | Command |
+| `payment.refunded`             | Payment                   | Orchestrator, Notification | Event   |
+| `shipping.create_label`        | Orchestrator              | Shipping                   | Command |
+| `shipping.label_created`       | Shipping                  | Orchestrator               | Event   |
+| `shipping.status_updated`      | Shipping                  | Order, Notification        | Event   |
+| `shipping.delivered`           | Shipping                  | Orchestrator               | Event   |
+| `notification.send`            | Orchestrator, Refund, api | Notification               | Command |
+| `refund.requested`             | Refund                    | Orchestrator               | Event   |
+| `refund.validated`             | Refund                    | Orchestrator               | Event   |
+| `refund.status_updated`        | Orchestrator              | Refund, Notification       | Command |
+| `*.dlq`                        | Kafka (auto)              | Manual intervention        | DLQ     |
 
 ### 8.3 Key Payload Schemas
 
@@ -2415,17 +2423,17 @@ Services **bắt buộc** có đầy đủ resilience patterns: Orchestrator, Or
 
 **Per-service EXCLUDED_TABLES:**
 
-| Service | Tables |
-|---------|--------|
-| `auth-service` | `migrations_auth` |
-| `order-service` | `migrations_order`, `outbox_event` |
-| `product-service` | `migrations_product` |
-| `inventory-service` | `migrations_api`, `outbox_event`, `processed_event` |
-| `payment-service` | `migrations_api`, `outbox_event`, `processed_webhook` |
-| `shipping-service` | `migrations_api` |
-| `notification-service` | `migrations_api` |
-| `orchestrator-service` | `migrations_api` |
-| `refund-service` | `migrations_api`, `outbox_event` |
+| Service                | Tables                                                |
+| ---------------------- | ----------------------------------------------------- |
+| `auth-service`         | `migrations_auth`                                     |
+| `order-service`        | `migrations_order`, `outbox_event`                    |
+| `product-service`      | `migrations_product`                                  |
+| `inventory-service`    | `migrations_api`, `outbox_event`, `processed_event`   |
+| `payment-service`      | `migrations_api`, `outbox_event`, `processed_webhook` |
+| `shipping-service`     | `migrations_api`                                      |
+| `notification-service` | `migrations_api`                                      |
+| `orchestrator-service` | `migrations_api`                                      |
+| `refund-service`       | `migrations_api`, `outbox_event`                      |
 
 **Verify (per service):**
 
@@ -2524,14 +2532,14 @@ NEXT_PUBLIC_WS_URL=http://localhost:3010
 
 Các quyết định đã được chốt:
 
-| #   | Quyết định                  | Chi tiết                                                                                                                                                     |
-| --- | --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| 1   | **JWT storage**             | `accessToken` → Zustand in-memory (không persist). `refreshToken` → httpOnly cookie. App init → gọi silent refresh để lấy lại accessToken nếu cookie còn hạn |
-| 2   | **WebSocket**               | Socket.io với NestJS `@WebSocketGateway` built-in                                                                                                            |
-| 3   | **Shipping mock interval**  | Config qua env `MOCK_SHIPPING_INTERVAL_MS`                                                                                                                   |
-| 4   | **AI Refund Validation V1** | Approve nếu: ít nhất 1 file hợp lệ + `reason.length >= 20`. Reject kèm lý do cụ thể                                                                          |
-| 5   | **Seed user**               | `test@nextmart.com` / `Test@123`                                                                                                                             |
-| 6   | **Backup auth**             | Không dùng JWT. Admin xác thực bằng email trong env: POST → body, GET → query param. Đơn giản, đủ bảo mật cho internal admin tool |
-| 7   | **Backup progress**         | Không dùng WebSocket. Admin poll `GET /backup/:id` hoặc `GET /restore/:id` để theo dõi tiến trình. Giảm complexity, đủ dùng cho use case admin |
-| 8   | **Backup worker**           | BullMQ chạy trong cùng process với HTTP server (`@nestjs/bullmq`). Không cần app entry riêng ở phase này |
+| #   | Quyết định                    | Chi tiết                                                                                                                                                                        |
+| --- | ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | **JWT storage**               | `accessToken` → Zustand in-memory (không persist). `refreshToken` → httpOnly cookie. App init → gọi silent refresh để lấy lại accessToken nếu cookie còn hạn                    |
+| 2   | **WebSocket**                 | Socket.io với NestJS `@WebSocketGateway` built-in                                                                                                                               |
+| 3   | **Shipping mock interval**    | Config qua env `MOCK_SHIPPING_INTERVAL_MS`                                                                                                                                      |
+| 4   | **AI Refund Validation V1**   | Approve nếu: ít nhất 1 file hợp lệ + `reason.length >= 20`. Reject kèm lý do cụ thể                                                                                             |
+| 5   | **Seed user**                 | `test@nextmart.com` / `Test@123`                                                                                                                                                |
+| 6   | **Backup auth**               | Không dùng JWT. Admin xác thực bằng email trong env: POST → body, GET → query param. Đơn giản, đủ bảo mật cho internal admin tool                                               |
+| 7   | **Backup progress**           | Không dùng WebSocket. Admin poll `GET /backup/:id` hoặc `GET /restore/:id` để theo dõi tiến trình. Giảm complexity, đủ dùng cho use case admin                                  |
+| 8   | **Backup worker**             | BullMQ chạy trong cùng process với HTTP server (`@nestjs/bullmq`). Không cần app entry riêng ở phase này                                                                        |
 | 9   | **Backup email notification** | Dùng Kafka `notification.send` thay vì direct SMTP. Đảm bảo consistent pattern khi mở rộng backup sang các service khác. notification-service cần thêm template `backup-result` |

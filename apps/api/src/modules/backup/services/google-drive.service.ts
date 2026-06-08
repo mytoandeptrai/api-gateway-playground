@@ -10,13 +10,16 @@ export class GoogleDriveService implements OnModuleInit {
   private readonly folderId: string;
 
   constructor(private readonly configService: ConfigService) {
-    this.folderId = this.configService.getOrThrow<string>('google.driveFolderId');
+    this.folderId = this.configService.getOrThrow<string>(
+      'google.driveFolderId',
+    );
   }
 
   onModuleInit() {
     const auth = new google.auth.GoogleAuth({
       credentials: {
-        client_email: this.configService.getOrThrow<string>('google.clientEmail'),
+        client_email:
+          this.configService.getOrThrow<string>('google.clientEmail'),
         private_key: this.configService.getOrThrow<string>('google.privateKey'),
       },
       // drive (not drive.file) is required for Shared Drive access
@@ -25,7 +28,10 @@ export class GoogleDriveService implements OnModuleInit {
     this.drive = google.drive({ version: 'v3', auth });
   }
 
-  async upload(filename: string, content: string): Promise<{ fileId: string; webViewLink: string }> {
+  async upload(
+    filename: string,
+    content: string,
+  ): Promise<{ fileId: string; webViewLink: string }> {
     const stream = Readable.from([content]);
     const res = await this.drive.files.create({
       supportsAllDrives: true,
@@ -40,7 +46,8 @@ export class GoogleDriveService implements OnModuleInit {
       fields: 'id,webViewLink',
     });
     const fileId = res.data.id!;
-    const webViewLink = res.data.webViewLink ?? `https://drive.google.com/file/d/${fileId}`;
+    const webViewLink =
+      res.data.webViewLink ?? `https://drive.google.com/file/d/${fileId}`;
     this.logger.log(`Uploaded backup to Drive: ${fileId}`);
     return { fileId, webViewLink };
   }

@@ -37,7 +37,11 @@ export class RestoreLog {
   @Column({ type: 'jsonb', nullable: true })
   collectionStats: Record<string, unknown> | null;
 
-  @Column({ type: 'enum', enum: RestoreStatus, default: RestoreStatus.IN_PROGRESS })
+  @Column({
+    type: 'enum',
+    enum: RestoreStatus,
+    default: RestoreStatus.IN_PROGRESS,
+  })
   status: RestoreStatus;
 
   @Column({ nullable: true })

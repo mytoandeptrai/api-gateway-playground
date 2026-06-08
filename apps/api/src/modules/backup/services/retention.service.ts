@@ -29,7 +29,10 @@ export class RetentionService {
       return;
     }
 
-    const toDelete = successfulBackups.slice(0, successfulBackups.length - this.maxBackups);
+    const toDelete = successfulBackups.slice(
+      0,
+      successfulBackups.length - this.maxBackups,
+    );
     for (const backup of toDelete) {
       try {
         if (backup.fileId) {
@@ -40,7 +43,11 @@ export class RetentionService {
       } catch (err) {
         this.logger.error(
           `Retention: failed to remove backup ${backup.backupId}`,
-          err instanceof Error ? err.message : String(err),
+          err instanceof Error
+            ? err.message
+            : typeof err === 'string'
+              ? err
+              : 'Unknown error',
         );
       }
     }

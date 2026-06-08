@@ -37,7 +37,11 @@ export class KafkaProducer
       } catch (error) {
         this.logger.error(
           `[KafkaProducer] Connect attempt ${attempt}/${retries} failed`,
-          error instanceof Error ? error.message : String(error),
+          error instanceof Error
+            ? error.message
+            : typeof error === 'string'
+              ? error
+              : 'Unknown error',
         );
         if (attempt >= retries) throw error;
         await sleep(1000 * attempt);
@@ -52,7 +56,11 @@ export class KafkaProducer
     } catch (error) {
       this.logger.error(
         '[KafkaProducer] Disconnect failed',
-        error instanceof Error ? error.message : String(error),
+        error instanceof Error
+          ? error.message
+          : typeof error === 'string'
+            ? error
+            : 'Unknown error',
       );
       throw error;
     }
@@ -64,7 +72,11 @@ export class KafkaProducer
     } catch (error) {
       this.logger.error(
         '[KafkaProducer] Send failed',
-        error instanceof Error ? error.message : String(error),
+        error instanceof Error
+          ? error.message
+          : typeof error === 'string'
+            ? error
+            : 'Unknown error',
         { topic: message.topic },
       );
       throw error;

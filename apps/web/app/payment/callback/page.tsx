@@ -41,9 +41,10 @@ export default function PaymentCallbackPage() {
       toast.success("Thanh toán thành công!");
     } else {
       setStatus("failed");
-      const msg = vnpResponseCode === "24"
-        ? "Bạn đã hủy giao dịch."
-        : "Thanh toán thất bại. Vui lòng thử lại.";
+      const msg =
+        vnpResponseCode === "24"
+          ? "Bạn đã hủy giao dịch."
+          : "Thanh toán thất bại. Vui lòng thử lại.";
       toast.error(msg);
     }
   }, [searchParams]);

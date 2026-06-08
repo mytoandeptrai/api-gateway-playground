@@ -1,5 +1,14 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsEmail, IsEnum, IsOptional, IsString, IsArray, IsDateString, IsInt, Min } from 'class-validator';
+import {
+  IsEmail,
+  IsEnum,
+  IsOptional,
+  IsString,
+  IsArray,
+  IsDateString,
+  IsInt,
+  Min,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 import { BackupStatus } from '../entities/backup-log.entity';
 import { RestoreMode, RestoreStatus } from '../entities/restore-log.entity';
@@ -48,14 +57,22 @@ export class ListBackupsQueryDto extends AdminEmailQueryDto {
   @IsDateString()
   endDate?: string;
 
-  @ApiPropertyOptional({ description: 'Page number (1-based)', default: 1, example: 1 })
+  @ApiPropertyOptional({
+    description: 'Page number (1-based)',
+    default: 1,
+    example: 1,
+  })
   @IsOptional()
   @Type(() => Number)
   @IsInt()
   @Min(1)
   page: number = 1;
 
-  @ApiPropertyOptional({ description: 'Number of items per page', default: 10, example: 10 })
+  @ApiPropertyOptional({
+    description: 'Number of items per page',
+    default: 10,
+    example: 10,
+  })
   @IsOptional()
   @Type(() => Number)
   @IsInt()
@@ -78,7 +95,8 @@ export class RestoreBodyDto extends AdminEmailBodyDto {
 export class SelectiveRestoreBodyDto extends RestoreBodyDto {
   @ApiProperty({
     type: [String],
-    description: 'List of collection (table) names to restore. Must exist in the backup.',
+    description:
+      'List of collection (table) names to restore. Must exist in the backup.',
     example: ['users'],
   })
   @IsArray()
@@ -129,14 +147,22 @@ export class ListRestoreHistoryQueryDto extends AdminEmailQueryDto {
   @IsDateString()
   endDate?: string;
 
-  @ApiPropertyOptional({ description: 'Page number (1-based)', default: 1, example: 1 })
+  @ApiPropertyOptional({
+    description: 'Page number (1-based)',
+    default: 1,
+    example: 1,
+  })
   @IsOptional()
   @Type(() => Number)
   @IsInt()
   @Min(1)
   page: number = 1;
 
-  @ApiPropertyOptional({ description: 'Number of items per page', default: 10, example: 10 })
+  @ApiPropertyOptional({
+    description: 'Number of items per page',
+    default: 10,
+    example: 10,
+  })
   @IsOptional()
   @Type(() => Number)
   @IsInt()

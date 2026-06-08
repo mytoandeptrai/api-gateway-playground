@@ -52,20 +52,20 @@ pnpm --filter web build
 
 ### Applications & Ports
 
-| App                           | Port | Purpose                                                              |
-| ----------------------------- | ---- | -------------------------------------------------------------------- |
-| `apps/web`                    | 3000 | Next.js 15 (App Router) frontend — products, checkout, orders, refund |
-| `apps/api`                    | 3001 | General NestJS API service (Kafka practice, user management)         |
-| `apps/api-gateway`            | 3002 | Core gateway — rate limiting, circuit breaking, load balancing, cache |
-| `apps/auth-service`           | 3003 | JWT auth — register, login, refresh token, Passport.js              |
-| `apps/product-service`        | 3005 | Product catalog — CRUD, price, stock info                            |
-| `apps/order-service`          | 3006 | Order management — create order, update status, outbox pattern       |
-| `apps/inventory-service`      | 3007 | Stock reservation — Redlock distributed lock, outbox, idempotency    |
-| `apps/payment-service`        | 3008 | VNPay payment — QR generation, IPN webhook, timeout scheduler        |
-| `apps/shipping-service`       | 3009 | Shipping label + mock delivery simulation (PREPARING → IN_TRANSIT → DELIVERED) |
-| `apps/notification-service`   | 3010 | Email (Mailpit) + WebSocket (Socket.IO `/notifications` namespace)   |
-| `apps/refund-service`         | 3011 | Refund requests — file upload to MinIO, outbox pattern               |
-| `apps/orchestrator-service`   | 3012 | Orchestrator Saga — ORDER_SAGA + REFUND_SAGA, DLQ with retry backoff |
+| App                         | Port | Purpose                                                                        |
+| --------------------------- | ---- | ------------------------------------------------------------------------------ |
+| `apps/web`                  | 3000 | Next.js 15 (App Router) frontend — products, checkout, orders, refund          |
+| `apps/api`                  | 3001 | General NestJS API service (Kafka practice, user management)                   |
+| `apps/api-gateway`          | 3002 | Core gateway — rate limiting, circuit breaking, load balancing, cache          |
+| `apps/auth-service`         | 3003 | JWT auth — register, login, refresh token, Passport.js                         |
+| `apps/product-service`      | 3005 | Product catalog — CRUD, price, stock info                                      |
+| `apps/order-service`        | 3006 | Order management — create order, update status, outbox pattern                 |
+| `apps/inventory-service`    | 3007 | Stock reservation — Redlock distributed lock, outbox, idempotency              |
+| `apps/payment-service`      | 3008 | VNPay payment — QR generation, IPN webhook, timeout scheduler                  |
+| `apps/shipping-service`     | 3009 | Shipping label + mock delivery simulation (PREPARING → IN_TRANSIT → DELIVERED) |
+| `apps/notification-service` | 3010 | Email (Mailpit) + WebSocket (Socket.IO `/notifications` namespace)             |
+| `apps/refund-service`       | 3011 | Refund requests — file upload to MinIO, outbox pattern                         |
+| `apps/orchestrator-service` | 3012 | Orchestrator Saga — ORDER_SAGA + REFUND_SAGA, DLQ with retry backoff           |
 
 ### Infrastructure Ports (Docker)
 
@@ -94,19 +94,19 @@ Docker volumes live in `docker/volumes/`. Reset everything with `cd docker && do
 
 Single PostgreSQL instance, one schema per service:
 
-| Schema         | Service                 |
-| -------------- | ----------------------- |
-| `public`       | api                     |
-| `gateway`      | api-gateway             |
-| `auth`         | auth-service            |
-| `product`      | product-service         |
-| `orders`       | order-service           |
-| `inventory`    | inventory-service       |
-| `payment`      | payment-service         |
-| `shipping`     | shipping-service        |
-| `notification` | notification-service    |
-| `refund`       | refund-service          |
-| `orchestrator` | orchestrator-service    |
+| Schema         | Service              |
+| -------------- | -------------------- |
+| `public`       | api                  |
+| `gateway`      | api-gateway          |
+| `auth`         | auth-service         |
+| `product`      | product-service      |
+| `orders`       | order-service        |
+| `inventory`    | inventory-service    |
+| `payment`      | payment-service      |
+| `shipping`     | shipping-service     |
+| `notification` | notification-service |
+| `refund`       | refund-service       |
+| `orchestrator` | orchestrator-service |
 
 Set `DB_SCHEMA` in each app's `.env` accordingly.
 
@@ -182,18 +182,18 @@ refund.requested
 
 ### Key Kafka topics
 
-| Topic | Producer | Consumer |
-| ----- | -------- | -------- |
-| `order.created` | order-service | orchestrator |
-| `inventory.reserve_stock` | orchestrator | inventory-service |
-| `inventory.stock_reserved` / `stock_insufficient` / `stock_released` / `stock_confirmed` | inventory-service (outbox) | orchestrator |
-| `payment.completed` / `failed` / `timeout` / `refunded` | payment-service (outbox/scheduler) | orchestrator |
-| `shipping.create_label` | orchestrator | shipping-service |
-| `shipping.label_created` / `status_updated` / `delivered` | shipping-service | orchestrator |
-| `notification.send` | orchestrator | notification-service |
-| `refund.requested` | refund-service (outbox) | orchestrator |
-| `refund.validated` | refund-service | orchestrator |
-| `refund.status_updated` | orchestrator | refund-service |
+| Topic                                                                                    | Producer                           | Consumer             |
+| ---------------------------------------------------------------------------------------- | ---------------------------------- | -------------------- |
+| `order.created`                                                                          | order-service                      | orchestrator         |
+| `inventory.reserve_stock`                                                                | orchestrator                       | inventory-service    |
+| `inventory.stock_reserved` / `stock_insufficient` / `stock_released` / `stock_confirmed` | inventory-service (outbox)         | orchestrator         |
+| `payment.completed` / `failed` / `timeout` / `refunded`                                  | payment-service (outbox/scheduler) | orchestrator         |
+| `shipping.create_label`                                                                  | orchestrator                       | shipping-service     |
+| `shipping.label_created` / `status_updated` / `delivered`                                | shipping-service                   | orchestrator         |
+| `notification.send`                                                                      | orchestrator                       | notification-service |
+| `refund.requested`                                                                       | refund-service (outbox)            | orchestrator         |
+| `refund.validated`                                                                       | refund-service                     | orchestrator         |
+| `refund.status_updated`                                                                  | orchestrator                       | refund-service       |
 
 ### Outbox pattern
 
@@ -220,16 +220,16 @@ Key files:
 
 Frontend pages under `apps/web/app/`:
 
-| Route | Description |
-| ----- | ----------- |
-| `/products` | Product listing (root redirects here) |
-| `/login` | Auth (JWT, stored in Zustand session store) |
-| `/checkout` | Place order |
-| `/orders` | Order list |
-| `/orders/[orderId]` | Order detail + timeline |
-| `/orders/[orderId]/refund` | Submit refund request (file upload) |
-| `/payment/[orderId]` | VNPay QR payment page |
-| `/payment/callback` | VNPay return URL handler |
+| Route                      | Description                                 |
+| -------------------------- | ------------------------------------------- |
+| `/products`                | Product listing (root redirects here)       |
+| `/login`                   | Auth (JWT, stored in Zustand session store) |
+| `/checkout`                | Place order                                 |
+| `/orders`                  | Order list                                  |
+| `/orders/[orderId]`        | Order detail + timeline                     |
+| `/orders/[orderId]/refund` | Submit refund request (file upload)         |
+| `/payment/[orderId]`       | VNPay QR payment page                       |
+| `/payment/callback`        | VNPay return URL handler                    |
 
 Real-time order status updates use `socket.io-client` connecting to `notification-service:3010/notifications`.
 

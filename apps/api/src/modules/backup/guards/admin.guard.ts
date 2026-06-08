@@ -14,7 +14,8 @@ export class AdminGuard implements CanActivate {
   canActivate(context: ExecutionContext): boolean {
     const req = context.switchToHttp().getRequest<Request>();
     const method = req.method.toUpperCase();
-    const adminEmail = this.configService.getOrThrow<string>('backup.adminEmail');
+    const adminEmail =
+      this.configService.getOrThrow<string>('backup.adminEmail');
 
     let email: string | undefined;
     if (method === 'GET') {

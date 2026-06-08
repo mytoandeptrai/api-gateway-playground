@@ -23,7 +23,11 @@ export class RedlockService {
     this.redlock.on('error', (err) => {
       this.logger.error(
         '[Redlock] Error',
-        err instanceof Error ? err.message : String(err),
+        err instanceof Error
+          ? err.message
+          : typeof err === 'string'
+            ? err
+            : 'Unknown error',
       );
     });
   }
@@ -38,7 +42,11 @@ export class RedlockService {
     } catch (err) {
       this.logger.warn(
         '[Redlock] Release failed (lock may have expired)',
-        err instanceof Error ? err.message : String(err),
+        err instanceof Error
+          ? err.message
+          : typeof err === 'string'
+            ? err
+            : 'Unknown error',
       );
     }
   }

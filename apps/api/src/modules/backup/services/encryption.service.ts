@@ -10,14 +10,19 @@ export class EncryptionService {
   private readonly key: Buffer;
 
   constructor(private readonly configService: ConfigService) {
-    const keyHex = this.configService.getOrThrow<string>('backup.encryptionKey');
+    const keyHex = this.configService.getOrThrow<string>(
+      'backup.encryptionKey',
+    );
     this.key = Buffer.from(keyHex, 'hex');
   }
 
   encrypt(data: string): string {
     const iv = crypto.randomBytes(IV_LENGTH);
     const cipher = crypto.createCipheriv(ALGORITHM, this.key, iv);
-    const encrypted = Buffer.concat([cipher.update(data, 'utf8'), cipher.final()]);
+    const encrypted = Buffer.concat([
+      cipher.update(data, 'utf8'),
+      cipher.final(),
+    ]);
     return iv.toString('hex') + ':' + encrypted.toString('hex');
   }
 

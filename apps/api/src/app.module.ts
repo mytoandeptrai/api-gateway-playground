@@ -22,7 +22,13 @@ import { BackupModule } from './modules/backup/backup.module';
     // Configuration module - must be first
     ConfigModule.forRoot({
       isGlobal: true,
-      load: [databaseConfig, redisConfig, kafkaConfig, backupConfig, googleConfig],
+      load: [
+        databaseConfig,
+        redisConfig,
+        kafkaConfig,
+        backupConfig,
+        googleConfig,
+      ],
       envFilePath: ['.env.local', '.env'],
     }),
 

@@ -16,7 +16,11 @@ export class BackupLog {
   @PrimaryGeneratedColumn('uuid')
   backupId: string;
 
-  @Column({ type: 'enum', enum: BackupStatus, default: BackupStatus.IN_PROGRESS })
+  @Column({
+    type: 'enum',
+    enum: BackupStatus,
+    default: BackupStatus.IN_PROGRESS,
+  })
   status: BackupStatus;
 
   @CreateDateColumn()

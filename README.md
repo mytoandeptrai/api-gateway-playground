@@ -409,20 +409,20 @@ pnpm turbo dev
 pnpm dev:services
 ```
 
-| App                    | URL                    |
-| ---------------------- | ---------------------- |
-| Web                    | http://localhost:3000  |
-| API                    | http://localhost:3001  |
-| API Gateway            | http://localhost:3002  |
-| Auth Service           | http://localhost:3003  |
-| Product Service        | http://localhost:3005  |
-| Order Service          | http://localhost:3006  |
-| Inventory Service      | http://localhost:3007  |
-| Payment Service        | http://localhost:3008  |
-| Shipping Service       | http://localhost:3009  |
-| Notification Service   | http://localhost:3010  |
-| Refund Service         | http://localhost:3011  |
-| Orchestrator Service   | http://localhost:3012  |
+| App                  | URL                   |
+| -------------------- | --------------------- |
+| Web                  | http://localhost:3000 |
+| API                  | http://localhost:3001 |
+| API Gateway          | http://localhost:3002 |
+| Auth Service         | http://localhost:3003 |
+| Product Service      | http://localhost:3005 |
+| Order Service        | http://localhost:3006 |
+| Inventory Service    | http://localhost:3007 |
+| Payment Service      | http://localhost:3008 |
+| Shipping Service     | http://localhost:3009 |
+| Notification Service | http://localhost:3010 |
+| Refund Service       | http://localhost:3011 |
+| Orchestrator Service | http://localhost:3012 |
 
 ## Commands
 
@@ -452,12 +452,12 @@ Each service has its own multi-stage `Dockerfile` under `apps/<service>/Dockerfi
 
 ### Dockerfile stages
 
-| Stage | Base | Purpose |
-|---|---|---|
-| `deps` | `node:20.19-alpine` | Install workspace deps with frozen lockfile |
-| `builder` | `node:20.19-alpine` | Compile TypeScript (`pnpm --filter <app> build`) |
+| Stage       | Base                | Purpose                                                         |
+| ----------- | ------------------- | --------------------------------------------------------------- |
+| `deps`      | `node:20.19-alpine` | Install workspace deps with frozen lockfile                     |
+| `builder`   | `node:20.19-alpine` | Compile TypeScript (`pnpm --filter <app> build`)                |
 | `prod-deps` | `node:20.19-alpine` | Isolate prod deps (`pnpm --filter <app> deploy --prod /deploy`) |
-| `runner` | `node:20.19-alpine` | Minimal production image, non-root user |
+| `runner`    | `node:20.19-alpine` | Minimal production image, non-root user                         |
 
 The `web` service uses Next.js `output: 'standalone'` — the runner copies `.next/standalone` without a separate `prod-deps` stage.
 
@@ -480,14 +480,14 @@ Production bind-mount data lives in `docker/volumes-production/` (postgres, redi
 
 Inside Docker Compose, services talk to each other by container name, not `localhost`. The compose file overrides the env vars that differ from local dev:
 
-| Env var | Dev (local) | Docker |
-|---|---|---|
-| `DB_HOST` | `localhost` | `postgres` |
-| `REDIS_HOST` | `localhost` | `redis` |
-| `KAFKA_BROKERS` | `localhost:1115` | `kafka:29092` |
-| `MAIL_HOST` / `SMTP_HOST` | `localhost` | `mailpit` |
-| `MINIO_ENDPOINT` | `localhost` | `minio` |
-| `API_GATEWAY_URL` (web) | `http://localhost:3002` | `http://api-gateway:3002` |
+| Env var                   | Dev (local)             | Docker                    |
+| ------------------------- | ----------------------- | ------------------------- |
+| `DB_HOST`                 | `localhost`             | `postgres`                |
+| `REDIS_HOST`              | `localhost`             | `redis`                   |
+| `KAFKA_BROKERS`           | `localhost:1115`        | `kafka:29092`             |
+| `MAIL_HOST` / `SMTP_HOST` | `localhost`             | `mailpit`                 |
+| `MINIO_ENDPOINT`          | `localhost`             | `minio`                   |
+| `API_GATEWAY_URL` (web)   | `http://localhost:3002` | `http://api-gateway:3002` |
 
 `env_file` loads the local `.env` values; the `environment` block in compose overrides only the infra hostnames.
 
@@ -533,21 +533,21 @@ Images are pushed to Docker Hub as:
 <DOCKERHUB_USERNAME>/nextmart-<service>:latest
 ```
 
-| Service | Image |
-|---|---|
-| `api-gateway` | `<user>/nextmart-api-gateway` |
+| Service        | Image                          |
+| -------------- | ------------------------------ |
+| `api-gateway`  | `<user>/nextmart-api-gateway`  |
 | `auth-service` | `<user>/nextmart-auth-service` |
-| `web` | `<user>/nextmart-web` |
-| … | … |
+| `web`          | `<user>/nextmart-web`          |
+| …              | …                              |
 
 ### Required secrets
 
 Set these in **GitHub → Settings → Environments → `nextmart`**:
 
-| Secret | Value |
-|---|---|
-| `DOCKERHUB_USERNAME` | Your Docker Hub username |
-| `DOCKERHUB_TOKEN` | Docker Hub access token (read/write) |
+| Secret               | Value                                |
+| -------------------- | ------------------------------------ |
+| `DOCKERHUB_USERNAME` | Your Docker Hub username             |
+| `DOCKERHUB_TOKEN`    | Docker Hub access token (read/write) |
 
 ---
 

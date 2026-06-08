@@ -186,7 +186,11 @@ export class RestoreService {
       } catch (err) {
         this.logger.error(
           `[${id}] Transaction failed, rolling back`,
-          err instanceof Error ? err.message : String(err),
+          err instanceof Error
+            ? err.message
+            : typeof err === 'string'
+              ? err
+              : 'Unknown error',
         );
         await queryRunner.rollbackTransaction();
         throw err;
@@ -203,7 +207,12 @@ export class RestoreService {
     } catch (err) {
       log.status = RestoreStatus.FAILED;
       log.endTime = new Date();
-      log.error = err instanceof Error ? err.message : String(err);
+      log.error =
+        err instanceof Error
+          ? err.message
+          : typeof err === 'string'
+            ? err
+            : 'Unknown error';
       log.collectionStats = collectionStats;
       await this.restoreLogRepo.save(log);
       await this.sendNotification(log);
@@ -257,7 +266,11 @@ export class RestoreService {
     } catch (err) {
       this.logger.error(
         'Failed to send restore notification',
-        err instanceof Error ? err.message : String(err),
+        err instanceof Error
+          ? err.message
+          : typeof err === 'string'
+            ? err
+            : 'Unknown error',
       );
     }
   }

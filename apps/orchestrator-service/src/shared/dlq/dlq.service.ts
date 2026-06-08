@@ -41,7 +41,7 @@ export class DlqService {
         lastError = err;
         this.logger.warn(
           `[RETRY] ${topic} attempt ${attempt + 1}/${MAX_RETRIES} ` +
-            `sagaId=${event.sagaId ?? '?'} orderId=${event.orderId ?? '?'}: ${err}`,
+            `sagaId=${(event?.sagaId as string | undefined) ?? '?'} orderId=${(event?.orderId as string | undefined) ?? '?'}: ${err instanceof Error ? err.message : typeof err === 'string' ? err : 'Unknown error'}`,
         );
         if (attempt < MAX_RETRIES - 1) {
           await sleep(RETRY_DELAYS_MS[attempt]);
@@ -51,7 +51,14 @@ export class DlqService {
 
     // All retries exhausted
     await this.sendToDlq(topic, event, lastError);
-    await this.markSagaFailed(event, String(lastError));
+    await this.markSagaFailed(
+      event,
+      lastError instanceof Error
+        ? lastError.message
+        : typeof lastError === 'string'
+          ? lastError
+          : 'Unknown error',
+    );
   }
 
   private async sendToDlq(
@@ -65,39 +72,44 @@ export class DlqService {
         topic: dlqTopic,
         messages: [
           {
-            key: (event.orderId as string) ?? null,
+            key: (event?.orderId as string) ?? null,
             value: JSON.stringify({
               originalTopic: topic,
               event,
-              error: error instanceof Error ? error.message : typeof error === 'string' ? error : 'Unknown error',
+              error:
+                error instanceof Error
+                  ? error.message
+                  : typeof error === 'string'
+                    ? error
+                    : 'Unknown error',
               failedAt: new Date().toISOString(),
             }),
           },
         ],
       });
       this.logger.error(
-        `[DLQ] Message sent to ${dlqTopic} — sagaId=${event.sagaId ?? '?'} orderId=${event.orderId ?? '?'} error=${error instanceof Error ? error.message : typeof error === 'string' ? error : 'Unknown error'}`,
+        `[DLQ] Message sent to ${dlqTopic} — sagaId=${(event?.sagaId as string | undefined) ?? '?'} orderId=${(event?.orderId as string | undefined) ?? '?'} error=${error instanceof Error ? error.message : typeof error === 'string' ? error : 'Unknown error'}`,
       );
     } catch (dlqErr) {
-      this.logger.error(`[DLQ] Failed to publish to ${dlqTopic}: ${dlqErr instanceof Error ? dlqErr.message : typeof dlqErr === 'string' ? dlqErr : 'Unknown error'}`);
+      this.logger.error(
+        `[DLQ] Failed to publish to ${dlqTopic}: ${dlqErr instanceof Error ? dlqErr.message : typeof dlqErr === 'string' ? dlqErr : 'Unknown error'}`,
+      );
     }
   }
 
   private async markSagaFailed(event: Record<string, unknown>, reason: string) {
-    const sagaId = event.sagaId as string | undefined;
-    const orderId = event.orderId as string | undefined;
+    const sagaId = event?.sagaId as string | undefined;
+    const orderId = event?.orderId as string | undefined;
 
     if (!sagaId && !orderId) return;
 
-    const where = sagaId ? { id: sagaId } : { orderId };
-    const saga = await this.sagaRepo.findOne({
-      where: where as Parameters<typeof this.sagaRepo.findOne>[0]['where'],
-    });
+    const where = sagaId ? { id: sagaId } : { orderId: orderId as string };
+    const saga = await this.sagaRepo.findOne({ where });
     if (!saga) return;
 
     await this.sagaRepo.update(saga.id, {
       status: SagaStatus.FAILED,
-      currentStep: `FAILED:${event.eventType ?? 'unknown'}`,
+      currentStep: `FAILED:${(event?.eventType as string | undefined) ?? 'unknown'}`,
     });
 
     this.logger.error(
@@ -135,9 +147,9 @@ export class DlqService {
             },
           ],
         })
-        .catch((err) =>
+        .catch((err: unknown) =>
           this.logger.error(
-            `[DLQ] Failed to send failure notification: ${err}`,
+            `[DLQ] Failed to send failure notification: ${err instanceof Error ? err.message : typeof err === 'string' ? err : 'Unknown error'}`,
           ),
         );
     }

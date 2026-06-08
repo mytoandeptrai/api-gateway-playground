@@ -36,7 +36,11 @@ export class KafkaAdmin implements OnModuleInit, OnModuleDestroy {
       } catch (error) {
         this.logger.error(
           `[KafkaAdmin] Connect attempt ${attempt}/${retries} failed`,
-          error instanceof Error ? error.message : String(error),
+          error instanceof Error
+            ? error.message
+            : typeof error === 'string'
+              ? error
+              : 'Unknown error',
         );
         if (attempt >= retries) throw error;
         await sleep(1000 * attempt);
@@ -51,7 +55,11 @@ export class KafkaAdmin implements OnModuleInit, OnModuleDestroy {
     } catch (error) {
       this.logger.error(
         '[KafkaAdmin] Disconnect failed',
-        error instanceof Error ? error.message : String(error),
+        error instanceof Error
+          ? error.message
+          : typeof error === 'string'
+            ? error
+            : 'Unknown error',
       );
       throw error;
     }
@@ -72,7 +80,12 @@ export class KafkaAdmin implements OnModuleInit, OnModuleDestroy {
       }
     } catch (error) {
       // Ignore "topic already exists" errors — idempotent
-      const msg = error instanceof Error ? error.message : String(error);
+      const msg =
+        error instanceof Error
+          ? error.message
+          : typeof error === 'string'
+            ? error
+            : 'Unknown error';
       if (!msg.includes('TOPIC_ALREADY_EXISTS')) {
         this.logger.error(`[KafkaAdmin] Failed to create topic: ${topic}`, msg);
         throw error;
@@ -92,7 +105,11 @@ export class KafkaAdmin implements OnModuleInit, OnModuleDestroy {
     } catch (error) {
       this.logger.error(
         '[KafkaAdmin] Failed to list topics',
-        error instanceof Error ? error.message : String(error),
+        error instanceof Error
+          ? error.message
+          : typeof error === 'string'
+            ? error
+            : 'Unknown error',
       );
       throw error;
     }

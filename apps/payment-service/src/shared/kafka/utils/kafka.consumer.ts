@@ -48,7 +48,11 @@ export class KafkaConsumer implements IKafkaConsumer, OnModuleDestroy {
       } catch (error) {
         this.logger.error(
           `[KafkaConsumer] Connect attempt ${attempt}/${retries} failed for ${consumerKey}`,
-          error instanceof Error ? error.message : String(error),
+          error instanceof Error
+            ? error.message
+            : typeof error === 'string'
+              ? error
+              : 'Unknown error',
         );
         if (attempt >= retries) throw error;
         await sleep(1000 * attempt);
@@ -112,7 +116,11 @@ export class KafkaConsumer implements IKafkaConsumer, OnModuleDestroy {
           this.logger.error(
             `[KafkaConsumer] Handler failed — skipping commit for ${consumerKey} ` +
               `topic=${topic} partition=${partition} offset=${message.offset}`,
-            error instanceof Error ? error.message : String(error),
+            error instanceof Error
+              ? error.message
+              : typeof error === 'string'
+                ? error
+                : 'Unknown error',
           );
         }
       },

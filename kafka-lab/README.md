@@ -27,11 +27,11 @@ Kiểm tra topic đã tạo trên Kafka UI: http://localhost:1116
 
 ## Files
 
-| File | Mô tả |
-|------|-------|
-| `setup.sh` | Tạo topic `lab.orders` với N partitions |
+| File          | Mô tả                                     |
+| ------------- | ----------------------------------------- |
+| `setup.sh`    | Tạo topic `lab.orders` với N partitions   |
 | `producer.js` | Gửi messages với key cố định theo orderId |
-| `consumer.js` | Consumer có thể cấu hình delay, groupId |
+| `consumer.js` | Consumer có thể cấu hình delay, groupId   |
 
 ---
 
@@ -39,24 +39,24 @@ Kiểm tra topic đã tạo trên Kafka UI: http://localhost:1116
 
 ### producer.js
 
-| Var | Default | Mô tả |
-|-----|---------|-------|
-| `MESSAGE_COUNT` | `30` | Số message gửi |
-| `INTERVAL_MS` | `500` | Delay giữa các message (ms) |
-| `BURST` | `false` | Gửi tất cả không delay |
-| `SKEW` | `false` | Tất cả message dùng cùng 1 key → cùng 1 partition |
-| `INJECT_POISON` | `false` | Chèn 1 poison pill message vào giữa |
-| `POISON_KEY` | `order-POISON` | Key của poison pill message |
+| Var             | Default        | Mô tả                                             |
+| --------------- | -------------- | ------------------------------------------------- |
+| `MESSAGE_COUNT` | `30`           | Số message gửi                                    |
+| `INTERVAL_MS`   | `500`          | Delay giữa các message (ms)                       |
+| `BURST`         | `false`        | Gửi tất cả không delay                            |
+| `SKEW`          | `false`        | Tất cả message dùng cùng 1 key → cùng 1 partition |
+| `INJECT_POISON` | `false`        | Chèn 1 poison pill message vào giữa               |
+| `POISON_KEY`    | `order-POISON` | Key của poison pill message                       |
 
 ### consumer.js
 
-| Var | Default | Mô tả |
-|-----|---------|-------|
-| `CONSUMER_ID` | `1` | Label hiển thị trong log |
-| `GROUP_ID` | `lab-group` | Consumer group |
-| `DELAY_MS` | `0` | Giả lập xử lý chậm (ms) |
-| `POISON_KEY` | off | Messages có key này luôn fail, không bao giờ commit |
-| `CRASH_AFTER_N` | `0` | Exit không commit sau khi xử lý N messages |
+| Var             | Default     | Mô tả                                               |
+| --------------- | ----------- | --------------------------------------------------- |
+| `CONSUMER_ID`   | `1`         | Label hiển thị trong log                            |
+| `GROUP_ID`      | `lab-group` | Consumer group                                      |
+| `DELAY_MS`      | `0`         | Giả lập xử lý chậm (ms)                             |
+| `POISON_KEY`    | off         | Messages có key này luôn fail, không bao giờ commit |
+| `CRASH_AFTER_N` | `0`         | Exit không commit sau khi xử lý N messages          |
 
 ---
 
@@ -231,6 +231,7 @@ MESSAGE_COUNT=100 INTERVAL_MS=300 node producer.js
 ```
 
 **Graceful (Ctrl+C):**
+
 ```bash
 # Ctrl+C trên terminal C2
 # → consumer gọi disconnect() → gửi LeaveGroup lên broker
@@ -238,6 +239,7 @@ MESSAGE_COUNT=100 INTERVAL_MS=300 node producer.js
 ```
 
 **Ungraceful (kill -9):**
+
 ```bash
 # Lấy PID của C2
 ps aux | grep consumer.js
@@ -256,11 +258,11 @@ Kết quả mong đợi: graceful rebalance xảy ra ngay lập tức, ungracefu
 
 http://localhost:1116
 
-| Tab | Xem gì |
-|-----|--------|
-| Topics → lab.orders → Messages | Message browser, partition assignment |
-| Topics → lab.orders → Consumers | Consumer groups đang đọc topic này |
-| Consumer Groups | Offset và lag theo từng partition |
+| Tab                             | Xem gì                                |
+| ------------------------------- | ------------------------------------- |
+| Topics → lab.orders → Messages  | Message browser, partition assignment |
+| Topics → lab.orders → Consumers | Consumer groups đang đọc topic này    |
+| Consumer Groups                 | Offset và lag theo từng partition     |
 
 ---
 
