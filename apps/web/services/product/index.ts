@@ -5,6 +5,7 @@ export const useGetProductsQuery = () =>
   useQuery({
     queryKey: ["products"],
     queryFn: () => getProductsApi(),
+    placeholderData: (prev) => prev,
   });
 
 export const useGetProductByIdQuery = (id: string) =>
