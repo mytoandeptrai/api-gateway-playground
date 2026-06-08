@@ -141,7 +141,7 @@ export class OrderSagaService {
     if (!saga) return;
 
     await this.completeStep(saga.id, STEP.AWAIT_PAYMENT, event.payload);
-    await this.createStep(
+    const isNewConfirmStep = await this.createStep(
       saga.id,
       STEP.CONFIRM_INVENTORY,
       'inventory.confirm_stock',
@@ -152,10 +152,12 @@ export class OrderSagaService {
     });
 
     await this.updateOrderStatus(saga.orderId, 'PAYMENT_RECEIVED');
-    await this.sendNotification(saga, 'payment-success', {
-      amount: event.payload.amount,
-      paidAt: event.payload.paidAt,
-    });
+    if (isNewConfirmStep) {
+      await this.sendNotification(saga, 'payment-success', {
+        amount: event.payload.amount,
+        paidAt: event.payload.paidAt,
+      });
+    }
     await this.publishCommand(
       'inventory.confirm_stock',
       saga.id,
@@ -242,11 +244,13 @@ export class OrderSagaService {
 
     const trackingId = event.payload.trackingId as string;
     await this.completeStep(saga.id, STEP.CREATE_SHIPPING, event.payload);
-    await this.createStep(saga.id, STEP.AWAIT_DELIVERY, null, null);
+    const isNewDeliveryStep = await this.createStep(saga.id, STEP.AWAIT_DELIVERY, null, null);
     await this.sagaRepo.update(saga.id, { currentStep: STEP.AWAIT_DELIVERY });
 
     await this.updateOrderStatus(saga.orderId, 'PREPARING', { trackingId });
-    await this.sendNotification(saga, 'order-confirmed', { trackingId });
+    if (isNewDeliveryStep) {
+      await this.sendNotification(saga, 'order-confirmed', { trackingId });
+    }
 
     this.logger.log(
       `Saga ${saga.id}: shipping label created, trackingId=${trackingId}`,
@@ -375,7 +379,7 @@ export class OrderSagaService {
     await this.completeStep(saga.id, 'VALIDATE_REFUND', event.payload);
 
     if (approved) {
-      await this.createStep(
+      const isNewRefundStep = await this.createStep(
         saga.id,
         'PROCESS_REFUND',
         'payment.refund_requested',
@@ -383,7 +387,9 @@ export class OrderSagaService {
       );
       await this.sagaRepo.update(saga.id, { currentStep: 'PROCESS_REFUND' });
 
-      await this.sendNotification(saga, 'refund-approved', { refundId });
+      if (isNewRefundStep) {
+        await this.sendNotification(saga, 'refund-approved', { refundId });
+      }
 
       const orderSaga = await this.sagaRepo.findOne({
         where: { orderId: event.orderId, sagaType: 'ORDER_SAGA' },
@@ -504,8 +510,11 @@ export class OrderSagaService {
     stepName: string,
     commandTopic: string | null,
     payload: object | null,
-  ) {
-    return this.stepRepo.save(
+  ): Promise<boolean> {
+    const existing = await this.stepRepo.findOne({ where: { sagaId, stepName } });
+    if (existing) return false;
+
+    await this.stepRepo.save(
       this.stepRepo.create({
         sagaId,
         stepName,
@@ -515,6 +524,7 @@ export class OrderSagaService {
         startedAt: new Date(),
       }),
     );
+    return true;
   }
 
   private async completeStep(sagaId: string, stepName: string, result: object) {

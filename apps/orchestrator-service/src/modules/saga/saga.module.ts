@@ -10,7 +10,9 @@ import { SagaTraceService } from './saga-trace.service';
 import { SagaTraceController } from './saga-trace.controller';
 import { CircuitBreakerService } from '@/shared/circuit-breaker/circuit-breaker.service';
 import { DlqService } from '@/shared/dlq/dlq.service';
-import { SagaCompensationJob } from '@/shared/dlq/saga-compensation.job';
+import { SagaCompensationJob } from './jobs/saga-compensation.job';
+import { SagaRecoveryService } from './saga-recovery.service';
+import { SagaRecoveryJob } from './jobs/saga-recovery.job';
 
 @Module({
   imports: [
@@ -26,6 +28,8 @@ import { SagaCompensationJob } from '@/shared/dlq/saga-compensation.job';
     CircuitBreakerService,
     DlqService,
     SagaCompensationJob,
+    SagaRecoveryService,
+    SagaRecoveryJob,
   ],
 })
 export class SagaModule {}

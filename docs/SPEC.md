@@ -2342,6 +2342,8 @@ Services **bắt buộc** có đầy đủ resilience patterns: Orchestrator, Or
 
 **Goal**: Xây dựng module backup & restore hoàn chỉnh cho `apps/api`: dump PostgreSQL entities ra JSON, mã hóa AES-256-CBC, lưu Google Drive Shared Drive, restore theo chế độ REPLACE/MERGE với topological sort FK-aware. Admin trigger qua REST API, tiến trình theo dõi qua polling endpoint.
 
+> **Scope**: Chỉ `apps/api`. Sync sang các services còn lại sẽ thực hiện ở Phase 5.
+
 **Backend (`apps/api`):**
 
 - [x] Install: `bullmq`, `@nestjs/bullmq`, `googleapis`, `redlock`
@@ -2380,6 +2382,56 @@ Services **bắt buộc** có đầy đủ resilience patterns: Orchestrator, Or
 - [ ] Selective restore MERGE
 - [ ] PARTIAL status
 - [ ] Concurrent lock test
+
+---
+
+### Phase 5 — Database Backup (all services)
+
+**Goal**: Sync backup module từ `apps/api` ra 9 services còn lại. Mỗi service dùng chung cùng architecture nhưng khác nhau ở `EXCLUDED_TABLES` và entity list.
+
+**Services cần sync:**
+
+- [ ] `auth-service`
+- [ ] `product-service`
+- [ ] `order-service`
+- [ ] `inventory-service`
+- [ ] `payment-service`
+- [ ] `shipping-service`
+- [ ] `notification-service`
+- [ ] `refund-service`
+- [ ] `orchestrator-service`
+
+**Thay đổi per-service:**
+
+- `EXCLUDED_TABLES`: khác nhau theo migration table + operational tables (outbox_event, processed_event, processed_webhook)
+- `metadata.service`: tên service tương ứng
+- `filename` prefix: `backup-<service>-...`
+
+**Dependencies cần thêm:**
+
+- `auth-service` + `product-service`: thêm Kafka shared module + `kafka.config.ts` + `kafkajs` dep
+- `order-service`: thêm `SharedRedisModule` + update `CachingModule` để remove duplicate `RedisModule.forRootAsync`
+- All services: `@nestjs/bullmq`, `bullmq`, `googleapis`, `redlock` (hầu hết), `@nestjs/schedule` (một số)
+
+**Per-service EXCLUDED_TABLES:**
+
+| Service | Tables |
+|---------|--------|
+| `auth-service` | `migrations_auth` |
+| `order-service` | `migrations_order`, `outbox_event` |
+| `product-service` | `migrations_product` |
+| `inventory-service` | `migrations_api`, `outbox_event`, `processed_event` |
+| `payment-service` | `migrations_api`, `outbox_event`, `processed_webhook` |
+| `shipping-service` | `migrations_api` |
+| `notification-service` | `migrations_api` |
+| `orchestrator-service` | `migrations_api` |
+| `refund-service` | `migrations_api`, `outbox_event` |
+
+**Verify (per service):**
+
+- [ ] Manual backup trigger → Google Drive file xuất hiện
+- [ ] Full restore REPLACE không phá FK relations
+- [ ] Email notification gửi đúng
 
 ---
 

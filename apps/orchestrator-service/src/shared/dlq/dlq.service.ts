@@ -69,17 +69,17 @@ export class DlqService {
             value: JSON.stringify({
               originalTopic: topic,
               event,
-              error: String(error),
+              error: error instanceof Error ? error.message : typeof error === 'string' ? error : 'Unknown error',
               failedAt: new Date().toISOString(),
             }),
           },
         ],
       });
       this.logger.error(
-        `[DLQ] Message sent to ${dlqTopic} — sagaId=${event.sagaId ?? '?'} orderId=${event.orderId ?? '?'} error=${error}`,
+        `[DLQ] Message sent to ${dlqTopic} — sagaId=${event.sagaId ?? '?'} orderId=${event.orderId ?? '?'} error=${error instanceof Error ? error.message : typeof error === 'string' ? error : 'Unknown error'}`,
       );
     } catch (dlqErr) {
-      this.logger.error(`[DLQ] Failed to publish to ${dlqTopic}: ${dlqErr}`);
+      this.logger.error(`[DLQ] Failed to publish to ${dlqTopic}: ${dlqErr instanceof Error ? dlqErr.message : typeof dlqErr === 'string' ? dlqErr : 'Unknown error'}`);
     }
   }
 
