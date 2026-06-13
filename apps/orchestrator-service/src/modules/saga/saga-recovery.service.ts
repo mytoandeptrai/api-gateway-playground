@@ -99,10 +99,18 @@ export class SagaRecoveryService {
     switch (saga.currentStep) {
       case 'RESERVE_INVENTORY':
       case 'CONFIRM_INVENTORY':
+        if (!orderPayload?.productId || !orderPayload?.quantity) {
+          this.logger.error(
+            `[RECOVERY] saga=${sagaId} missing productId/quantity in orderPayload — cannot recover, mark as FAILED manually`,
+          );
+          throw new Error(
+            `saga=${sagaId} orderPayload missing productId/quantity`,
+          );
+        }
         return {
           ...base,
-          productId: orderPayload?.productId,
-          quantity: orderPayload?.quantity,
+          productId: orderPayload.productId,
+          quantity: orderPayload.quantity,
         };
       case 'CREATE_SHIPPING':
         return { ...base, userId };

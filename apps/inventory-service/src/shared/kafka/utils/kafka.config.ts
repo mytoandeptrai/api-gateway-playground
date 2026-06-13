@@ -67,6 +67,7 @@ export class KafkaConfigService {
 
   getClientConfig(): KafkaClientConfig {
     return {
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
       clientId: this.config.clientId!,
       brokers: this.config.brokers as string[],
     };

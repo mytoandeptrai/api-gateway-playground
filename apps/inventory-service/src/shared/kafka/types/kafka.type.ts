@@ -13,7 +13,15 @@ export type KafkaConsumerOptions = ConsumerConfig & {
   groupId: string;
   fromBeginning?: boolean;
   retries?: number;
+  instanceId?: number;
 };
+
+export type MessageHandler = (message: {
+  key: string | null;
+  value: string | null;
+  topic: string;
+  partition: number;
+}) => Promise<void>;
 
 export interface IKafkaProducer {
   connect(): Promise<void>;
@@ -25,13 +33,10 @@ export interface IKafkaConsumer {
   disconnectConsumer(customerKey: string): Promise<void>;
   disconnect(): Promise<void>;
   subscribe(options: KafkaConsumerOptions): Promise<string>;
-  run(
-    consumerKey: string,
-    handler: (message: {
-      key: string | null;
-      value: string | null;
-      topic: string;
-      partition: number;
-    }) => Promise<void>,
-  ): Promise<void>;
+  run(consumerKey: string, handler: MessageHandler): Promise<void>;
+  createConsumers(
+    options: Omit<KafkaConsumerOptions, 'instanceId'>,
+    count: number,
+    handler: MessageHandler,
+  ): Promise<string[]>;
 }

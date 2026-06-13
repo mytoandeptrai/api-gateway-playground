@@ -2,7 +2,6 @@ import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
 import { RedisService } from '@liaoliaots/nestjs-redis';
-import type Redis from 'ioredis';
 import Redlock from 'redlock';
 import { randomUUID } from 'crypto';
 import { InventoryItem } from './entities/inventory-item.entity';
@@ -13,7 +12,7 @@ import {
 import { ProcessedEvent } from './entities/processed-event.entity';
 import { OutboxEvent } from './entities/outbox-event.entity';
 
-interface KafkaEnvelope {
+export interface KafkaEnvelope {
   eventId: string;
   eventType: string;
   sagaId: string;
@@ -52,12 +51,18 @@ export class InventoryService {
   async reserveStock(event: KafkaEnvelope) {
     if (await this.isDuplicate(event.eventId)) return;
 
-    const { productId, quantity, sagaId, orderId } = event.payload as {
+    const { productId, sagaId, orderId } = event.payload as {
       productId: string;
-      quantity: number;
       sagaId: string;
       orderId: string;
     };
+    const quantity = Number(event.payload.quantity);
+    if (!productId || isNaN(quantity)) {
+      this.logger.error(
+        `[reserveStock] Invalid payload: productId=${productId} quantity=${quantity}`,
+      );
+      return;
+    }
 
     const lockKey = `inventory:lock:${productId}`;
     const lock = await this.redlock.acquire([lockKey], 5000);

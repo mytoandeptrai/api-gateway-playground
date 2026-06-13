@@ -1,7 +1,11 @@
 import { Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
 import { Consumer, Kafka } from 'kafkajs';
 import { setTimeout as sleep } from 'timers/promises';
-import { IKafkaConsumer, KafkaConsumerOptions } from '../types/kafka.type';
+import {
+  IKafkaConsumer,
+  KafkaConsumerOptions,
+  MessageHandler,
+} from '../types/kafka.type';
 import { KafkaConfig, KafkaConfigService } from './kafka.config';
 
 @Injectable()
@@ -25,7 +29,7 @@ export class KafkaConsumer implements IKafkaConsumer, OnModuleDestroy {
     ...options
   }: KafkaConsumerOptions): Promise<string> {
     const topicKey = options.topics ? options.topics.join(',') : options.topic;
-    const consumerKey = `${topicKey}-${options.groupId}`;
+    const consumerKey = `${topicKey}-${options.groupId}-${options.instanceId ?? 0}`;
 
     if (this.consumers.has(consumerKey)) {
       this.logger.warn(
@@ -60,6 +64,7 @@ export class KafkaConsumer implements IKafkaConsumer, OnModuleDestroy {
     }
 
     await consumer.subscribe({
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
       topics: options.topics ?? [options.topic!],
       fromBeginning: options.fromBeginning ?? false,
     });
@@ -71,15 +76,23 @@ export class KafkaConsumer implements IKafkaConsumer, OnModuleDestroy {
     return consumerKey;
   }
 
-  async run(
-    consumerKey: string,
-    handler: (message: {
-      key: string | null;
-      value: string | null;
-      topic: string;
-      partition: number;
-    }) => Promise<void>,
-  ): Promise<void> {
+  async createConsumers(
+    options: Omit<KafkaConsumerOptions, 'instanceId'>,
+    count: number,
+    handler: MessageHandler,
+  ): Promise<string[]> {
+    if (count <= 0) return [];
+
+    const keys: string[] = [];
+    for (let i = 0; i < count; i++) {
+      const key = await this.subscribe({ ...options, instanceId: i });
+      await this.run(key, handler);
+      keys.push(key);
+    }
+    return keys;
+  }
+
+  async run(consumerKey: string, handler: MessageHandler): Promise<void> {
     const consumer = this.consumers.get(consumerKey);
     if (!consumer) {
       throw new Error(
