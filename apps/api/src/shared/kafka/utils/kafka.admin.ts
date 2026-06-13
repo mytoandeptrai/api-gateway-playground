@@ -104,4 +104,40 @@ export class KafkaAdmin implements OnModuleInit, OnModuleDestroy {
       throw error;
     }
   }
+
+  async ensureTopicPartitions(
+    topic: string,
+    numPartitions: number,
+    replicationFactor = 1,
+  ): Promise<void> {
+    const existingTopics = await this.admin.listTopics();
+
+    if (!existingTopics.includes(topic)) {
+      await this.admin.createTopics({
+        topics: [{ topic, numPartitions, replicationFactor }],
+        waitForLeaders: true,
+      });
+      this.logger.log(
+        `[KafkaAdmin] Created topic ${topic} with ${numPartitions} partition(s)`,
+      );
+      return;
+    }
+
+    const metadata = await this.admin.fetchTopicMetadata({ topics: [topic] });
+    const currentCount = metadata.topics[0].partitions.length;
+
+    if (currentCount >= numPartitions) {
+      this.logger.log(
+        `[KafkaAdmin] Topic ${topic} already has ${currentCount} partition(s), skipping`,
+      );
+      return;
+    }
+
+    await this.admin.createPartitions({
+      topicPartitions: [{ topic, count: numPartitions }],
+    });
+    this.logger.log(
+      `[KafkaAdmin] Increased ${topic} partitions: ${currentCount} → ${numPartitions}`,
+    );
+  }
 }
