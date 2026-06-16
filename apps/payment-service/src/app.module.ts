@@ -1,6 +1,7 @@
 import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { BullModule } from '@nestjs/bullmq';
 import { AppController } from '@/app.controller';
 import { AppService } from '@/app.service';
 import databaseConfig from '@/config/database.config';
@@ -44,6 +45,29 @@ import { PaymentModule } from '@/modules/payment/payment.module';
         extra: {
           max: 20,
           connectionTimeoutMillis: 5000,
+        },
+      }),
+    }),
+
+    // BullMQ
+    BullModule.forRootAsync({
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService) => ({
+        connection: {
+          host: configService.get<string>('redis.host'),
+          port: configService.get<number>('redis.port'),
+          password: configService.get<string>('redis.password') || undefined,
+          db: configService.get<number>('redis.db'),
+          // Required for BullMQ workers — prevents ioredis from throwing on
+          // blocking commands used internally by the worker
+          maxRetriesPerRequest: null,
+          // Don't block startup waiting for Redis ready signal
+          enableReadyCheck: false,
+          // Exponential reconnect capped at 30s, stop after 10 attempts (~145s total)
+          retryStrategy: (times: number) => {
+            if (times > 10) return null;
+            return Math.min(times * 1000, 30_000);
+          },
         },
       }),
     }),

@@ -3,11 +3,16 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource, LessThan } from 'typeorm';
 import { ConfigService } from '@nestjs/config';
 import { randomUUID, createHmac } from 'crypto';
+import { InjectQueue } from '@nestjs/bullmq';
+import { Queue } from 'bullmq';
 import { VnpayService } from 'nestjs-vnpay';
 import { ProductCode } from 'vnpay';
-import { PaymentIntent, PaymentStatus } from './entities/payment-intent.entity';
-import { OutboxEvent } from './entities/outbox-event.entity';
-import { ProcessedWebhook } from './entities/processed-webhook.entity';
+import {
+  PaymentIntent,
+  PaymentStatus,
+} from '../entities/payment-intent.entity';
+import { OutboxEvent } from '../entities/outbox-event.entity';
+import { IPN_QUEUE } from '../payment.constants';
 
 @Injectable()
 export class PaymentService {
@@ -16,13 +21,10 @@ export class PaymentService {
   constructor(
     @InjectRepository(PaymentIntent)
     private readonly intentRepo: Repository<PaymentIntent>,
-    @InjectRepository(OutboxEvent)
-    private readonly outboxRepo: Repository<OutboxEvent>,
-    @InjectRepository(ProcessedWebhook)
-    private readonly webhookRepo: Repository<ProcessedWebhook>,
     private readonly dataSource: DataSource,
     private readonly configService: ConfigService,
     private readonly vnpayService: VnpayService,
+    @InjectQueue(IPN_QUEUE) private readonly ipnQueue: Queue,
   ) {}
 
   async createQR(body: { orderId: string; amount: number; sagaId: string }) {
@@ -80,7 +82,6 @@ export class PaymentService {
       this.configService.getOrThrow<string>('vnpay.hashSecret');
     const secureHash = query['vnp_SecureHash'];
     const txnRef = query['vnp_TxnRef'];
-    const responseCode = query['vnp_ResponseCode'];
 
     const params = { ...query };
     delete params['vnp_SecureHash'];
@@ -99,102 +100,14 @@ export class PaymentService {
       return { RspCode: '97', Message: 'Invalid signature' };
     }
 
-    const alreadyProcessed = await this.webhookRepo.findOne({
-      where: { vnpTxnRef: txnRef },
-    });
-    if (alreadyProcessed) {
-      return { RspCode: '00', Message: 'Already processed' };
-    }
+    await this.ipnQueue.add('process-ipn', { query });
 
-    const intent = await this.intentRepo.findOne({
-      where: { orderId: txnRef },
-    });
-    if (!intent) {
-      return { RspCode: '01', Message: 'Order not found' };
-    }
-
-    if (responseCode !== '00') {
-      await this.dataSource.transaction(async (manager) => {
-        await manager.update(
-          PaymentIntent,
-          { id: intent.id },
-          { status: PaymentStatus.FAILED },
-        );
-
-        const outbox = manager.create(OutboxEvent, {
-          aggregateId: intent.id,
-          eventType: 'payment.failed',
-          payload: {
-            eventId: randomUUID(),
-            eventType: 'payment.failed',
-            sagaId: intent.sagaId,
-            orderId: intent.orderId,
-            userId: intent.userId,
-            correlationId: randomUUID(),
-            timestamp: new Date().toISOString(),
-            payload: {
-              orderId: intent.orderId,
-              reason: `VNPay response code: ${responseCode}`,
-            },
-          },
-          published: false,
-        });
-        await manager.save(outbox);
-        await manager.save(
-          ProcessedWebhook,
-          manager.create(ProcessedWebhook, { vnpTxnRef: txnRef }),
-        );
-      });
-
-      this.logger.log(
-        `Payment failed for order ${txnRef}, code=${responseCode}`,
-      );
-      return { RspCode: '00', Message: 'Acknowledged' };
-    }
-
-    await this.dataSource.transaction(async (manager) => {
-      await manager.update(
-        PaymentIntent,
-        { id: intent.id },
-        {
-          status: PaymentStatus.COMPLETED,
-          paidAt: new Date(),
-        },
-      );
-
-      const outbox = manager.create(OutboxEvent, {
-        aggregateId: intent.id,
-        eventType: 'payment.completed',
-        payload: {
-          eventId: randomUUID(),
-          eventType: 'payment.completed',
-          sagaId: intent.sagaId,
-          orderId: intent.orderId,
-          userId: intent.userId,
-          correlationId: randomUUID(),
-          timestamp: new Date().toISOString(),
-          payload: {
-            orderId: intent.orderId,
-            amount: intent.amount,
-            vnpTxnRef: txnRef,
-            paidAt: new Date().toISOString(),
-            // productId and quantity come from orchestrator context
-          },
-        },
-        published: false,
-      });
-      await manager.save(outbox);
-      await manager.save(
-        ProcessedWebhook,
-        manager.create(ProcessedWebhook, { vnpTxnRef: txnRef }),
-      );
-    });
-
-    this.logger.log(`Payment completed for order ${txnRef}`);
-    return { RspCode: '00', Message: 'Success' };
+    this.logger.log(`[IPN] Queued txnRef=${txnRef}`);
+    return { RspCode: '00', Message: 'Queued' };
   }
 
   async testPaymentUrl() {
+    await new Promise((resolve) => setTimeout(resolve, 1000));
     const returnUrl = this.configService.getOrThrow<string>('vnpay.returnUrl');
     const now = new Date();
     const orderId = `TEST${formatVnpDate(now).slice(-6)}`;

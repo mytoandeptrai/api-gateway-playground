@@ -8,7 +8,7 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
-import { PaymentService } from './payment.service';
+import { PaymentService } from './services/payment.service';
 
 @ApiTags('payment')
 @Controller('payment')
