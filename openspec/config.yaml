@@ -1,0 +1,104 @@
+schema: spec-driven
+
+context: |
+
+  Language: Vietnamese
+  ## Ngôn ngữ tài liệu
+  Viết tài liệu bằng tiếng Việt. Giữ nguyên tiếng Anh cho: tên function, class, entity,
+  config key, Kafka topic, HTTP method, pattern name, thuật ngữ kỹ thuật IT.
+
+  ## Project
+  NextMart — e-commerce backend, mục đích học distributed systems qua thực hành.
+  Không phải production system. Ưu tiên pattern rõ ràng, dễ observe hơn tối ưu hiệu năng.
+
+  ## Tech Stack
+  - Runtime: Node.js, TypeScript (strict)
+  - Backend: NestJS + TypeORM, pnpm monorepo (Turborepo)
+  - Frontend: Next.js 15 App Router (apps/web)
+  - Messaging: Kafka (KRaft, no ZooKeeper) via KafkaJS
+  - Cache / Lock: Redis — rate limiting, response cache, Redlock distributed lock
+  - Database: PostgreSQL — single instance, one schema per service
+  - Storage: MinIO S3-compatible (refund file uploads)
+  - Payment: VNPay (QR + IPN webhook)
+  - Queue: BullMQ — xử lý VNPay IPN webhook (concurrency: 5, trong payment-service)
+  - Realtime: Socket.IO namespace /notifications (notification-service → web)
+  - Auth: JWT + Passport.js (auth-service), JWT_SECRET shared với order-service
+
+  ## Service Map
+  web                  :3000  schema —             Next.js 15 frontend
+  api-gateway          :3002  schema gateway       Entry point: rate limit, circuit breaker, load balance, cache
+  auth-service         :3003  schema auth          Register, login, refresh token (JWT)
+  product-service      :3005  schema product       Product catalog CRUD
+  order-service        :3006  schema orders        Order lifecycle, outbox producer
+  inventory-service    :3007  schema inventory     Stock reserve/confirm/release, Redlock, outbox
+  payment-service      :3008  schema payment       VNPay QR + IPN (BullMQ), payment timeout scheduler, outbox
+  shipping-service     :3009  schema shipping      Shipping label + mock delivery (PREPARING→IN_TRANSIT→DELIVERED)
+  notification-service :3010  schema notification  Email (Mailpit) + Socket.IO push
+  refund-service       :3011  schema refund        Refund request, MinIO file upload, outbox
+  orchestrator-service :3012  schema orchestrator  Orchestrator Saga (ORDER_SAGA + REFUND_SAGA), DLQ + retry
+
+  ## Quy tắc giao tiếp (HTTP vs Kafka)
+  - HTTP (synchronous): orchestrator → payment-service (POST /payment/create-qr),
+    orchestrator → order-service (PATCH /orders/:id/status),
+    order-service → product-service (GET product info)
+  - Kafka (async): tất cả saga steps và domain events giữa các service
+  - WebSocket: notification-service → web (realtime order status update)
+  - Rule: dùng HTTP khi orchestrator cần response ngay; dùng Kafka cho mọi thứ còn lại
+
+  ## Kafka Envelope (chuẩn toàn hệ thống — bắt buộc follow)
+  {
+    eventId: string        // UUID — dùng cho idempotency check
+    eventType: string      // == tên Kafka topic
+    sagaId: string         // UUID của SagaInstance
+    orderId: string        // UUID của Order
+    userId: string
+    correlationId: string  // UUID mới mỗi lần publish
+    timestamp: string      // ISO 8601
+    payload: object        // domain-specific data
+  }
+  Kafka message key: orderId (partition theo order)
+
+  ## Database Convention
+  - Single PostgreSQL instance (:1111), credentials: postgres/postgres
+  - Mỗi service có 1 schema riêng (xem Service Map ở trên)
+  - Service chỉ đọc/ghi schema của mình — không cross-schema query
+  - DB_SYNC=true trong development (TypeORM tự migrate)
+
+  ## Patterns — khi nào áp dụng
+  **Orchestrator Saga** (không dùng Choreography):
+  - orchestrator-service giữ toàn bộ state trong SagaInstance + SagaStep
+  - ORDER_SAGA steps: RESERVE_INVENTORY → AWAIT_PAYMENT → CONFIRM_INVENTORY → CREATE_SHIPPING → AWAIT_DELIVERY → COMPLETE_ORDER
+  - REFUND_SAGA steps: VALIDATE_REFUND → PROCESS_REFUND → COMPLETE_REFUND (hoặc REJECT_REFUND)
+  - Compensation: payment.timeout/failed → inventory.release_stock → cancel order
+  - Áp dụng khi: feature có multi-step cross-service flow cần rollback
+
+  **Transactional Outbox** (inventory, payment, refund, order):
+  - Domain change + OutboxEvent trong cùng 1 DB transaction
+  - OutboxWorker background job poll → publish Kafka → mark published=true
+  - Áp dụng khi: service cần publish Kafka event sau khi update DB
+
+  **Idempotency**:
+  - ProcessedEvent { eventId unique } — Kafka consumer check trước khi xử lý
+  - ProcessedWebhook { vnpTxnRef unique } — deduplicate VNPay IPN
+  - SagaInstance check: không start saga mới nếu đã có RUNNING saga cho orderId
+  - Áp dụng khi: thêm Kafka consumer mới nào cũng phải implement
+
+  **Redlock** (inventory-service):
+  - Lock key: inventory:lock:{productId}, TTL 5s
+  - Áp dụng khi: cần atomic read-then-write trên shared resource
+
+  **DLQ + Retry** (orchestrator-service):
+  - 3 lần retry, exponential backoff: 1s → 3s → 9s
+  - Sau khi hết retry: publish {topic}.dlq, mark saga FAILED, gửi email thông báo user
+
+  ## Infrastructure Ports
+  PostgreSQL :1111 | Redis :1112 | Mailpit SMTP :1113 | Mailpit Web :1114
+  Kafka :1115 | Kafka UI :1116 | MinIO API :1117 | MinIO Console :1118
+
+  ## Code Conventions
+  - Package manager: pnpm only — không dùng npm/yarn
+  - Path alias: @/ → src/ (tất cả NestJS services)
+  - API prefix: api/v1 (tất cả services)
+  - Module structure: src/modules/{domain}/ + src/shared/{infra}/
+  - Shared infra có sẵn trong mỗi service: kafka, redis, caching module
+  - Commit: conventional commits (feat/fix/refactor/chore)
