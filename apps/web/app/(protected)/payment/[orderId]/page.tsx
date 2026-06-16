@@ -69,7 +69,8 @@ export default function PaymentPage() {
     }
   }, [payment?.status, seconds, orderId, router]);
 
-  const expired = seconds === 0 || payment?.status === "EXPIRED";
+  const settled = ["COMPLETED", "FAILED", "EXPIRED"].includes(payment?.status ?? "");
+  const expired = seconds === 0 || settled;
   const qrUrl = payment?.qrUrl;
 
   return (
