@@ -10,6 +10,7 @@ import { HttpService } from '@nestjs/axios';
 import { ConfigService } from '@nestjs/config';
 import { firstValueFrom } from 'rxjs';
 import { randomUUID } from 'crypto';
+import { trace } from '@opentelemetry/api';
 import { Order, OrderStatus } from './entities/order.entity';
 import { OutboxEvent } from './entities/outbox-event.entity';
 import { CreateOrderDto } from './dto/create-order.dto';
@@ -37,6 +38,14 @@ export class OrdersService {
   ) {}
 
   async create(userId: string, userEmail: string, dto: CreateOrderDto) {
+    const span = trace.getActiveSpan();
+    span?.setAttributes({
+      'user.id': userId,
+      'user.email': userEmail,
+      'order.product_id': dto.productId,
+      'order.quantity': dto.quantity,
+    });
+
     const product = await this.fetchProduct(dto.productId);
 
     const totalAmount = product.price * dto.quantity;
@@ -100,15 +109,26 @@ export class OrdersService {
   }
 
   async findAllByUser(userId: string): Promise<Order[]> {
-    return this.orderRepo.find({
+    const span = trace.getActiveSpan();
+    span?.setAttribute('user.id', userId);
+
+    const orders = await this.orderRepo.find({
       where: { userId },
       order: { createdAt: 'DESC' },
     });
+
+    span?.setAttribute('order.count', orders.length);
+    return orders;
   }
 
   async findOneByUser(id: string, userId: string): Promise<Order> {
+    const span = trace.getActiveSpan();
+    span?.setAttributes({ 'order.id': id, 'user.id': userId });
+
     const order = await this.orderRepo.findOne({ where: { id, userId } });
     if (!order) throw new NotFoundException('Order not found');
+
+    span?.setAttribute('order.status', order.status);
     return order;
   }
 

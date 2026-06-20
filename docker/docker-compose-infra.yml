@@ -118,6 +118,18 @@ services:
   # → Khi app expect bucket name cố định ngay lúc docker compose up (tránh 404 NoSuchBucket).
   # → Dev solo: có thể tạo bucket tay qua Console (http://localhost:1118) — đủ dùng.
   # → Team/CI: nên thêm init sidecar để môi trường reproducible, không phụ thuộc thao tác tay.
+  # Jaeger — distributed tracing UI + OTLP collector
+  # 1119 = Jaeger UI | 4318 = OTLP HTTP receiver
+  jaeger:
+    image: jaegertracing/all-in-one:1.57
+    container_name: api-gateway-jaeger
+    restart: unless-stopped
+    ports:
+      - "1119:16686"  # Jaeger UI
+      - "4318:4318"   # OTLP HTTP receiver
+    environment:
+      COLLECTOR_OTLP_ENABLED: "true"
+
   minio:
     image: minio/minio:RELEASE.2025-04-22T22-12-26Z
     container_name: api-gateway-minio
