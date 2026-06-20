@@ -2,6 +2,7 @@ import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ScheduleModule } from '@nestjs/schedule';
+import { PrometheusModule } from '@willsoto/nestjs-prometheus';
 import { AppController } from '@/app.controller';
 import { AppService } from '@/app.service';
 import databaseConfig from '@/config/database.config';
@@ -44,6 +45,7 @@ import { OrdersModule } from '@/modules/orders/orders.module';
       }),
     }),
 
+    PrometheusModule.register({ defaultMetrics: { enabled: true } }),
     ScheduleModule.forRoot(),
     CachingModule,
     KafkaModule,

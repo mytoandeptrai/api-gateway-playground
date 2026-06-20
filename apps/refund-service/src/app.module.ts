@@ -1,3 +1,4 @@
+import { PrometheusModule } from '@willsoto/nestjs-prometheus';
 import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
@@ -49,6 +50,7 @@ import { RefundModule } from '@/modules/refund/refund.module';
 
     // Shared Module
     SharedRedisModule,
+    PrometheusModule.register({ defaultMetrics: { enabled: true } }),
     CachingModule,
     KafkaModule,
 

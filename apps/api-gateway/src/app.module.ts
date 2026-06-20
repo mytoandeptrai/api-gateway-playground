@@ -1,3 +1,4 @@
+import { PrometheusModule } from '@willsoto/nestjs-prometheus';
 import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
@@ -46,6 +47,7 @@ import { RateLimitingModule } from '@/shared/rate-limiting/rate-limiting.module'
 
     // Global Modules
     SharedRedisModule,
+    PrometheusModule.register({ defaultMetrics: { enabled: true } }),
     CachingModule,
     RateLimitingModule,
 

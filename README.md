@@ -13,6 +13,7 @@ A full-stack NestJS microservices playground implementing a complete e-commerce 
 - **Payment:** VNPay (QR code, IPN webhook)
 - **Monorepo:** Turborepo + pnpm
 - **Email (Dev):** Mailpit
+- **Observability:** OpenTelemetry + Jaeger (distributed tracing), Prometheus + Grafana (metrics)
 
 ## Architecture
 
@@ -221,7 +222,7 @@ pnpm only-infra
 
 This starts PostgreSQL, Redis, Mailpit, Kafka, Kafka UI, and MinIO. Data is persisted under `docker/volumes/`.
 
-#### Port pattern (1111–1118)
+#### Port pattern (1111–1121)
 
 Local infrastructure uses **sequential host ports** starting at `1111` — easy to trace, one block for all Docker services:
 
@@ -235,6 +236,9 @@ Local infrastructure uses **sequential host ports** starting at `1111` — easy 
 | 1116 | 8080      | Kafka UI       |
 | 1117 | 9000      | MinIO S3 API   |
 | 1118 | 9001      | MinIO Console  |
+| 1119 | 16686     | Jaeger UI      |
+| 1120 | 9090      | Prometheus     |
+| 1121 | 3000      | Grafana        |
 
 > **Kafka note:** `KAFKA_ADVERTISED_LISTENERS` is set to `localhost:1115` so host clients receive the correct broker address in metadata.
 
@@ -245,6 +249,9 @@ Local infrastructure uses **sequential host ports** starting at `1111` — easy 
 | Mailpit       | http://localhost:1114 | —                           |
 | Kafka UI      | http://localhost:1116 | —                           |
 | MinIO Console | http://localhost:1118 | `minioadmin` / `minioadmin` |
+| Jaeger UI     | http://localhost:1119 | —                           |
+| Prometheus    | http://localhost:1120 | —                           |
+| Grafana       | http://localhost:1121 | `admin` / `admin`           |
 
 #### App connections (NestJS, CLI, drivers)
 
@@ -490,6 +497,64 @@ Inside Docker Compose, services talk to each other by container name, not `local
 | `API_GATEWAY_URL` (web)   | `http://localhost:3002` | `http://api-gateway:3002` |
 
 `env_file` loads the local `.env` values; the `environment` block in compose overrides only the infra hostnames.
+
+---
+
+## Observability
+
+### Setup
+
+```bash
+# Start Jaeger + Prometheus + Grafana (included in infra compose)
+docker compose -f docker/docker-compose-infra.yml up -d jaeger prometheus grafana
+```
+
+**Grafana first-time setup:**
+1. Open `http://localhost:1121` → login `admin / admin`
+2. **Connections → Data sources → Add → Prometheus**
+3. URL: `http://prometheus:9090` → **Save & test**
+4. **Dashboards → New → Import** → enter ID `11159` → select datasource `prometheus` → **Import**
+
+### Distributed Tracing (OpenTelemetry + Jaeger)
+
+All 10 NestJS services are instrumented with OpenTelemetry (`@opentelemetry/sdk-node`). Traces are exported via OTLP HTTP to Jaeger.
+
+Each service has `src/tracing.ts` bootstrapped before NestJS in `main.ts`:
+
+```typescript
+// main.ts — must be first import
+import './tracing';
+```
+
+Context propagation works automatically across:
+- **HTTP** — `traceparent` header injected/extracted via `@nestjs/axios`
+- **Kafka** — trace context injected into message headers by KafkaJS instrumentation
+
+Custom span attributes are added at the business logic layer (e.g. `user.id`, `order.id`, `order.status`) for filtering traces in Jaeger.
+
+**Jaeger UI:** `http://localhost:1119`
+
+When running in Docker, set:
+```env
+OTEL_EXPORTER_OTLP_ENDPOINT=http://jaeger:4318/v1/traces
+```
+
+### Metrics (Prometheus + Grafana)
+
+All services expose a `/metrics` endpoint via `@willsoto/nestjs-prometheus`. Prometheus scrapes every 15s. Grafana visualizes the data.
+
+Default metrics exposed per service:
+- `process_cpu_seconds_total` — CPU usage
+- `nodejs_eventloop_lag_seconds` — event loop lag (key Node.js health signal)
+- `process_resident_memory_bytes` — memory usage
+- `nodejs_heap_size_used_bytes` — heap usage
+- `nodejs_gc_duration_seconds` — garbage collection duration
+
+**Scrape config:** `docker/prometheus.yml`
+
+**Grafana datasource:** `http://prometheus:9090` (container-to-container)
+
+**Grafana UI:** `http://localhost:1121` — import dashboard ID `11159` (NodeJS Application Dashboard) for default metrics.
 
 ---
 

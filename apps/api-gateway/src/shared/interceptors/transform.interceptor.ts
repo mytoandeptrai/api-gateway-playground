@@ -16,19 +16,6 @@ export interface Response<T> {
   timestamp: string;
 }
 
-/**
- * Transform Interceptor
- * Transforms all responses to a consistent format
- * @example
- * ```json
- * {
- *   "success": true,
- *   "statusCode": 200,
- *   "data": { ... },
- *   "timestamp": "2024-01-01T00:00:00.000Z"
- * }
- * ```
- */
 @Injectable()
 export class TransformInterceptor<T>
   implements NestInterceptor<T, Response<T>>
@@ -37,9 +24,14 @@ export class TransformInterceptor<T>
     context: ExecutionContext,
     next: CallHandler,
   ): Observable<Response<T>> {
+    const request = context.switchToHttp().getRequest();
     const response = context.switchToHttp().getResponse();
-    const statusCode = response.statusCode || HttpStatus.OK;
 
+    if (request.path?.endsWith('/metrics')) {
+      return next.handle();
+    }
+
+    const statusCode = response.statusCode || HttpStatus.OK;
     return next.handle().pipe(
       map((data) => ({
         success: statusCode < 400,

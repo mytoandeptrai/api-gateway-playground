@@ -144,8 +144,38 @@ services:
     volumes:
       - ./volumes/minio_data:/data
 
+  # Prometheus — scrape metrics từ tất cả services mỗi 15s
+  # 1120 = Prometheus UI
+  prometheus:
+    image: prom/prometheus:v2.51.0
+    container_name: api-gateway-prometheus
+    restart: unless-stopped
+    ports:
+      - "1120:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./volumes/prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+
+  # Grafana — dashboard visualization
+  # 1121 = Grafana UI (admin/admin)
+  grafana:
+    image: grafana/grafana:10.4.0
+    container_name: api-gateway-grafana
+    restart: unless-stopped
+    ports:
+      - "1121:3000"
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: admin
+    volumes:
+      - ./volumes/grafana_data:/var/lib/grafana
+
 volumes:
   postgres_data:
   redis_data:
   kafka_data:
   minio_data:
+  prometheus_data:
+  grafana_data:

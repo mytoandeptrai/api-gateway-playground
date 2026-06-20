@@ -1,3 +1,4 @@
+import { PrometheusModule } from '@willsoto/nestjs-prometheus';
 import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
@@ -48,6 +49,7 @@ import { NotificationModule } from '@/modules/notification/notification.module';
 
     // Shared Module
     SharedRedisModule,
+    PrometheusModule.register({ defaultMetrics: { enabled: true } }),
     CachingModule,
     KafkaModule,
 
