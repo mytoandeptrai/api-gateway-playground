@@ -49,3 +49,5 @@ harness.db-wal
 harness.db-shm
 scripts/bin/harness-cli
 docs-openspec/*
+docs/*
+openspec/*
